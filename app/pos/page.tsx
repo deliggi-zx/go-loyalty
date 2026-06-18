@@ -1,3 +1,5 @@
+import { PosTerminal } from "@/components/pos/pos-terminal";
+
 export default function PosPage() {
-  return <div>POS</div>;
+  return <PosTerminal />;
 }
