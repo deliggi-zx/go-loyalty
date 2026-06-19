@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Pencil, ToggleLeft, ToggleRight, TrendingUp, Award } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toggleRewardActive } from "@/app/dashboard/premios/actions";
 
-interface Reward {
+export interface RewardRow {
   id: string;
   emoji: string;
   name: string;
@@ -15,78 +17,26 @@ interface Reward {
   active: boolean;
 }
 
-// Placeholder — reemplazar con query a Supabase
-const INITIAL_REWARDS: Reward[] = [
-  {
-    id: "r1",
-    emoji: "☕",
-    name: "Café gratis",
-    description: "Un café de cualquier tamaño y variedad",
-    stampsRequired: 10,
-    totalRedemptions: 47,
-    monthRedemptions: 8,
-    active: true,
-  },
-  {
-    id: "r2",
-    emoji: "🥐",
-    name: "Medialunas x6",
-    description: "6 medialunas de manteca recién horneadas",
-    stampsRequired: 10,
-    totalRedemptions: 31,
-    monthRedemptions: 5,
-    active: true,
-  },
-  {
-    id: "r3",
-    emoji: "🧋",
-    name: "Cappuccino grande",
-    description: "Cappuccino 500ml, a elección con leche vegetal",
-    stampsRequired: 10,
-    totalRedemptions: 12,
-    monthRedemptions: 3,
-    active: true,
-  },
-  {
-    id: "r4",
-    emoji: "🥪",
-    name: "Tostado completo",
-    description: "Tostado de jamón y queso con jugo de naranja",
-    stampsRequired: 10,
-    totalRedemptions: 9,
-    monthRedemptions: 2,
-    active: true,
-  },
-  {
-    id: "r5",
-    emoji: "🏷️",
-    name: "Descuento 20%",
-    description: "20% de descuento en tu próxima compra",
-    stampsRequired: 10,
-    totalRedemptions: 6,
-    monthRedemptions: 1,
-    active: false,
-  },
-  {
-    id: "r6",
-    emoji: "🍰",
-    name: "Porción de torta",
-    description: "Una porción de la torta del día",
-    stampsRequired: 10,
-    totalRedemptions: 3,
-    monthRedemptions: 0,
-    active: false,
-  },
-];
-
-export function RewardsGrid() {
-  const [rewards, setRewards] = useState(INITIAL_REWARDS);
+export function RewardsGrid({ rewards: initialRewards }: { rewards: RewardRow[] }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [rewards, setRewards] = useState(initialRewards);
   const [filter, setFilter] = useState<"todos" | "activos" | "inactivos">("todos");
 
-  function toggleActive(id: string) {
+  // Sync state when server re-renders with fresh data
+  useEffect(() => {
+    setRewards(initialRewards);
+  }, [initialRewards]);
+
+  function handleToggle(id: string, currentActive: boolean) {
+    // Optimistic update
     setRewards((prev) =>
       prev.map((r) => (r.id === id ? { ...r, active: !r.active } : r))
     );
+    startTransition(async () => {
+      await toggleRewardActive(id, !currentActive);
+      router.refresh();
+    });
   }
 
   const filtered = rewards.filter((r) => {
@@ -100,19 +50,28 @@ export function RewardsGrid() {
   const totalMonth    = rewards.reduce((acc, r) => acc + r.monthRedemptions, 0);
   const totalAll      = rewards.reduce((acc, r) => acc + r.totalRedemptions, 0);
 
+  if (rewards.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-stone-400">
+        <p className="text-sm">No hay premios configurados aún.</p>
+        <p className="text-xs mt-1">Usá el botón &quot;Nuevo premio&quot; para empezar.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Premios activos",      value: activeCount,   sub: `${inactiveCount} inactivos`,       color: "text-amber-600",   bg: "bg-amber-50"   },
-          { label: "Canjes este mes",       value: totalMonth,    sub: "en todos los premios",              color: "text-emerald-600", bg: "bg-emerald-50" },
-          { label: "Canjes totales",        value: totalAll,      sub: "desde el inicio",                   color: "text-blue-600",    bg: "bg-blue-50"    },
-          { label: "Premio más canjeado",   value: "Café gratis", sub: "47 canjes totales",                 color: "text-purple-600",  bg: "bg-purple-50"  },
+          { label: "Premios activos",    value: activeCount,                    sub: `${inactiveCount} inactivos`,  color: "text-amber-600",   bg: "bg-amber-50"   },
+          { label: "Canjes este mes",    value: totalMonth,                     sub: "en todos los premios",         color: "text-emerald-600", bg: "bg-emerald-50" },
+          { label: "Canjes totales",     value: totalAll,                       sub: "desde el inicio",              color: "text-blue-600",    bg: "bg-blue-50"    },
+          { label: "Premio más canjeado", value: rewards[0]?.name ?? "—",       sub: `${rewards[0]?.totalRedemptions ?? 0} canjes totales`, color: "text-purple-600", bg: "bg-purple-50" },
         ].map(({ label, value, sub, color, bg }) => (
           <div key={label} className="bg-white rounded-xl border border-stone-200 p-4 space-y-1">
             <p className="text-xs font-medium text-stone-500">{label}</p>
-            <p className={cn("text-2xl font-bold", color)}>{value}</p>
+            <p className={cn("text-2xl font-bold truncate", color)}>{value}</p>
             <p className="text-xs text-stone-400">{sub}</p>
           </div>
         ))}
@@ -126,7 +85,9 @@ export function RewardsGrid() {
             onClick={() => setFilter(f)}
             className={cn(
               "px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors",
-              filter === f ? "bg-amber-100 text-amber-700" : "text-stone-500 hover:bg-stone-100"
+              filter === f
+                ? "bg-amber-100 text-amber-700"
+                : "text-stone-500 hover:bg-stone-100"
             )}
           >
             {f === "todos"
@@ -148,13 +109,14 @@ export function RewardsGrid() {
               reward.active ? "border-stone-200" : "border-stone-100 opacity-60"
             )}
           >
-            {/* Header */}
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className={cn(
-                  "w-12 h-12 rounded-xl flex items-center justify-center text-2xl",
-                  reward.active ? "bg-amber-50" : "bg-stone-50"
-                )}>
+                <div
+                  className={cn(
+                    "w-12 h-12 rounded-xl flex items-center justify-center text-2xl",
+                    reward.active ? "bg-amber-50" : "bg-stone-50"
+                  )}
+                >
                   {reward.emoji}
                 </div>
                 <div>
@@ -165,33 +127,36 @@ export function RewardsGrid() {
                 </div>
               </div>
               <button
-                onClick={() => toggleActive(reward.id)}
-                className="shrink-0 text-stone-400 hover:text-amber-500 transition-colors p-1 -mr-1"
+                onClick={() => handleToggle(reward.id, reward.active)}
+                disabled={isPending}
+                className="shrink-0 text-stone-400 hover:text-amber-500 transition-colors p-1 -mr-1 disabled:opacity-50"
                 title={reward.active ? "Desactivar" : "Activar"}
               >
-                {reward.active
-                  ? <ToggleRight className="w-6 h-6 text-amber-500" />
-                  : <ToggleLeft className="w-6 h-6" />}
+                {reward.active ? (
+                  <ToggleRight className="w-6 h-6 text-amber-500" />
+                ) : (
+                  <ToggleLeft className="w-6 h-6" />
+                )}
               </button>
             </div>
 
-            {/* Stamps badge */}
             <div className="flex items-center justify-between">
               <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-stone-100 text-stone-600 px-2.5 py-1 rounded-full">
                 <Award className="w-3 h-3" />
                 {reward.stampsRequired} sellos
               </span>
-              <span className={cn(
-                "text-xs font-medium px-2.5 py-1 rounded-full",
-                reward.active
-                  ? "bg-emerald-50 text-emerald-700"
-                  : "bg-stone-100 text-stone-400"
-              )}>
+              <span
+                className={cn(
+                  "text-xs font-medium px-2.5 py-1 rounded-full",
+                  reward.active
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-stone-100 text-stone-400"
+                )}
+              >
                 {reward.active ? "Activo" : "Inactivo"}
               </span>
             </div>
 
-            {/* Stats */}
             <div className="grid grid-cols-2 gap-3 pt-1 border-t border-stone-100">
               <div>
                 <p className="text-xs text-stone-400">Este mes</p>
@@ -214,7 +179,6 @@ export function RewardsGrid() {
               </div>
             </div>
 
-            {/* Edit */}
             <button className="w-full flex items-center justify-center gap-2 text-xs font-medium text-stone-400 hover:text-stone-700 hover:bg-stone-50 py-2 rounded-lg transition-colors border border-stone-100 hover:border-stone-200">
               <Pencil className="w-3.5 h-3.5" />
               Editar premio
@@ -222,7 +186,6 @@ export function RewardsGrid() {
           </div>
         ))}
 
-        {/* Nueva tarjeta vacía */}
         <button className="rounded-xl border-2 border-dashed border-stone-200 p-5 flex flex-col items-center justify-center gap-2 text-stone-400 hover:border-amber-300 hover:text-amber-500 hover:bg-amber-50 transition-all min-h-[220px]">
           <div className="w-10 h-10 rounded-full border-2 border-current flex items-center justify-center">
             <span className="text-xl font-light leading-none">+</span>
