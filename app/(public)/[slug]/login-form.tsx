@@ -12,6 +12,7 @@ export function LoginForm({ primaryColor }: LoginFormProps) {
   const supabase = createClient();
   const router = useRouter();
   const [mode, setMode] = useState<"login" | "register">("login");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,7 +32,11 @@ export function LoginForm({ primaryColor }: LoginFormProps) {
         router.refresh();
       }
     } else {
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: name } },
+      });
       if (error) {
         setError(error.message);
       } else {
@@ -83,6 +88,16 @@ export function LoginForm({ primaryColor }: LoginFormProps) {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-3">
+        {mode === "register" && (
+          <input
+            type="text"
+            placeholder="Nombre"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 bg-stone-50 focus:outline-none focus:bg-white focus:border-stone-400 transition-colors"
+          />
+        )}
         <input
           type="email"
           placeholder="tu@email.com"
