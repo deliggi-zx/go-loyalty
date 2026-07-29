@@ -45,22 +45,18 @@ export default async function TenantPage({
         {/* Promos, en columna */}
         {promoItems.length > 0 && (
           <div className="space-y-4">
-            {promoItems.map((item) => (
-              <div
-                key={item.id}
-                className="rounded-2xl overflow-hidden bg-stone-100"
-                style={{ aspectRatio: "16 / 9" }}
-              >
-                {item.image_url && (
+            {promoItems.map(
+              (item) =>
+                item.image_url && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
+                    key={item.id}
                     src={item.image_url}
                     alt={item.title ?? ""}
-                    className="w-full h-full object-cover"
+                    className="w-full h-auto rounded-2xl object-contain"
                   />
-                )}
-              </div>
-            ))}
+                )
+            )}
           </div>
         )}
       </div>
