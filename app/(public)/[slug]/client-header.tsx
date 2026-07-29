@@ -30,7 +30,7 @@ export function ClientHeader({
   return (
     <>
       <header
-        className="sticky top-0 z-30 flex items-center justify-between px-4 h-14 shrink-0"
+        className="sticky top-0 z-50 flex items-center justify-between px-4 h-14 shrink-0"
         style={{ backgroundColor: primaryColor || "#f59e0b" }}
       >
         <button

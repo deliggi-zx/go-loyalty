@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, Phone, MessageCircle, LogOut, FileText } from "lucide-react";
+import Link from "next/link";
+import { X, Phone, MessageCircle, LogOut, FileText, Receipt } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { SocialLinks } from "./social-links";
 
@@ -15,6 +16,7 @@ export interface SideMenuTransaction {
 export interface SideMenuProps {
   isOpen: boolean;
   onClose: () => void;
+  slug: string;
   orgName: string;
   isLoggedIn: boolean;
   userName: string | null;
@@ -34,6 +36,7 @@ export interface SideMenuProps {
 export function SideMenu({
   isOpen,
   onClose,
+  slug,
   orgName,
   isLoggedIn,
   userName,
@@ -67,7 +70,7 @@ export function SideMenu({
     <>
       {/* Overlay */}
       <div
-        className={`fixed inset-0 bg-black/40 z-40 transition-opacity ${
+        className={`fixed inset-0 bg-black/40 z-[60] transition-opacity ${
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         onClick={onClose}
@@ -75,7 +78,7 @@ export function SideMenu({
 
       {/* Drawer */}
       <div
-        className={`fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-white z-50 shadow-xl transition-transform duration-300 overflow-y-auto ${
+        className={`fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-white z-[70] shadow-xl transition-transform duration-300 overflow-y-auto ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -91,6 +94,15 @@ export function SideMenu({
         </div>
 
         <div className="p-5 space-y-6">
+          <Link
+            href={`/${slug}/precios`}
+            onClick={onClose}
+            className="flex items-center gap-2 text-sm font-medium text-stone-700 hover:text-stone-900 transition-colors"
+          >
+            <Receipt className="w-4 h-4 text-stone-400" />
+            Lista de precios
+          </Link>
+
           {isLoggedIn && (
             <div>
               <p className="text-sm font-semibold text-stone-900">{userName}</p>

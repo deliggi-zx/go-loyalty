@@ -1,0 +1,100 @@
+import { notFound } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { getTenantOrg, getTenantUser } from "./data";
+import { ClientHeader } from "./client-header";
+
+export default async function TenantLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: { slug: string };
+}) {
+  const org = await getTenantOrg(params.slug);
+  if (!org) return notFound();
+
+  const user = await getTenantUser();
+
+  let userDisplayName: string | null = null;
+  let transactions: { id: string; amount: number; claimed_at: string | null }[] = [];
+
+  if (user) {
+    const supabase = createClient();
+    const [{ data: profile }, { data: txs }] = await Promise.all([
+      supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
+      supabase
+        .from("loyalty_transactions")
+        .select("id, amount, claimed_at")
+        .eq("profile_id", user.id)
+        .eq("org_id", org.id)
+        .eq("status", "claimed")
+        .order("claimed_at", { ascending: false }),
+    ]);
+
+    userDisplayName = profile?.full_name || user.email?.split("@")[0] || null;
+    transactions = txs ?? [];
+  }
+
+  const primary = org.primary_color ?? "#f59e0b";
+
+  const bodyStyle: React.CSSProperties = org.background_url
+    ? {
+        backgroundImage: `url(${org.background_url})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundAttachment: "fixed",
+      }
+    : org.background_color
+    ? { backgroundColor: org.background_color }
+    : { backgroundColor: "#fafaf9" };
+
+  return (
+    <div className="min-h-screen" style={bodyStyle}>
+      <ClientHeader
+        orgName={org.name}
+        primaryColor={primary}
+        userDisplayName={user ? userDisplayName : null}
+        menuProps={{
+          slug: params.slug,
+          orgName: org.name,
+          isLoggedIn: !!user,
+          userName: userDisplayName,
+          userEmail: user?.email ?? null,
+          transactions,
+          aboutText: org.about_text,
+          phoneNumber: org.phone_number,
+          whatsappNumber: org.whatsapp_number,
+          facebookUrl: org.facebook_url,
+          instagramUrl: org.instagram_url,
+          twitterUrl: org.twitter_url,
+          youtubeUrl: org.youtube_url,
+          termsText: org.terms_text,
+          primaryColor: primary,
+        }}
+      />
+
+      {/* Banner */}
+      {org.banner_url ? (
+        <div className="w-full h-48 sm:h-64 overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={org.banner_url}
+            alt={org.name}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      ) : (
+        <div
+          className="w-full h-48 sm:h-64 flex items-center justify-center"
+          style={{ backgroundColor: primary }}
+        >
+          <h1 className="text-3xl sm:text-4xl font-bold text-white drop-shadow">
+            {org.name}
+          </h1>
+        </div>
+      )}
+
+      {children}
+    </div>
+  );
+}
