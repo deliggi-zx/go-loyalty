@@ -20,6 +20,7 @@ export async function updateOrgAppearance(data: {
   secondary_color?: string;
   accent_color?: string;
   member_tier_label?: string | null;
+  next_reward_threshold?: number | null;
 }) {
   const supabase = createClient();
   const orgId = await requireOrgId();

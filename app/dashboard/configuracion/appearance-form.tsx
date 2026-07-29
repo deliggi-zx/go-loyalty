@@ -16,6 +16,7 @@ interface OrgData {
   secondary_color: string | null;
   accent_color: string | null;
   member_tier_label: string | null;
+  next_reward_threshold: number | null;
 }
 
 interface AppearanceFormProps {
@@ -46,6 +47,11 @@ export function AppearanceForm({ org }: AppearanceFormProps) {
   // Member tier label
   const [memberTierLabel, setMemberTierLabel] = useState(
     org.member_tier_label ?? "Socio Frecuente"
+  );
+
+  // Next reward threshold
+  const [nextRewardThreshold, setNextRewardThreshold] = useState(
+    (org.next_reward_threshold ?? 1000).toString()
   );
 
   const supabase = createClient();
@@ -136,6 +142,16 @@ export function AppearanceForm({ org }: AppearanceFormProps) {
   function handleMemberTierLabelSave() {
     startTransition(async () => {
       await updateOrgAppearance({ member_tier_label: memberTierLabel || null });
+      router.refresh();
+    });
+  }
+
+  function handleNextRewardThresholdSave() {
+    const parsed = parseInt(nextRewardThreshold, 10);
+    startTransition(async () => {
+      await updateOrgAppearance({
+        next_reward_threshold: Number.isFinite(parsed) && parsed > 0 ? parsed : null,
+      });
       router.refresh();
     });
   }
@@ -321,6 +337,34 @@ export function AppearanceForm({ org }: AppearanceFormProps) {
           />
           <button
             onClick={handleMemberTierLabelSave}
+            disabled={isPending}
+            className="shrink-0 text-xs font-medium text-white bg-amber-500 hover:bg-amber-600 disabled:opacity-50 px-4 py-2 rounded-lg transition-colors"
+          >
+            {isPending ? "Guardando..." : "Guardar"}
+          </button>
+        </div>
+      </div>
+
+      {/* Meta de puntos */}
+      <div className="bg-white rounded-xl border border-stone-200 p-5 space-y-4">
+        <div>
+          <p className="text-sm font-medium text-stone-700">Próxima meta de puntos</p>
+          <p className="text-xs text-stone-400 mt-0.5">
+            Puntos necesarios para la barra de progreso en el perfil del cliente
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <input
+            type="number"
+            min="1"
+            value={nextRewardThreshold}
+            onChange={(e) => setNextRewardThreshold(e.target.value)}
+            placeholder="1000"
+            className="flex-1 h-9 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
+          />
+          <button
+            onClick={handleNextRewardThresholdSave}
             disabled={isPending}
             className="shrink-0 text-xs font-medium text-white bg-amber-500 hover:bg-amber-600 disabled:opacity-50 px-4 py-2 rounded-lg transition-colors"
           >
