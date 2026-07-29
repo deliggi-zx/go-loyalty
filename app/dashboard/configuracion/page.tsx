@@ -3,7 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
 import { AppearanceForm } from "./appearance-form";
 import { CarouselManager } from "./carousel-manager";
+import { PromoManager } from "./promo-manager";
 import { PriceListManager } from "./price-list-manager";
+import { ContactForm } from "./contact-form";
 
 export default async function ConfiguracionPage() {
   const supabase = createClient();
@@ -15,7 +17,7 @@ export default async function ConfiguracionPage() {
     supabase
       .from("loyalty_organizations")
       .select(
-        "id, slug, name, banner_url, background_url, background_color, primary_color, secondary_color, accent_color"
+        "id, slug, name, banner_url, background_url, background_color, primary_color, secondary_color, accent_color, about_text, whatsapp_number, phone_number, facebook_url, instagram_url, twitter_url, youtube_url, terms_text"
       )
       .eq("id", orgId)
       .single(),
@@ -31,6 +33,7 @@ export default async function ConfiguracionPage() {
   const org = orgRes.data;
   const carouselItems =
     contentRes.data?.filter((c) => c.type === "carousel") ?? [];
+  const promoItems = contentRes.data?.filter((c) => c.type === "promo") ?? [];
   const priceItems =
     contentRes.data?.filter((c) => c.type === "price_list") ?? [];
 
@@ -60,7 +63,9 @@ export default async function ConfiguracionPage() {
       <div className="p-8 space-y-10 max-w-3xl">
         <AppearanceForm org={org} />
         <CarouselManager orgId={orgId} items={carouselItems} />
+        <PromoManager orgId={orgId} items={promoItems} />
         <PriceListManager orgId={orgId} items={priceItems} />
+        <ContactForm org={org} />
       </div>
     </div>
   );

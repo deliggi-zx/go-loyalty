@@ -4,32 +4,23 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2, ChevronUp, ChevronDown, ImagePlus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import {
-  addCarouselItem,
-  deleteContentItem,
-  updateContentOrder,
-} from "./actions";
+import { addPromoItem, deleteContentItem, updateContentOrder } from "./actions";
 
-interface CarouselItem {
+interface PromoItem {
   id: string;
-  title: string | null;
   image_url: string | null;
   sort_order: number;
 }
 
-interface CarouselManagerProps {
+interface PromoManagerProps {
   orgId: string;
-  items: CarouselItem[];
+  items: PromoItem[];
 }
 
-export function CarouselManager({
-  orgId,
-  items: initialItems,
-}: CarouselManagerProps) {
+export function PromoManager({ orgId, items: initialItems }: PromoManagerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [items, setItems] = useState(initialItems);
-  const [newTitle, setNewTitle] = useState("");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,11 +30,17 @@ export function CarouselManager({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 5 * 1024 * 1024) {
+      setError("La imagen supera el límite de 5 MB.");
+      e.target.value = "";
+      return;
+    }
+
     setUploading(true);
     setError(null);
 
     const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `carousel/${orgId}/${Date.now()}.${ext}`;
+    const path = `promo/${orgId}/${Date.now()}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
       .from("loyalty-content")
@@ -62,11 +59,9 @@ export function CarouselManager({
     const maxOrder =
       items.length > 0 ? Math.max(...items.map((i) => i.sort_order)) : 0;
 
-    await addCarouselItem(publicUrl, newTitle, maxOrder + 1);
-    setNewTitle("");
+    await addPromoItem(publicUrl, maxOrder + 1);
     setUploading(false);
 
-    // Reset file input
     e.target.value = "";
 
     router.refresh();
@@ -87,7 +82,7 @@ export function CarouselManager({
     startTransition(async () => {
       await updateContentOrder(
         updated.map((i) => ({ id: i.id, sort_order: i.sort_order })),
-        "carousel"
+        "promo"
       );
     });
   }
@@ -104,10 +99,10 @@ export function CarouselManager({
     <section className="space-y-4">
       <div>
         <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">
-          Carrusel de imágenes
+          Promos
         </h2>
         <p className="text-xs text-stone-400 mt-0.5">
-          Las imágenes se muestran en orden en la página pública. Máx. 5 MB por imagen.
+          Carrusel de promociones, separado del carrusel principal. Máx. 5 MB por imagen.
         </p>
       </div>
 
@@ -117,31 +112,23 @@ export function CarouselManager({
         </div>
       )}
 
-      {/* Item list */}
       {items.length > 0 ? (
         <div className="bg-white rounded-xl border border-stone-200 divide-y divide-stone-100">
           {items.map((item, index) => (
             <div key={item.id} className="flex items-center gap-3 px-4 py-3">
-              {/* Thumbnail */}
               <div className="w-16 h-10 rounded-md overflow-hidden bg-stone-100 shrink-0">
                 {item.image_url && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={item.image_url}
-                    alt={item.title ?? ""}
+                    alt=""
                     className="w-full h-full object-cover"
                   />
                 )}
               </div>
 
-              {/* Title */}
-              <p className="flex-1 text-sm text-stone-700 truncate">
-                {item.title ?? (
-                  <span className="text-stone-400 italic">Sin título</span>
-                )}
-              </p>
+              <p className="flex-1 text-sm text-stone-400">Promo {index + 1}</p>
 
-              {/* Order */}
               <div className="flex flex-col gap-0.5">
                 <button
                   onClick={() => moveItem(index, "up")}
@@ -159,7 +146,6 @@ export function CarouselManager({
                 </button>
               </div>
 
-              {/* Delete */}
               <button
                 onClick={() => handleDelete(item.id)}
                 disabled={isPending}
@@ -172,20 +158,12 @@ export function CarouselManager({
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-dashed border-stone-200 py-10 text-center text-stone-400 text-sm">
-          No hay imágenes en el carrusel todavía.
+          No hay promos todavía.
         </div>
       )}
 
-      {/* Add new */}
       <div className="bg-white rounded-xl border border-stone-200 p-4 space-y-3">
-        <p className="text-xs font-medium text-stone-600">Agregar imagen</p>
-        <input
-          type="text"
-          placeholder="Título opcional"
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          className="w-full h-9 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
-        />
+        <p className="text-xs font-medium text-stone-600">Agregar promo</p>
         <label
           className={`flex items-center gap-2 text-sm font-medium text-white rounded-lg px-4 py-2.5 cursor-pointer w-fit transition-colors
             ${uploading ? "bg-stone-300 pointer-events-none" : "bg-amber-500 hover:bg-amber-600"}`}

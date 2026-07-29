@@ -1,8 +1,11 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { LoginForm } from "./login-form";
-import { StampCard } from "./stamp-card";
+import { PointsPanel } from "./points-panel";
 import { Carousel } from "./carousel";
+import { PriceFlyers } from "./price-flyers";
+import { ClientHeader } from "./client-header";
+import { SocialLinks } from "./social-links";
 
 export default async function TenantPage({
   params,
@@ -14,7 +17,7 @@ export default async function TenantPage({
   const { data: org } = await supabase
     .from("loyalty_organizations")
     .select(
-      "id, name, banner_url, background_url, background_color, primary_color, secondary_color, accent_color"
+      "id, name, banner_url, background_url, background_color, primary_color, secondary_color, accent_color, about_text, whatsapp_number, phone_number, facebook_url, instagram_url, twitter_url, youtube_url, terms_text"
     )
     .eq("slug", params.slug)
     .maybeSingle();
@@ -33,28 +36,38 @@ export default async function TenantPage({
 
   const user = authData?.user ?? null;
   const carouselItems = content?.filter((c) => c.type === "carousel") ?? [];
-  const priceItems = content?.filter((c) => c.type === "price_list") ?? [];
+  const promoItems = content?.filter((c) => c.type === "promo") ?? [];
+  const priceFlyers = content?.filter((c) => c.type === "price_list") ?? [];
 
-  // Group price list by category
-  const priceByCategory = priceItems.reduce<
-    Record<string, typeof priceItems>
-  >((acc, item) => {
-    const cat = item.category ?? "General";
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(item);
-    return acc;
-  }, {});
+  let pointsBalance = 0;
+  let userDisplayName: string | null = null;
+  let transactions: { id: string; amount: number; claimed_at: string | null }[] = [];
 
-  // Stamp count for logged-in user
-  let stampCount = 0;
   if (user) {
-    const { data: pts } = await supabase
-      .from("loyalty_user_points")
-      .select("points")
-      .eq("profile_id", user.id)
-      .eq("org_id", org.id)
-      .maybeSingle();
-    stampCount = pts?.points ?? 0;
+    const [{ data: pts }, { data: profile }, { data: txs }] = await Promise.all([
+      supabase
+        .from("loyalty_user_points")
+        .select("balance")
+        .eq("profile_id", user.id)
+        .eq("org_id", org.id)
+        .maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .maybeSingle(),
+      supabase
+        .from("loyalty_transactions")
+        .select("id, amount, claimed_at")
+        .eq("profile_id", user.id)
+        .eq("org_id", org.id)
+        .eq("status", "claimed")
+        .order("claimed_at", { ascending: false }),
+    ]);
+
+    pointsBalance = pts?.balance ?? 0;
+    userDisplayName = profile?.full_name || user.email?.split("@")[0] || null;
+    transactions = txs ?? [];
   }
 
   const primary = org.primary_color ?? "#f59e0b";
@@ -72,9 +85,40 @@ export default async function TenantPage({
 
   return (
     <div className="min-h-screen" style={bodyStyle}>
+      <ClientHeader
+        orgName={org.name}
+        primaryColor={primary}
+        userDisplayName={user ? userDisplayName : null}
+        menuProps={{
+          orgName: org.name,
+          isLoggedIn: !!user,
+          userName: userDisplayName,
+          userEmail: user?.email ?? null,
+          transactions,
+          aboutText: org.about_text,
+          phoneNumber: org.phone_number,
+          whatsappNumber: org.whatsapp_number,
+          facebookUrl: org.facebook_url,
+          instagramUrl: org.instagram_url,
+          twitterUrl: org.twitter_url,
+          youtubeUrl: org.youtube_url,
+          termsText: org.terms_text,
+          primaryColor: primary,
+        }}
+      />
+
+      {/* Points strip or login */}
+      <div className="max-w-lg mx-auto px-4 pt-4">
+        {user ? (
+          <PointsPanel orgName={org.name} balance={pointsBalance} primaryColor={primary} />
+        ) : (
+          <LoginForm primaryColor={primary} />
+        )}
+      </div>
+
       {/* Banner */}
       {org.banner_url ? (
-        <div className="w-full h-48 sm:h-64 overflow-hidden">
+        <div className="w-full h-48 sm:h-64 overflow-hidden mt-6">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={org.banner_url}
@@ -84,7 +128,7 @@ export default async function TenantPage({
         </div>
       ) : (
         <div
-          className="w-full h-48 sm:h-64 flex items-center justify-center"
+          className="w-full h-48 sm:h-64 flex items-center justify-center mt-6"
           style={{ backgroundColor: primary }}
         >
           <h1 className="text-3xl sm:text-4xl font-bold text-white drop-shadow">
@@ -95,57 +139,26 @@ export default async function TenantPage({
 
       {/* Content */}
       <div className="max-w-lg mx-auto px-4 py-8 space-y-6">
-
-        {/* Stamp card or login */}
-        {user ? (
-          <StampCard
-            profileId={user.id}
-            stampCount={stampCount}
-            orgName={org.name}
-            primaryColor={primary}
-          />
-        ) : (
-          <LoginForm primaryColor={primary} />
-        )}
-
-        {/* Carousel */}
+        {/* Carousel principal */}
         {carouselItems.length > 0 && <Carousel items={carouselItems} />}
 
-        {/* Price list */}
-        {priceItems.length > 0 && (
-          <section className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-stone-100">
-              <h2 className="font-semibold text-stone-900">Carta de precios</h2>
-            </div>
-            {Object.entries(priceByCategory).map(([category, items]) => (
-              <div key={category}>
-                <div className="px-5 py-2.5 bg-stone-50 border-b border-stone-100">
-                  <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
-                    {category}
-                  </p>
-                </div>
-                <div className="divide-y divide-stone-50">
-                  {items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between px-5 py-3"
-                    >
-                      <p className="text-sm text-stone-800">{item.title}</p>
-                      {item.price != null && (
-                        <p className="text-sm font-semibold text-stone-900 ml-4 shrink-0 tabular-nums">
-                          ${item.price.toLocaleString("es-AR")}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </section>
-        )}
+        {/* Promos */}
+        {promoItems.length > 0 && <Carousel items={promoItems} />}
+      </div>
 
-        {/* Footer */}
-        <p className="text-center text-xs text-stone-400 pb-4">
+      {/* Flyers de precios */}
+      {priceFlyers.length > 0 && <PriceFlyers items={priceFlyers} />}
+
+      {/* Footer */}
+      <div className="max-w-lg mx-auto px-4 pb-8 pt-2 space-y-4">
+        <SocialLinks
+          facebookUrl={org.facebook_url}
+          instagramUrl={org.instagram_url}
+          twitterUrl={org.twitter_url}
+          youtubeUrl={org.youtube_url}
+          className="flex items-center justify-center gap-4"
+        />
+        <p className="text-center text-xs text-stone-400">
           Programa de fidelización por{" "}
           <span className="font-medium" style={{ color: primary }}>
             Go Loyalty

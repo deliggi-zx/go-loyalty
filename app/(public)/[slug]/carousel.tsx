@@ -28,12 +28,38 @@ export function Carousel({ items }: { items: CarouselItem[] }) {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [resetTimer]);
 
+  const touchStartX = useRef<number | null>(null);
+
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX;
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    if (touchStartX.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+
+    const threshold = 40;
+    if (deltaX > threshold) {
+      setCurrent((c) => (c - 1 + items.length) % items.length);
+      resetTimer();
+    } else if (deltaX < -threshold) {
+      next();
+      resetTimer();
+    }
+  }
+
   if (items.length === 0) return null;
 
   return (
     <div className="space-y-3">
       {/* Slides */}
-      <div className="relative overflow-hidden rounded-2xl bg-stone-100" style={{ aspectRatio: "16 / 7" }}>
+      <div
+        className="relative overflow-hidden rounded-2xl bg-stone-100"
+        style={{ aspectRatio: "16 / 7" }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         {items.map((item, i) => (
           <div
             key={item.id}

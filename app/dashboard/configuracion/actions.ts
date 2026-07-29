@@ -72,8 +72,9 @@ export async function deleteContentItem(id: string) {
   revalidatePath("/dashboard/configuracion");
 }
 
-export async function updateCarouselOrder(
-  items: { id: string; sort_order: number }[]
+export async function updateContentOrder(
+  items: { id: string; sort_order: number }[],
+  type: "carousel" | "price_list" | "promo"
 ) {
   const supabase = createClient();
   const orgId = await requireOrgId();
@@ -85,51 +86,73 @@ export async function updateCarouselOrder(
         .update({ sort_order: item.sort_order })
         .eq("id", item.id)
         .eq("org_id", orgId)
+        .eq("type", type)
     )
   );
 
   revalidatePath("/dashboard/configuracion");
 }
 
-// ── Lista de precios ──────────────────────────────────────────────────────────
+// ── Lista de precios (flyers) ───────────────────────────────────────────────────
 
-export async function addPriceItem(data: {
-  title: string;
-  price: number | null;
-  category: string;
-}) {
+export async function addPriceListFlyer(imageUrl: string, sortOrder: number) {
   const supabase = createClient();
   const orgId = await requireOrgId();
 
   await supabase.from("loyalty_content").insert({
     org_id: orgId,
     type: "price_list",
-    title: data.title,
-    price: data.price,
-    category: data.category || "General",
+    image_url: imageUrl,
+    title: null,
+    category: null,
+    price: null,
+    sort_order: sortOrder,
     is_active: true,
-    sort_order: 0,
   });
 
   revalidatePath("/dashboard/configuracion");
 }
 
-export async function updatePriceItem(
-  id: string,
-  data: { title: string; price: number | null; category: string }
-) {
+// ── Promos ────────────────────────────────────────────────────────────────────
+
+export async function addPromoItem(imageUrl: string, sortOrder: number) {
   const supabase = createClient();
   const orgId = await requireOrgId();
 
-  await supabase
-    .from("loyalty_content")
-    .update({
-      title: data.title,
-      price: data.price,
-      category: data.category || "General",
-    })
-    .eq("id", id)
-    .eq("org_id", orgId);
+  await supabase.from("loyalty_content").insert({
+    org_id: orgId,
+    type: "promo",
+    image_url: imageUrl,
+    title: null,
+    category: null,
+    price: null,
+    sort_order: sortOrder,
+    is_active: true,
+  });
+
+  revalidatePath("/dashboard/configuracion");
+}
+
+// ── Contacto y redes ─────────────────────────────────────────────────────────
+
+export async function updateOrgContact(data: {
+  about_text?: string | null;
+  whatsapp_number?: string | null;
+  phone_number?: string | null;
+  facebook_url?: string | null;
+  instagram_url?: string | null;
+  twitter_url?: string | null;
+  youtube_url?: string | null;
+  terms_text?: string | null;
+}) {
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+
+  const payload = Object.fromEntries(
+    Object.entries(data).filter(([, v]) => v !== undefined)
+  );
+
+  await supabase.from("loyalty_organizations").update(payload).eq("id", orgId);
 
   revalidatePath("/dashboard/configuracion");
 }
