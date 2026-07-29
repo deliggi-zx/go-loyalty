@@ -1,14 +1,14 @@
 interface PointsPanelProps {
-  orgName: string;
+  label: string;
   balance: number;
   primaryColor: string;
 }
 
-export function PointsPanel({ orgName, balance, primaryColor }: PointsPanelProps) {
+export function PointsPanel({ label, balance, primaryColor }: PointsPanelProps) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-stone-100 p-6 text-center space-y-1">
       <p className="text-xs font-medium text-stone-400 uppercase tracking-wide">
-        Socio {orgName}
+        {label}
       </p>
       <p
         className="text-4xl font-bold tabular-nums"

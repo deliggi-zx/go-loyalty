@@ -6,7 +6,7 @@ export const getTenantOrg = cache(async (slug: string) => {
   const { data } = await supabase
     .from("loyalty_organizations")
     .select(
-      "id, name, banner_url, background_url, background_color, primary_color, secondary_color, accent_color, about_text, whatsapp_number, phone_number, facebook_url, instagram_url, twitter_url, youtube_url, terms_text"
+      "id, name, banner_url, background_url, background_color, primary_color, secondary_color, accent_color, member_tier_label, about_text, whatsapp_number, phone_number, facebook_url, instagram_url, twitter_url, youtube_url, terms_text"
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -21,4 +21,16 @@ export const getTenantUser = cache(async () => {
   } = await supabase.auth.getUser();
 
   return user;
+});
+
+export const getUserPointsBalance = cache(async (orgId: string, userId: string) => {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("loyalty_user_points")
+    .select("balance")
+    .eq("profile_id", userId)
+    .eq("org_id", orgId)
+    .maybeSingle();
+
+  return data?.balance ?? 0;
 });

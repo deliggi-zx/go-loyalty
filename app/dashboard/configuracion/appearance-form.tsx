@@ -15,6 +15,7 @@ interface OrgData {
   primary_color: string | null;
   secondary_color: string | null;
   accent_color: string | null;
+  member_tier_label: string | null;
 }
 
 interface AppearanceFormProps {
@@ -41,6 +42,11 @@ export function AppearanceForm({ org }: AppearanceFormProps) {
   const [bannerUrl, setBannerUrl] = useState<string | null>(org.banner_url);
   const [uploading, setUploading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Member tier label
+  const [memberTierLabel, setMemberTierLabel] = useState(
+    org.member_tier_label ?? "Socio Frecuente"
+  );
 
   const supabase = createClient();
 
@@ -123,6 +129,13 @@ export function AppearanceForm({ org }: AppearanceFormProps) {
         secondary_color: secondaryColor,
         accent_color: accentColor,
       });
+      router.refresh();
+    });
+  }
+
+  function handleMemberTierLabelSave() {
+    startTransition(async () => {
+      await updateOrgAppearance({ member_tier_label: memberTierLabel || null });
       router.refresh();
     });
   }
@@ -287,6 +300,33 @@ export function AppearanceForm({ org }: AppearanceFormProps) {
         >
           {isPending ? "Guardando..." : "Guardar colores"}
         </button>
+      </div>
+
+      {/* Tipo de socio */}
+      <div className="bg-white rounded-xl border border-stone-200 p-5 space-y-4">
+        <div>
+          <p className="text-sm font-medium text-stone-700">Tipo de socio</p>
+          <p className="text-xs text-stone-400 mt-0.5">
+            Se muestra junto a los puntos del cliente en su perfil
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            value={memberTierLabel}
+            onChange={(e) => setMemberTierLabel(e.target.value)}
+            placeholder="Texto de tipo de socio (ej: Socio Frecuente)"
+            className="flex-1 h-9 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
+          />
+          <button
+            onClick={handleMemberTierLabelSave}
+            disabled={isPending}
+            className="shrink-0 text-xs font-medium text-white bg-amber-500 hover:bg-amber-600 disabled:opacity-50 px-4 py-2 rounded-lg transition-colors"
+          >
+            {isPending ? "Guardando..." : "Guardar"}
+          </button>
+        </div>
       </div>
     </section>
   );

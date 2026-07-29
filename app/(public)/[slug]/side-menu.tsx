@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { X, Phone, MessageCircle, LogOut, FileText, Receipt } from "lucide-react";
+import { X, Phone, MessageCircle, LogOut, FileText, Receipt, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { SocialLinks } from "./social-links";
 
@@ -102,6 +102,17 @@ export function SideMenu({
             <Receipt className="w-4 h-4 text-stone-400" />
             Lista de precios
           </Link>
+
+          {isLoggedIn && (
+            <Link
+              href={`/${slug}/perfil`}
+              onClick={onClose}
+              className="flex items-center gap-2 text-sm font-medium text-stone-700 hover:text-stone-900 transition-colors"
+            >
+              <User className="w-4 h-4 text-stone-400" />
+              Mi Perfil
+            </Link>
+          )}
 
           {isLoggedIn && (
             <div>

@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getTenantOrg, getTenantUser } from "./data";
+import { getTenantOrg, getTenantUser, getUserPointsBalance } from "./data";
 import { ClientHeader } from "./client-header";
+import { PointsBadge } from "./points-badge";
 
 export default async function TenantLayout({
   children,
@@ -17,10 +18,11 @@ export default async function TenantLayout({
 
   let userDisplayName: string | null = null;
   let transactions: { id: string; amount: number; claimed_at: string | null }[] = [];
+  let pointsBalance = 0;
 
   if (user) {
     const supabase = createClient();
-    const [{ data: profile }, { data: txs }] = await Promise.all([
+    const [{ data: profile }, { data: txs }, balance] = await Promise.all([
       supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
       supabase
         .from("loyalty_transactions")
@@ -29,10 +31,12 @@ export default async function TenantLayout({
         .eq("org_id", org.id)
         .eq("status", "claimed")
         .order("claimed_at", { ascending: false }),
+      getUserPointsBalance(org.id, user.id),
     ]);
 
     userDisplayName = profile?.full_name || user.email?.split("@")[0] || null;
     transactions = txs ?? [];
+    pointsBalance = balance;
   }
 
   const primary = org.primary_color ?? "#f59e0b";
@@ -72,6 +76,13 @@ export default async function TenantLayout({
           primaryColor: primary,
         }}
       />
+
+      {user && (
+        <PointsBadge
+          tierLabel={org.member_tier_label ?? "Socio Frecuente"}
+          balance={pointsBalance}
+        />
+      )}
 
       {/* Banner */}
       {org.banner_url ? (
