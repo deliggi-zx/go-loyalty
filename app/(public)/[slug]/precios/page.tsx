@@ -34,7 +34,11 @@ export default async function PreciosPage({
       </div>
 
       {priceFlyers.length > 0 ? (
-        <PriceFlyers items={priceFlyers} />
+        <PriceFlyers
+          items={priceFlyers}
+          backgroundColor={org.background_color}
+          backgroundUrl={org.background_url}
+        />
       ) : (
         <p className="text-center text-sm text-stone-400 py-16">
           Todavía no hay lista de precios cargada.

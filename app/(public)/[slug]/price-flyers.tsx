@@ -7,8 +7,25 @@ interface FlyerItem {
   image_url: string | null;
 }
 
-export function PriceFlyers({ items }: { items: FlyerItem[] }) {
+interface PriceFlyersProps {
+  items: FlyerItem[];
+  backgroundColor?: string | null;
+  backgroundUrl?: string | null;
+}
+
+export function PriceFlyers({ items, backgroundColor, backgroundUrl }: PriceFlyersProps) {
   const [current, setCurrent] = useState(0);
+
+  const stageStyle: React.CSSProperties = backgroundUrl
+    ? {
+        height: "70vh",
+        backgroundImage: `url(${backgroundUrl})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }
+    : backgroundColor
+    ? { height: "70vh", backgroundColor }
+    : { height: "70vh", backgroundColor: "#f5f5f4" };
   const touchStartX = useRef<number | null>(null);
 
   function handleTouchStart(e: React.TouchEvent) {
@@ -33,8 +50,8 @@ export function PriceFlyers({ items }: { items: FlyerItem[] }) {
   return (
     <div className="w-full space-y-3 py-2">
       <div
-        className="relative w-full overflow-hidden bg-stone-100"
-        style={{ height: "70vh" }}
+        className="relative w-full overflow-hidden"
+        style={stageStyle}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
