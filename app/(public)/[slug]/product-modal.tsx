@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { X, ImageOff } from "lucide-react";
 import type { CatalogProduct } from "./data";
+import { useCart } from "./cart-context";
 
 interface ProductModalProps {
   product: CatalogProduct;
@@ -15,6 +16,17 @@ export function ProductModal({ product, primaryColor, onClose }: ProductModalPro
   const [current, setCurrent] = useState(0);
   const [added, setAdded] = useState(false);
   const touchStartX = useRef<number | null>(null);
+  const { addItem } = useCart();
+
+  function handleAddToCart() {
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      imageUrl: images[0]?.image_url ?? null,
+    });
+    setAdded(true);
+  }
 
   function goTo(index: number) {
     setCurrent((index + images.length) % images.length);
@@ -124,7 +136,7 @@ export function ProductModal({ product, primaryColor, onClose }: ProductModalPro
           )}
 
           <button
-            onClick={() => setAdded(true)}
+            onClick={handleAddToCart}
             disabled={added}
             className="w-full py-3 rounded-xl text-white font-medium transition-opacity disabled:opacity-70"
             style={{ backgroundColor: primaryColor }}

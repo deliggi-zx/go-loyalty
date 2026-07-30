@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getTenantOrg, getTenantUser, getUserPointsBalance, getProductCategories } from "./data";
 import { ClientHeader } from "./client-header";
 import { PointsBadge } from "./points-badge";
+import { CartProvider } from "./cart-context";
 
 export default async function TenantLayout({
   children,
@@ -56,61 +57,64 @@ export default async function TenantLayout({
     : { backgroundColor: "#fafaf9" };
 
   return (
-    <div className="min-h-screen" style={bodyStyle}>
-      <ClientHeader
-        orgName={org.name}
-        primaryColor={primary}
-        userDisplayName={user ? userDisplayName : null}
-        menuProps={{
-          slug: params.slug,
-          orgName: org.name,
-          isLoggedIn: !!user,
-          userName: userDisplayName,
-          userEmail: user?.email ?? null,
-          transactions,
-          aboutText: org.about_text,
-          phoneNumber: org.phone_number,
-          whatsappNumber: org.whatsapp_number,
-          facebookUrl: org.facebook_url,
-          instagramUrl: org.instagram_url,
-          twitterUrl: org.twitter_url,
-          youtubeUrl: org.youtube_url,
-          termsText: org.terms_text,
-          primaryColor: primary,
-          catalogType: org.catalog_type,
-          productCategories,
-        }}
-      />
-
-      {user && (
-        <PointsBadge
-          tierLabel={org.member_tier_label ?? "Socio Frecuente"}
-          balance={pointsBalance}
+    <CartProvider key={org.id}>
+      <div className="min-h-screen" style={bodyStyle}>
+        <ClientHeader
+          orgName={org.name}
+          primaryColor={primary}
+          userDisplayName={user ? userDisplayName : null}
+          catalogType={org.catalog_type}
+          menuProps={{
+            slug: params.slug,
+            orgName: org.name,
+            isLoggedIn: !!user,
+            userName: userDisplayName,
+            userEmail: user?.email ?? null,
+            transactions,
+            aboutText: org.about_text,
+            phoneNumber: org.phone_number,
+            whatsappNumber: org.whatsapp_number,
+            facebookUrl: org.facebook_url,
+            instagramUrl: org.instagram_url,
+            twitterUrl: org.twitter_url,
+            youtubeUrl: org.youtube_url,
+            termsText: org.terms_text,
+            primaryColor: primary,
+            catalogType: org.catalog_type,
+            productCategories,
+          }}
         />
-      )}
 
-      {/* Banner */}
-      {org.banner_url ? (
-        <div className="w-full h-48 sm:h-64 overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={org.banner_url}
-            alt={org.name}
-            className="w-full h-full object-cover"
+        {user && (
+          <PointsBadge
+            tierLabel={org.member_tier_label ?? "Socio Frecuente"}
+            balance={pointsBalance}
           />
-        </div>
-      ) : (
-        <div
-          className="w-full h-48 sm:h-64 flex items-center justify-center"
-          style={{ backgroundColor: primary }}
-        >
-          <h1 className="text-3xl sm:text-4xl font-bold text-white drop-shadow">
-            {org.name}
-          </h1>
-        </div>
-      )}
+        )}
 
-      {children}
-    </div>
+        {/* Banner */}
+        {org.banner_url ? (
+          <div className="w-full h-48 sm:h-64 overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={org.banner_url}
+              alt={org.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ) : (
+          <div
+            className="w-full h-48 sm:h-64 flex items-center justify-center"
+            style={{ backgroundColor: primary }}
+          >
+            <h1 className="text-3xl sm:text-4xl font-bold text-white drop-shadow">
+              {org.name}
+            </h1>
+          </div>
+        )}
+
+        {children}
+      </div>
+    </CartProvider>
   );
 }
