@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { X, Phone, MessageCircle, LogOut, FileText, Receipt, User } from "lucide-react";
+import { X, Phone, MessageCircle, LogOut, FileText, Receipt, User, Tag } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { SocialLinks } from "./social-links";
 
@@ -11,6 +11,11 @@ export interface SideMenuTransaction {
   id: string;
   amount: number;
   claimed_at: string | null;
+}
+
+export interface SideMenuCategory {
+  id: string;
+  name: string;
 }
 
 export interface SideMenuProps {
@@ -31,6 +36,8 @@ export interface SideMenuProps {
   youtubeUrl: string | null;
   termsText: string | null;
   primaryColor: string;
+  catalogType?: string | null;
+  productCategories?: SideMenuCategory[];
 }
 
 export function SideMenu({
@@ -51,6 +58,8 @@ export function SideMenu({
   youtubeUrl,
   termsText,
   primaryColor,
+  catalogType,
+  productCategories = [],
 }: SideMenuProps) {
   const router = useRouter();
   const [showTerms, setShowTerms] = useState(false);
@@ -102,6 +111,27 @@ export function SideMenu({
             <Receipt className="w-4 h-4 text-stone-400" />
             Lista de precios
           </Link>
+
+          {catalogType === "products" && productCategories.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
+                Categorías
+              </h3>
+              <div className="space-y-1">
+                {productCategories.map((cat) => (
+                  <Link
+                    key={cat.id}
+                    href={`/${slug}/precios?categoria=${cat.id}`}
+                    onClick={onClose}
+                    className="flex items-center gap-2 text-sm text-stone-600 hover:text-stone-900 transition-colors"
+                  >
+                    <Tag className="w-3.5 h-3.5 text-stone-400" />
+                    {cat.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           {isLoggedIn && (
             <Link

@@ -7,6 +7,7 @@ import {
   Users,
   Stamp,
   Gift,
+  Package,
   ScanLine,
   Settings,
   LogOut,
@@ -14,21 +15,32 @@ import {
 import { logout } from "@/app/dashboard/actions";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+const baseNavItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/clientes", label: "Clientes", icon: Users },
   { href: "/dashboard/tarjetas", label: "Tarjetas", icon: Stamp },
   { href: "/dashboard/premios", label: "Premios", icon: Gift },
+];
+
+const catalogNavItem = { href: "/dashboard/catalogo", label: "Catálogo", icon: Package };
+
+const trailingNavItems = [
   { href: "/pos", label: "POS", icon: ScanLine },
   { href: "/dashboard/configuracion", label: "Configuración", icon: Settings },
 ];
 
 interface SidebarProps {
   userEmail: string;
+  showCatalog?: boolean;
 }
 
-export function Sidebar({ userEmail }: SidebarProps) {
+export function Sidebar({ userEmail, showCatalog = false }: SidebarProps) {
   const pathname = usePathname();
+  const navItems = [
+    ...baseNavItems,
+    ...(showCatalog ? [catalogNavItem] : []),
+    ...trailingNavItems,
+  ];
 
   return (
     <aside className="w-60 shrink-0 flex flex-col h-screen bg-white border-r border-stone-200">

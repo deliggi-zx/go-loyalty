@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getTenantOrg, getTenantUser, getUserPointsBalance } from "./data";
+import { getTenantOrg, getTenantUser, getUserPointsBalance, getProductCategories } from "./data";
 import { ClientHeader } from "./client-header";
 import { PointsBadge } from "./points-badge";
 
@@ -15,6 +15,9 @@ export default async function TenantLayout({
   if (!org) return notFound();
 
   const user = await getTenantUser();
+
+  const productCategories =
+    org.catalog_type === "products" ? await getProductCategories(org.id) : [];
 
   let userDisplayName: string | null = null;
   let transactions: { id: string; amount: number; claimed_at: string | null }[] = [];
@@ -74,6 +77,8 @@ export default async function TenantLayout({
           youtubeUrl: org.youtube_url,
           termsText: org.terms_text,
           primaryColor: primary,
+          catalogType: org.catalog_type,
+          productCategories,
         }}
       />
 

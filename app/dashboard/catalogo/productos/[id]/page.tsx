@@ -1,0 +1,56 @@
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { getOrgId } from "@/lib/supabase/get-org";
+import { ProductForm } from "../../product-form";
+import { ProductImagesManager } from "../../product-images-manager";
+
+export default async function EditarProductoPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const supabase = createClient();
+  const orgId = await getOrgId();
+  if (!orgId) redirect("/login");
+
+  const [{ data: product }, { data: categories }, { data: images }] = await Promise.all([
+    supabase
+      .from("products")
+      .select("id, name, description, price, category_id, active")
+      .eq("id", params.id)
+      .eq("org_id", orgId)
+      .maybeSingle(),
+    supabase
+      .from("product_categories")
+      .select("id, name")
+      .eq("org_id", orgId)
+      .order("display_order", { ascending: true }),
+    supabase
+      .from("product_images")
+      .select("id, image_url, display_order")
+      .eq("product_id", params.id)
+      .order("display_order", { ascending: true }),
+  ]);
+
+  if (!product) return notFound();
+
+  return (
+    <div className="flex-1 overflow-y-auto">
+      <header className="bg-white border-b border-stone-200 px-8 h-16 flex items-center gap-3 shrink-0">
+        <Link
+          href="/dashboard/catalogo"
+          className="text-sm text-stone-400 hover:text-stone-700 transition-colors"
+        >
+          ‹ Catálogo
+        </Link>
+        <h1 className="text-lg font-semibold text-stone-900">{product.name}</h1>
+      </header>
+
+      <div className="p-8 space-y-10">
+        <ProductForm categories={categories ?? []} product={product} />
+        <ProductImagesManager orgId={orgId} productId={product.id} images={images ?? []} />
+      </div>
+    </div>
+  );
+}
