@@ -71,7 +71,7 @@ export function ProductCatalog({
               <button
                 key={product.id}
                 onClick={() => setSelectedProduct(product)}
-                className="text-left rounded-2xl overflow-hidden bg-white shadow-sm border border-stone-100 hover:shadow-md transition-shadow"
+                className="text-left rounded-2xl overflow-hidden bg-white shadow-sm border border-stone-200 hover:shadow-md transition-shadow"
               >
                 <div className="aspect-square bg-stone-100 flex items-center justify-center overflow-hidden">
                   {mainImage ? (
