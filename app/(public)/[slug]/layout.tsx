@@ -4,6 +4,7 @@ import { getTenantOrg, getTenantUser, getUserPointsBalance, getProductCategories
 import { ClientHeader } from "./client-header";
 import { PointsBadge } from "./points-badge";
 import { CartProvider } from "./cart-context";
+import { WhatsAppButton } from "./whatsapp-button";
 
 export default async function TenantLayout({
   children,
@@ -114,6 +115,8 @@ export default async function TenantLayout({
         )}
 
         {children}
+
+        <WhatsAppButton whatsappNumber={org.whatsapp_number} />
       </div>
     </CartProvider>
   );
