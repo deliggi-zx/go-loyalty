@@ -11,9 +11,13 @@ interface LoginFormProps {
   // "bare": sin chrome propio, para vivir dentro de un contenedor que ya
   // aporta el fondo/sombra (ej. el modal de login del ícono del header).
   variant?: "card" | "bare";
+  // Estilo oscuro + acentos #ccff00 — hoy solo Gym2. Cubre login Y registro
+  // porque son el mismo formulario (se alternan con el estado `mode`), así
+  // que no hay un "recuadro de registrarse" separado que estilar aparte.
+  neonTheme?: boolean;
 }
 
-export function LoginForm({ primaryColor, variant = "card" }: LoginFormProps) {
+export function LoginForm({ primaryColor, variant = "card", neonTheme = false }: LoginFormProps) {
   const supabase = createClient();
   const router = useRouter();
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -54,29 +58,57 @@ export function LoginForm({ primaryColor, variant = "card" }: LoginFormProps) {
 
   const wrapperClass =
     variant === "card"
-      ? "bg-white rounded-2xl shadow-sm border border-stone-100 p-6 space-y-4"
+      ? neonTheme
+        ? "bg-[#0a0a0b] rounded-2xl shadow-sm border border-[#26262a] p-6 space-y-4"
+        : "bg-white rounded-2xl shadow-sm border border-stone-100 p-6 space-y-4"
       : "space-y-4";
   const successWrapperClass =
     variant === "card"
-      ? "bg-white rounded-2xl shadow-sm border border-stone-100 p-6 text-center space-y-3"
+      ? neonTheme
+        ? "bg-[#0a0a0b] rounded-2xl shadow-sm border border-[#26262a] p-6 text-center space-y-3"
+        : "bg-white rounded-2xl shadow-sm border border-stone-100 p-6 text-center space-y-3"
       : "text-center space-y-3";
+
+  const eyebrowClass = neonTheme ? "text-[#ccff00]" : "text-stone-400";
+  const titleClass = neonTheme ? "text-white" : "text-stone-900";
+  const errorClass = neonTheme
+    ? "text-xs text-red-300 bg-red-950/40 rounded-lg px-3 py-2 border border-red-800"
+    : "text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2 border border-red-100";
+  const inputClass = neonTheme
+    ? "w-full h-10 px-3 text-sm rounded-lg border border-[#26262a] bg-[#141416] text-white placeholder:text-[#6b6965] focus:outline-none focus:border-[#ccff00] focus:shadow-[0_0_0_1px_#ccff00,0_0_10px_rgba(204,255,0,0.35)] transition-colors"
+    : "w-full h-10 px-3 text-sm rounded-lg border border-stone-200 bg-stone-50 focus:outline-none focus:bg-white focus:border-stone-400 transition-colors";
+  const submitClass = neonTheme
+    ? "w-full h-10 rounded-lg text-sm font-semibold transition-colors disabled:opacity-60 border border-[#ccff00] text-[#ccff00] bg-[#ccff00]/10 hover:bg-[#ccff00]/20 shadow-[0_0_10px_rgba(204,255,0,0.35),inset_0_0_10px_rgba(204,255,0,0.1)]"
+    : "w-full h-10 rounded-lg text-sm font-semibold text-white transition-opacity disabled:opacity-60";
+  const submitStyle = neonTheme ? undefined : { backgroundColor: primaryColor || "#f59e0b" };
+  const toggleClass = neonTheme
+    ? "w-full text-xs transition-colors pt-1 text-[#9b9995] hover:text-[#ccff00]"
+    : "w-full text-xs text-stone-400 hover:text-stone-600 transition-colors pt-1";
+  const successIconWrapClass = neonTheme
+    ? "w-12 h-12 rounded-full bg-emerald-950/40 flex items-center justify-center mx-auto"
+    : "w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mx-auto";
+  const successIconClass = neonTheme ? "w-6 h-6 text-emerald-400" : "w-6 h-6 text-emerald-600";
+  const successTitleClass = neonTheme ? "font-semibold text-white" : "font-semibold text-stone-900";
+  const successSubtitleClass = neonTheme ? "text-sm text-[#9b9995]" : "text-sm text-stone-500";
+  const successLinkClass = neonTheme ? "text-sm font-medium text-[#ccff00]" : "text-sm font-medium";
+  const successLinkStyle = neonTheme ? undefined : { color: primaryColor || "#f59e0b" };
 
   if (registered) {
     return (
       <div className={successWrapperClass}>
-        <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mx-auto">
-          <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className={successIconWrapClass}>
+          <svg className={successIconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <p className="font-semibold text-stone-900">¡Cuenta creada!</p>
-        <p className="text-sm text-stone-500">
+        <p className={successTitleClass}>¡Cuenta creada!</p>
+        <p className={successSubtitleClass}>
           Revisá tu email para confirmar tu cuenta y después iniciá sesión.
         </p>
         <button
           onClick={() => { setMode("login"); setRegistered(false); }}
-          className="text-sm font-medium"
-          style={{ color: primaryColor || "#f59e0b" }}
+          className={successLinkClass}
+          style={successLinkStyle}
         >
           Ir a iniciar sesión
         </button>
@@ -87,19 +119,15 @@ export function LoginForm({ primaryColor, variant = "card" }: LoginFormProps) {
   return (
     <div className={wrapperClass}>
       <div>
-        <p className="text-xs font-medium text-stone-400 uppercase tracking-wide">
+        <p className={`text-xs font-medium uppercase tracking-wide ${eyebrowClass}`}>
           {mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
         </p>
-        <h2 className="text-base font-semibold text-stone-900 mt-0.5">
+        <h2 className={`text-base font-semibold mt-0.5 ${titleClass}`}>
           {mode === "login" ? "Accedé a tu tarjeta de sellos" : "Registrate para acumular sellos"}
         </h2>
       </div>
 
-      {error && (
-        <div className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2 border border-red-100">
-          {error}
-        </div>
-      )}
+      {error && <div className={errorClass}>{error}</div>}
 
       <form onSubmit={handleSubmit} className="space-y-3">
         {mode === "register" && (
@@ -109,7 +137,7 @@ export function LoginForm({ primaryColor, variant = "card" }: LoginFormProps) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 bg-stone-50 focus:outline-none focus:bg-white focus:border-stone-400 transition-colors"
+            className={inputClass}
           />
         )}
         <input
@@ -118,7 +146,7 @@ export function LoginForm({ primaryColor, variant = "card" }: LoginFormProps) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 bg-stone-50 focus:outline-none focus:bg-white focus:border-stone-400 transition-colors"
+          className={inputClass}
         />
         <input
           type="password"
@@ -127,21 +155,16 @@ export function LoginForm({ primaryColor, variant = "card" }: LoginFormProps) {
           onChange={(e) => setPassword(e.target.value)}
           required
           minLength={6}
-          className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 bg-stone-50 focus:outline-none focus:bg-white focus:border-stone-400 transition-colors"
+          className={inputClass}
         />
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full h-10 rounded-lg text-sm font-semibold text-white transition-opacity disabled:opacity-60"
-          style={{ backgroundColor: primaryColor || "#f59e0b" }}
-        >
+        <button type="submit" disabled={loading} className={submitClass} style={submitStyle}>
           {loading ? "Cargando..." : mode === "login" ? "Ingresar" : "Registrarme"}
         </button>
       </form>
 
       <button
         onClick={() => { setMode((m) => (m === "login" ? "register" : "login")); setError(null); }}
-        className="w-full text-xs text-stone-400 hover:text-stone-600 transition-colors pt-1"
+        className={toggleClass}
       >
         {mode === "login"
           ? "¿No tenés cuenta? Registrate gratis"

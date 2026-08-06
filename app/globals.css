@@ -404,3 +404,30 @@
     transition-duration: 0.01ms;
   }
 }
+
+/* ── Header + menú lateral neón — solo Gym2 ───────────────────────────────
+   Íconos del header (hamburguesa, carrito, escaneo, login) y acentos del
+   menú lateral: mismo verde-limón #ccff00 que el resto de la página, con
+   glow sutil (no la triple capa intensa de las tarjetas — estos íconos
+   están siempre visibles, no tienen estado apagado/encendido). */
+.neon-icon {
+  color: #ccff00;
+  filter: drop-shadow(0 0 2px rgba(204, 255, 0, 0.85)) drop-shadow(0 0 6px rgba(204, 255, 0, 0.45));
+}
+.neon-icon-active {
+  filter: drop-shadow(0 0 3px rgba(204, 255, 0, 0.95)) drop-shadow(0 0 10px rgba(204, 255, 0, 0.7))
+    drop-shadow(0 0 18px rgba(204, 255, 0, 0.4));
+}
+.neon-menu-link {
+  color: #d8d6d2;
+  transition: color 220ms ease, text-shadow 220ms ease;
+}
+.neon-menu-link:hover,
+.neon-menu-link:focus-visible {
+  color: #ccff00;
+  text-shadow: 0 0 8px rgba(204, 255, 0, 0.55);
+}
+.neon-amount {
+  color: #ccff00;
+  text-shadow: 0 0 6px rgba(204, 255, 0, 0.5);
+}

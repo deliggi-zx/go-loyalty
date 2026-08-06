@@ -7,13 +7,22 @@ interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
   primaryColor: string;
+  // Estilo oscuro + acentos #ccff00 — hoy solo Gym2, decidido por quien
+  // monta el modal (ClientHeader), no hay nada Gym2-específico acá.
+  neonTheme?: boolean;
 }
 
 // Modal centrado que aloja el mismo LoginForm de siempre (variant="bare",
 // sin su chrome de recuadro porque el modal ya aporta fondo/sombra). Es el
-// destino del ícono de usuario del header — pensado para Gym2, pero no hay
-// nada Gym2-específico acá: quién lo muestra lo decide ClientHeader.
-export function LoginModal({ isOpen, onClose, primaryColor }: LoginModalProps) {
+// destino del ícono de usuario del header.
+export function LoginModal({ isOpen, onClose, primaryColor, neonTheme = false }: LoginModalProps) {
+  const panelClass = neonTheme
+    ? "bg-[#0a0a0b] border border-[#26262a]"
+    : "bg-white";
+  const closeBtnClass = neonTheme
+    ? "text-[#9b9995] hover:text-[#ccff00]"
+    : "text-stone-400 hover:text-stone-700";
+
   return (
     <>
       <div
@@ -29,19 +38,19 @@ export function LoginModal({ isOpen, onClose, primaryColor }: LoginModalProps) {
         }`}
       >
         <div
-          className={`relative w-full max-w-sm bg-white rounded-2xl shadow-xl p-6 transition-transform duration-200 ${
+          className={`relative w-full max-w-sm rounded-2xl shadow-xl p-6 transition-transform duration-200 ${panelClass} ${
             isOpen ? "scale-100" : "scale-95"
           }`}
         >
           <button
             onClick={onClose}
             aria-label="Cerrar"
-            className="absolute top-3 right-3 p-1.5 text-stone-400 hover:text-stone-700 transition-colors"
+            className={`absolute top-3 right-3 p-1.5 transition-colors ${closeBtnClass}`}
           >
             <X className="w-5 h-5" />
           </button>
 
-          <LoginForm primaryColor={primaryColor} variant="bare" />
+          <LoginForm primaryColor={primaryColor} variant="bare" neonTheme={neonTheme} />
         </div>
       </div>
     </>

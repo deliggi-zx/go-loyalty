@@ -38,6 +38,13 @@ export interface SideMenuProps {
   primaryColor: string;
   catalogType?: string | null;
   productCategories?: SideMenuCategory[];
+  // Estilo neón oscuro — hoy solo Gym2 (ver hasGymFeatures en layout.tsx).
+  // El resto de las orgs sigue con el menú claro de siempre.
+  neonTheme?: boolean;
+  // En Gym2 ese ítem del menú lleva al catálogo de productos (no a price
+  // flyers), así que se renombra a "Planes" en vez de "Lista de precios".
+  // El resto de las orgs sigue con el label de siempre.
+  priceListLabel?: string;
 }
 
 export function SideMenu({
@@ -60,11 +67,32 @@ export function SideMenu({
   primaryColor,
   catalogType,
   productCategories = [],
+  neonTheme = false,
+  priceListLabel = "Lista de precios",
 }: SideMenuProps) {
   const router = useRouter();
   const [showTerms, setShowTerms] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const hasSocials = facebookUrl || instagramUrl || twitterUrl || youtubeUrl;
+
+  // Clases condicionadas al tema — mismo criterio que showLoginIcon: una
+  // sola variante de estilo por prop, no un side-menu-gym2.tsx paralelo.
+  const drawerBg = neonTheme ? "bg-[#0a0a0b]" : "bg-white";
+  const headerBorder = neonTheme ? "border-[#26262a]" : "border-stone-100";
+  const titleText = neonTheme ? "text-white" : "text-stone-900";
+  const closeBtn = neonTheme
+    ? "text-[#9b9995] hover:text-[#ccff00]"
+    : "text-stone-400 hover:text-stone-700";
+  const linkText = neonTheme ? "neon-menu-link" : "text-stone-700 hover:text-stone-900";
+  const linkTextMuted = neonTheme ? "neon-menu-link" : "text-stone-600 hover:text-stone-900";
+  const leadIcon = neonTheme ? "neon-icon shrink-0" : "text-stone-400 shrink-0";
+  const leadIconSm = neonTheme ? "neon-icon shrink-0" : "text-stone-400";
+  const sectionLabel = neonTheme ? "text-[#6b6965]" : "text-stone-500";
+  const bodyText = neonTheme ? "text-[#d8d6d2]" : "text-stone-600";
+  const faintText = neonTheme ? "text-[#6b6965]" : "text-stone-400";
+  const nameText = neonTheme ? "text-white" : "text-stone-900";
+  const dividerBorder = neonTheme ? "divide-[#1c1c1e] border-[#26262a]" : "divide-stone-100 border-stone-100";
+  const rowAmount = neonTheme ? "neon-amount" : "text-stone-900";
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -87,16 +115,16 @@ export function SideMenu({
 
       {/* Drawer */}
       <div
-        className={`fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-white z-[70] shadow-xl transition-transform duration-300 overflow-y-auto ${
+        className={`fixed top-0 left-0 h-full w-80 max-w-[85vw] ${drawerBg} z-[70] shadow-xl transition-transform duration-300 overflow-y-auto ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between px-5 h-14 border-b border-stone-100">
-          <span className="font-semibold text-stone-900">{orgName}</span>
+        <div className={`flex items-center justify-between px-5 h-14 border-b ${headerBorder}`}>
+          <span className={`font-semibold ${titleText}`}>{orgName}</span>
           <button
             onClick={onClose}
             aria-label="Cerrar menú"
-            className="p-1.5 text-stone-400 hover:text-stone-700 transition-colors"
+            className={`p-1.5 transition-colors ${closeBtn}`}
           >
             <X className="w-5 h-5" />
           </button>
@@ -106,15 +134,15 @@ export function SideMenu({
           <Link
             href={`/${slug}/precios`}
             onClick={onClose}
-            className="flex items-center gap-2 text-sm font-medium text-stone-700 hover:text-stone-900 transition-colors"
+            className={`flex items-center gap-2 text-sm font-medium transition-colors ${linkText}`}
           >
-            <Receipt className="w-4 h-4 text-stone-400" />
-            Lista de precios
+            <Receipt className={`w-4 h-4 ${leadIcon}`} />
+            {priceListLabel}
           </Link>
 
           {catalogType === "products" && productCategories.length > 0 && (
             <div className="space-y-2">
-              <h3 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
+              <h3 className={`text-xs font-semibold uppercase tracking-wide ${sectionLabel}`}>
                 Categorías
               </h3>
               <div className="space-y-1">
@@ -123,9 +151,9 @@ export function SideMenu({
                     key={cat.id}
                     href={`/${slug}/precios?categoria=${cat.id}`}
                     onClick={onClose}
-                    className="flex items-center gap-2 text-sm text-stone-600 hover:text-stone-900 transition-colors"
+                    className={`flex items-center gap-2 text-sm transition-colors ${linkTextMuted}`}
                   >
-                    <Tag className="w-3.5 h-3.5 text-stone-400" />
+                    <Tag className={`w-3.5 h-3.5 ${leadIconSm}`} />
                     {cat.name}
                   </Link>
                 ))}
@@ -137,66 +165,68 @@ export function SideMenu({
             <Link
               href={`/${slug}/perfil`}
               onClick={onClose}
-              className="flex items-center gap-2 text-sm font-medium text-stone-700 hover:text-stone-900 transition-colors"
+              className={`flex items-center gap-2 text-sm font-medium transition-colors ${linkText}`}
             >
-              <User className="w-4 h-4 text-stone-400" />
+              <User className={`w-4 h-4 ${leadIcon}`} />
               Mi Perfil
             </Link>
           )}
 
           {isLoggedIn && (
             <div>
-              <p className="text-sm font-semibold text-stone-900">{userName}</p>
-              <p className="text-xs text-stone-400">{userEmail}</p>
+              <p className={`text-sm font-semibold ${nameText}`}>{userName}</p>
+              <p className={`text-xs ${faintText}`}>{userEmail}</p>
             </div>
           )}
 
           {isLoggedIn && (
             <div className="space-y-2">
-              <h3 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
+              <h3 className={`text-xs font-semibold uppercase tracking-wide ${sectionLabel}`}>
                 Historial
               </h3>
               {transactions.length > 0 ? (
-                <div className="divide-y divide-stone-100 border border-stone-100 rounded-lg overflow-hidden">
+                <div
+                  className={`divide-y rounded-lg overflow-hidden border ${dividerBorder}`}
+                >
                   {transactions.map((tx) => (
                     <div
                       key={tx.id}
                       className="flex items-center justify-between px-3 py-2 text-sm"
                     >
-                      <span className="text-stone-500 text-xs">
+                      <span className={`text-xs ${sectionLabel}`}>
                         {tx.claimed_at
                           ? new Date(tx.claimed_at).toLocaleDateString("es-AR")
                           : "—"}
                       </span>
-                      <span className="font-medium text-stone-900">
+                      <span className={`font-medium ${rowAmount}`}>
                         +{tx.amount.toLocaleString("es-AR")} pts
                       </span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-stone-400">Todavía no sumaste puntos.</p>
+                <p className={`text-xs ${faintText}`}>Todavía no sumaste puntos.</p>
               )}
             </div>
           )}
 
           {aboutText && (
             <div className="space-y-1.5">
-              <h3 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
+              <h3 className={`text-xs font-semibold uppercase tracking-wide ${sectionLabel}`}>
                 Acerca del negocio
               </h3>
-              <p className="text-sm text-stone-600 whitespace-pre-wrap">{aboutText}</p>
+              <p className={`text-sm whitespace-pre-wrap ${bodyText}`}>{aboutText}</p>
             </div>
           )}
 
           {(phoneNumber || whatsappNumber) && (
             <div className="space-y-1.5">
-              <h3 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
+              <h3 className={`text-xs font-semibold uppercase tracking-wide ${sectionLabel}`}>
                 Contacto
               </h3>
               {phoneNumber && (
-                <div className="flex items-center gap-2 text-sm text-stone-600">
-                  <Phone className="w-4 h-4 text-stone-400 shrink-0" />
+                <div className={`flex items-center gap-2 text-sm ${bodyText}`}>
+                  <Phone className={`w-4 h-4 ${leadIcon}`} />
                   {phoneNumber}
                 </div>
               )}
@@ -205,9 +235,9 @@ export function SideMenu({
                   href={`https://wa.me/${whatsappNumber.replace(/\D/g, "")}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-stone-600 hover:text-stone-900 transition-colors"
+                  className={`flex items-center gap-2 text-sm transition-colors ${linkTextMuted}`}
                 >
-                  <MessageCircle className="w-4 h-4 text-stone-400 shrink-0" />
+                  <MessageCircle className={`w-4 h-4 ${leadIcon}`} />
                   WhatsApp
                 </a>
               )}
@@ -216,7 +246,7 @@ export function SideMenu({
 
           {hasSocials && (
             <div className="space-y-1.5">
-              <h3 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
+              <h3 className={`text-xs font-semibold uppercase tracking-wide ${sectionLabel}`}>
                 Redes sociales
               </h3>
               <SocialLinks
@@ -232,13 +262,17 @@ export function SideMenu({
             <div className="space-y-1.5">
               <button
                 onClick={() => setShowTerms((v) => !v)}
-                className="flex items-center gap-2 text-xs font-semibold text-stone-500 uppercase tracking-wide hover:text-stone-700 transition-colors"
+                className={`flex items-center gap-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
+                  neonTheme
+                    ? "text-[#6b6965] hover:text-[#ccff00]"
+                    : "text-stone-500 hover:text-stone-700"
+                }`}
               >
-                <FileText className="w-3.5 h-3.5" />
+                <FileText className={`w-3.5 h-3.5 ${leadIconSm}`} />
                 Términos y condiciones
               </button>
               {showTerms && (
-                <p className="text-xs text-stone-500 whitespace-pre-wrap">{termsText}</p>
+                <p className={`text-xs whitespace-pre-wrap ${sectionLabel}`}>{termsText}</p>
               )}
             </div>
           )}
@@ -247,10 +281,12 @@ export function SideMenu({
             <button
               onClick={handleLogout}
               disabled={loggingOut}
-              className="flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 disabled:opacity-50 transition-colors pt-2 border-t border-stone-100 w-full"
-              style={{ color: primaryColor }}
+              className={`flex items-center gap-2 text-sm font-medium disabled:opacity-50 transition-colors pt-2 border-t w-full ${
+                neonTheme ? `${headerBorder} neon-menu-link` : "border-stone-100 text-stone-600 hover:text-stone-900"
+              }`}
+              style={neonTheme ? undefined : { color: primaryColor }}
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className={`w-4 h-4 ${leadIcon}`} />
               {loggingOut ? "Cerrando sesión..." : "Cerrar sesión"}
             </button>
           )}
