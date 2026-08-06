@@ -5,6 +5,9 @@ import { ClientHeader } from "./client-header";
 import { PointsBadge } from "./points-badge";
 import { CartProvider } from "./cart-context";
 import { WhatsAppButton } from "./whatsapp-button";
+import { HeroVideo } from "./hero-video";
+import { PromoBadge } from "./promo-badge";
+import { getGymLocations } from "./gym-data";
 
 export default async function TenantLayout({
   children,
@@ -45,6 +48,14 @@ export default async function TenantLayout({
   }
 
   const primary = org.primary_color ?? "#f59e0b";
+
+  // Mismo criterio que en page.tsx: el badge decorativo es específico del
+  // showroom de gimnasio (frases "Cross Funcional", "plan anual", etc.), así
+  // que solo aparece si esta org tiene datos gym_* cargados. getGymLocations
+  // está envuelta en cache(), así que esta llamada no duplica la query que
+  // hace page.tsx en el mismo request.
+  const gymLocations = await getGymLocations(org.id);
+  const hasGymFeatures = gymLocations.length > 0;
 
   const bodyStyle: React.CSSProperties = org.background_url
     ? {
@@ -97,25 +108,23 @@ export default async function TenantLayout({
         {org.banner_url ? (
           <div className="w-full h-48 sm:h-64 overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={org.banner_url}
-              alt={org.name}
-              className="w-full h-full object-cover"
-            />
+            <img src={org.banner_url} alt={org.name} className="w-full h-full object-cover" />
           </div>
         ) : (
           <div
             className="w-full h-48 sm:h-64 flex items-center justify-center"
             style={{ backgroundColor: primary }}
           >
-            <h1 className="text-3xl sm:text-4xl font-bold text-white drop-shadow">
-              {org.name}
-            </h1>
+            <h1 className="text-3xl sm:text-4xl font-bold text-white drop-shadow">{org.name}</h1>
           </div>
         )}
 
+        {/* Video: sección aparte debajo del banner, 4:3, autoplay muteado en loop */}
+        <HeroVideo videoUrl={org.hero_video_url} />
+
         {children}
 
+        {hasGymFeatures && <PromoBadge primaryColor={primary} />}
         <WhatsAppButton whatsappNumber={org.whatsapp_number} />
       </div>
     </CartProvider>

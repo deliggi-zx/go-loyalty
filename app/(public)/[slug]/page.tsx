@@ -1,8 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { getTenantOrg, getTenantUser } from "./data";
+import { getGymLocations, getGymClasses, getGymTestimonials } from "./gym-data";
 import { LoginForm } from "./login-form";
 import { Carousel } from "./carousel";
 import { SocialLinks } from "./social-links";
+import { GymLocationsSection } from "./gym-locations-section";
+import { GymClassesSection } from "./gym-classes-section";
+import { GymTestimonialsSection } from "./gym-testimonials-section";
 
 export default async function TenantPage({
   params,
@@ -25,6 +29,16 @@ export default async function TenantPage({
 
   const carouselItems = content?.filter((c) => c.type === "carousel") ?? [];
   const promoItems = content?.filter((c) => c.type === "promo") ?? [];
+
+  // Funcionalidad de gimnasio (Sedes, Clases, Comentarios): solo se muestra si
+  // esta organización tiene datos cargados en las tablas gym_*. Ninguna otra
+  // organización de Go Loyalty tiene filas ahí, así que no aparece para ellas.
+  const [gymLocations, gymClasses, gymTestimonials] = await Promise.all([
+    getGymLocations(org.id),
+    getGymClasses(org.id),
+    getGymTestimonials(org.id),
+  ]);
+  const hasGymFeatures = gymLocations.length > 0;
 
   const primary = org.primary_color ?? "#f59e0b";
 
@@ -60,6 +74,33 @@ export default async function TenantPage({
           </div>
         )}
       </div>
+
+      {/* Funcionalidad de gimnasio (Sedes, Clases, Comentarios) */}
+      {hasGymFeatures && (
+        <div className="max-w-5xl mx-auto px-4 pb-8 space-y-10">
+          <GymLocationsSection
+            locations={gymLocations}
+            primaryColor={primary}
+            bannerUrl={org.banner_url}
+            orgName={org.name}
+          />
+          <GymClassesSection
+            classes={gymClasses}
+            primaryColor={primary}
+            bannerUrl={org.banner_url}
+            orgName={org.name}
+          />
+          <GymTestimonialsSection
+            testimonials={gymTestimonials}
+            orgId={org.id}
+            slug={params.slug}
+            primaryColor={primary}
+            isLoggedIn={!!user}
+            backgroundUrl={org.banner_url}
+            orgName={org.name}
+          />
+        </div>
+      )}
 
       {/* Footer */}
       <div className="max-w-lg mx-auto px-4 pb-8 pt-2 space-y-4">
