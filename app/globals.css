@@ -7,3 +7,151 @@
     --radius: 0.5rem;
   }
 }
+
+/* ── Pestañas neón — solo Gym2 (org_id 08ff0a8d-07ee-44c3-afb2-1342226c2ae8) ──
+   Anatomía de "letrero de neón real": en reposo es el vidrio del tubo sin
+   encender (relleno sólido, sin texto); al hover/tap se "enciende" — placa
+   negra + núcleo blanco en el texto + halo verde-limón en 3 capas de blur. */
+.neon-tab {
+  --neon: #ccff00;
+  position: relative;
+  width: 52px;
+  height: 176px;
+  background: color-mix(in srgb, var(--neon) 55%, #101012 45%);
+  border: 1px solid color-mix(in srgb, var(--neon) 35%, #000 65%);
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  overflow: hidden;
+  transition: width 320ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 320ms ease,
+    border-color 320ms ease, background 320ms ease;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--neon) 30%, transparent),
+    inset 0 0 6px color-mix(in srgb, var(--neon) 20%, transparent);
+}
+.neon-tab:hover,
+.neon-tab:focus-visible,
+.neon-tab.is-open {
+  width: 310px;
+  outline: none;
+  background: linear-gradient(180deg, #141414, #050505);
+  border-color: var(--neon);
+  box-shadow: 0 0 6px var(--neon), 0 0 18px var(--neon),
+    0 0 38px color-mix(in srgb, var(--neon) 70%, transparent),
+    inset 0 0 10px color-mix(in srgb, var(--neon) 55%, transparent);
+}
+.neon-tab-glow {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    120% 100% at 0% 50%,
+    color-mix(in srgb, var(--neon) 20%, transparent),
+    transparent 70%
+  );
+}
+.neon-tab:hover .neon-tab-glow,
+.neon-tab:focus-visible .neon-tab-glow,
+.neon-tab.is-open .neon-tab-glow {
+  animation: neon-flicker 380ms steps(1) 1;
+  opacity: 1;
+}
+@keyframes neon-flicker {
+  0% { opacity: 0.35; }
+  8% { opacity: 1; }
+  12% { opacity: 0.45; }
+  20% { opacity: 1; }
+  28% { opacity: 0.55; }
+  36% { opacity: 1; }
+  100% { opacity: 1; }
+}
+.neon-tab-open {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 18px 24px 18px 22px;
+  opacity: 0;
+  transition: opacity 200ms ease 60ms;
+}
+.neon-tab:hover .neon-tab-open,
+.neon-tab:focus-visible .neon-tab-open,
+.neon-tab.is-open .neon-tab-open {
+  opacity: 1;
+}
+.neon-tab-open strong {
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 20px;
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-shadow: 0 0 2px #fff, 0 0 6px var(--neon),
+    0 0 16px color-mix(in srgb, var(--neon) 70%, transparent);
+}
+.neon-tab-open em {
+  font-style: normal;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #d8d6d2;
+}
+@media (prefers-reduced-motion: reduce) {
+  .neon-tab {
+    transition-duration: 0.01ms;
+  }
+  .neon-tab-glow {
+    animation: none !important;
+  }
+}
+
+/* ── Cartel diagonal con ticker promocional — solo Gym2 ──────────────────
+   Reemplaza al badge circular giratorio. Misma anatomía de neón, siempre
+   "encendido" (no reacciona a hover, es un cartel de vidriera). */
+.promo-ticker {
+  --neon: #ccff00;
+  position: absolute;
+  left: 28%;
+  right: -6%;
+  top: -3%;
+  height: 30px;
+  transform: rotate(9deg);
+  transform-origin: left center;
+  overflow: hidden;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #141414, #050505);
+  border-top: 1px solid color-mix(in srgb, var(--neon) 55%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--neon) 55%, transparent);
+  box-shadow: 0 0 6px var(--neon), 0 0 16px var(--neon),
+    0 0 34px color-mix(in srgb, var(--neon) 65%, transparent);
+}
+.promo-ticker-track {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  white-space: nowrap;
+  height: 100%;
+  padding: 0 20px;
+  width: max-content;
+  animation: promo-ticker-scroll 20s linear infinite;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  color: #fff;
+  text-shadow: 0 0 2px #fff, 0 0 7px var(--neon),
+    0 0 16px color-mix(in srgb, var(--neon) 70%, transparent);
+}
+.promo-ticker-dot {
+  color: var(--neon);
+  font-size: 9px;
+  text-shadow: 0 0 6px var(--neon);
+}
+@keyframes promo-ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .promo-ticker-track {
+    animation-duration: 120s;
+  }
+}

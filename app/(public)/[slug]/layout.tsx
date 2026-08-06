@@ -6,7 +6,6 @@ import { PointsBadge } from "./points-badge";
 import { CartProvider } from "./cart-context";
 import { WhatsAppButton } from "./whatsapp-button";
 import { HeroVideo } from "./hero-video";
-import { PromoBadge } from "./promo-badge";
 import { getGymLocations } from "./gym-data";
 
 export default async function TenantLayout({
@@ -49,11 +48,11 @@ export default async function TenantLayout({
 
   const primary = org.primary_color ?? "#f59e0b";
 
-  // Mismo criterio que en page.tsx: el badge decorativo es específico del
-  // showroom de gimnasio (frases "Cross Funcional", "plan anual", etc.), así
-  // que solo aparece si esta org tiene datos gym_* cargados. getGymLocations
-  // está envuelta en cache(), así que esta llamada no duplica la query que
-  // hace page.tsx en el mismo request.
+  // Mismo criterio que en page.tsx: las pestañas neón y el cartel diagonal
+  // del hero son específicos del showroom de gimnasio (frases "Cross
+  // Funcional", "plan anual", etc.), así que solo aparecen si esta org tiene
+  // datos gym_* cargados. getGymLocations está envuelta en cache(), así que
+  // esta llamada no duplica la query que hace page.tsx en el mismo request.
   const gymLocations = await getGymLocations(org.id);
   const hasGymFeatures = gymLocations.length > 0;
 
@@ -120,11 +119,10 @@ export default async function TenantLayout({
         )}
 
         {/* Video: sección aparte debajo del banner, 4:3, autoplay muteado en loop */}
-        <HeroVideo videoUrl={org.hero_video_url} />
+        <HeroVideo videoUrl={org.hero_video_url} showNeonOverlay={hasGymFeatures} />
 
         {children}
 
-        {hasGymFeatures && <PromoBadge primaryColor={primary} />}
         <WhatsAppButton whatsappNumber={org.whatsapp_number} />
       </div>
     </CartProvider>

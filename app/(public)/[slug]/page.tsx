@@ -4,6 +4,7 @@ import { getGymLocations, getGymClasses, getGymTestimonials } from "./gym-data";
 import { LoginForm } from "./login-form";
 import { Carousel } from "./carousel";
 import { SocialLinks } from "./social-links";
+import { GymAboutSection } from "./gym-about-section";
 import { GymLocationsSection } from "./gym-locations-section";
 import { GymClassesSection } from "./gym-classes-section";
 import { GymTestimonialsSection } from "./gym-testimonials-section";
@@ -75,21 +76,16 @@ export default async function TenantPage({
         )}
       </div>
 
-      {/* Funcionalidad de gimnasio (Sedes, Clases, Comentarios) */}
+      {/* Funcionalidad de gimnasio (Quiénes Somos, Sedes, Clases, Comentarios) */}
       {hasGymFeatures && (
         <div className="max-w-5xl mx-auto px-4 pb-8 space-y-10">
-          <GymLocationsSection
-            locations={gymLocations}
-            primaryColor={primary}
+          <GymAboutSection
+            aboutText={org.about_text}
             bannerUrl={org.banner_url}
             orgName={org.name}
           />
-          <GymClassesSection
-            classes={gymClasses}
-            primaryColor={primary}
-            bannerUrl={org.banner_url}
-            orgName={org.name}
-          />
+          <GymLocationsSection locations={gymLocations} primaryColor={primary} />
+          <GymClassesSection classes={gymClasses} primaryColor={primary} />
           <GymTestimonialsSection
             testimonials={gymTestimonials}
             orgId={org.id}
