@@ -48,12 +48,16 @@ export function GymClassesCarousel({ classes }: GymClassesCarouselProps) {
       onMouseLeave={() => (pausedRef.current = false)}
       onTouchStart={() => (pausedRef.current = true)}
       onTouchEnd={() => (pausedRef.current = false)}
-      // overflow-x-hidden fuerza overflow-y a "auto" (regla del spec de CSS:
-      // si un eje no es "visible" el otro deja de serlo también), lo que
-      // recorta el glow de las tarjetas al encenderse. El py-10 le da al
-      // halo (hasta 46px de blur) el margen que necesita para no cortarse,
-      // sin tocar el recorte horizontal que sí queremos para el auto-scroll.
-      className="flex gap-4 overflow-x-hidden py-10 -my-10"
+      // overflow-x-auto (antes overflow-x-hidden): en mobile real, asignar
+      // scrollLeft por JS sobre un contenedor con overflow:hidden no anima
+      // de forma confiable en todos los navegadores táctiles (funcionaba en
+      // desktop, no en el celular) — overflow-x:auto + no-scrollbar (clase
+      // en globals.css, oculta la barra nativa) es el patrón robusto para
+      // esto y de paso permite deslizar con el dedo. Igual que antes, un eje
+      // no-"visible" fuerza al otro a "auto", lo que recorta el glow de las
+      // tarjetas al encenderse; el py-10 le da al halo (hasta 46px de blur)
+      // el margen que necesita para no cortarse.
+      className="flex gap-4 overflow-x-auto no-scrollbar py-10 -my-10"
     >
       {classes.map((cls) => (
         <div key={cls.id} className="shrink-0 w-60">

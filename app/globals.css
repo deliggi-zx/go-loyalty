@@ -103,57 +103,110 @@
     animation: none !important;
   }
 }
+/* Mobile: las pestañas ocupaban toda la altura del video en bloques
+   gigantes — acá se achican a franjas angostas y bajas (mismo look, menos
+   lugar). Desktop (≥640px) sigue con el tamaño de arriba, sin cambios. */
+@media (max-width: 639px) {
+  .neon-tab {
+    width: 26px;
+    height: 46px;
+  }
+  .neon-tab:hover,
+  .neon-tab:focus-visible,
+  .neon-tab.is-open {
+    width: 168px;
+    height: 46px;
+  }
+  .neon-tab-open {
+    padding: 0 14px 0 12px;
+    justify-content: center;
+  }
+  .neon-tab-open strong {
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .neon-tab-open em {
+    display: none;
+  }
+}
 
-/* ── Cartel diagonal con ticker promocional — solo Gym2 ──────────────────
-   Reemplaza al badge circular giratorio. Misma anatomía de neón, siempre
-   "encendido" (no reacciona a hover, es un cartel de vidriera). */
-.promo-ticker {
+/* ── Barras horizontales con ticker promocional — solo Gym2 ───────────────
+   Reemplazan al cartel diagonal: una ancla al borde superior del video, la
+   otra al inferior. Ancho completo, mismo criterio de "siempre encendido"
+   que tenía la diagonal (cartel de vidriera, no reacciona a hover). Al ser
+   horizontales y ancladas a los bordes del propio contenedor (sin bleed
+   diagonal), no tienen el problema de recorte/posicionamiento que tenía la
+   diagonal en distintos anchos de pantalla. */
+.promo-bar {
   --neon: #ccff00;
   position: absolute;
-  left: 28%;
-  right: -6%;
-  top: -3%;
-  height: 30px;
-  transform: rotate(9deg);
-  transform-origin: left center;
+  left: 0;
+  right: 0;
+  height: 28px;
   overflow: hidden;
-  border-radius: 4px;
+  z-index: 15;
   background: linear-gradient(180deg, #141414, #050505);
-  border-top: 1px solid color-mix(in srgb, var(--neon) 55%, transparent);
+}
+.promo-bar-top {
+  top: 0;
   border-bottom: 1px solid color-mix(in srgb, var(--neon) 55%, transparent);
   box-shadow: 0 0 6px var(--neon), 0 0 16px var(--neon),
     0 0 34px color-mix(in srgb, var(--neon) 65%, transparent);
 }
-.promo-ticker-track {
+.promo-bar-bottom {
+  bottom: 0;
+  border-top: 1px solid color-mix(in srgb, var(--neon) 55%, transparent);
+  box-shadow: 0 0 6px var(--neon), 0 0 16px var(--neon),
+    0 0 34px color-mix(in srgb, var(--neon) 65%, transparent);
+}
+.promo-bar-track {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 22px;
   white-space: nowrap;
   height: 100%;
-  padding: 0 20px;
+  padding: 0 16px;
   width: max-content;
-  animation: promo-ticker-scroll 20s linear infinite;
+  animation: promo-bar-scroll 16s linear infinite;
   font-weight: 900;
   text-transform: uppercase;
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 0.03em;
   color: #fff;
   text-shadow: 0 0 2px #fff, 0 0 7px var(--neon),
     0 0 16px color-mix(in srgb, var(--neon) 70%, transparent);
 }
-.promo-ticker-dot {
+.promo-bar-dot {
   color: var(--neon);
-  font-size: 9px;
+  font-size: 8px;
   text-shadow: 0 0 6px var(--neon);
 }
-@keyframes promo-ticker-scroll {
+@keyframes promo-bar-scroll {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .promo-ticker-track {
-    animation-duration: 120s;
+  .promo-bar-track {
+    animation-duration: 100s;
   }
+}
+@media (min-width: 640px) {
+  .promo-bar {
+    height: 30px;
+  }
+  .promo-bar-track {
+    font-size: 12px;
+    gap: 26px;
+  }
+}
+
+/* Barra horizontal para no mostrar la scrollbar nativa en los carruseles
+   táctiles (clases en mobile, sedes en mobile) sin perder el scroll real. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 /* ── Tarjetas de sede — solo Gym2 ─────────────────────────────────────────
