@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Menu, ScanLine, ShoppingCart } from "lucide-react";
+import { Menu, ScanLine, ShoppingCart, User } from "lucide-react";
 import { SideMenu, type SideMenuProps } from "./side-menu";
 import { CartPanel } from "./cart-panel";
+import { LoginModal } from "./login-modal";
 import { useCart } from "./cart-context";
 
 interface ClientHeaderProps {
@@ -12,6 +13,10 @@ interface ClientHeaderProps {
   userDisplayName: string | null;
   menuProps: Omit<SideMenuProps, "isOpen" | "onClose">;
   catalogType?: string | null;
+  // Ícono de login en el header en vez del recuadro en el cuerpo — hoy
+  // solo para Gym2 (ver layout.tsx), el resto de las orgs sigue con el
+  // recuadro de siempre y este prop queda en false.
+  showLoginIcon?: boolean;
 }
 
 export function ClientHeader({
@@ -20,9 +25,11 @@ export function ClientHeader({
   userDisplayName,
   menuProps,
   catalogType,
+  showLoginIcon = false,
 }: ClientHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   const { totalQuantity } = useCart();
   const showCart = catalogType === "products";
 
@@ -77,6 +84,15 @@ export function ClientHeader({
           >
             <ScanLine className="w-5 h-5" />
           </button>
+          {showLoginIcon && (
+            <button
+              onClick={() => setLoginOpen(true)}
+              aria-label="Iniciar sesión"
+              className="p-2 text-white"
+            >
+              <User className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </header>
 
@@ -85,6 +101,13 @@ export function ClientHeader({
         <CartPanel
           isOpen={cartOpen}
           onClose={() => setCartOpen(false)}
+          primaryColor={primaryColor}
+        />
+      )}
+      {showLoginIcon && (
+        <LoginModal
+          isOpen={loginOpen}
+          onClose={() => setLoginOpen(false)}
           primaryColor={primaryColor}
         />
       )}

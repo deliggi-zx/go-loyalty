@@ -75,6 +75,7 @@ export default async function TenantLayout({
           primaryColor={primary}
           userDisplayName={user ? userDisplayName : null}
           catalogType={org.catalog_type}
+          showLoginIcon={hasGymFeatures && !user}
           menuProps={{
             slug: params.slug,
             orgName: org.name,

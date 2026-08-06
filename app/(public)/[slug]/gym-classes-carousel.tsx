@@ -8,10 +8,9 @@ const SPEED_PX_PER_FRAME = 0.6;
 
 interface GymClassesCarouselProps {
   classes: GymClassData[];
-  primaryColor: string;
 }
 
-export function GymClassesCarousel({ classes, primaryColor }: GymClassesCarouselProps) {
+export function GymClassesCarousel({ classes }: GymClassesCarouselProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const directionRef = useRef<1 | -1>(1);
   const pausedRef = useRef(false);
@@ -49,11 +48,16 @@ export function GymClassesCarousel({ classes, primaryColor }: GymClassesCarousel
       onMouseLeave={() => (pausedRef.current = false)}
       onTouchStart={() => (pausedRef.current = true)}
       onTouchEnd={() => (pausedRef.current = false)}
-      className="flex gap-4 overflow-x-hidden pb-1"
+      // overflow-x-hidden fuerza overflow-y a "auto" (regla del spec de CSS:
+      // si un eje no es "visible" el otro deja de serlo también), lo que
+      // recorta el glow de las tarjetas al encenderse. El py-10 le da al
+      // halo (hasta 46px de blur) el margen que necesita para no cortarse,
+      // sin tocar el recorte horizontal que sí queremos para el auto-scroll.
+      className="flex gap-4 overflow-x-hidden py-10 -my-10"
     >
       {classes.map((cls) => (
         <div key={cls.id} className="shrink-0 w-60">
-          <GymClassCard cls={cls} primaryColor={primaryColor} />
+          <GymClassCard cls={cls} />
         </div>
       ))}
     </div>

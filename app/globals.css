@@ -155,3 +155,252 @@
     animation-duration: 120s;
   }
 }
+
+/* ── Tarjetas de sede — solo Gym2 ─────────────────────────────────────────
+   Mismo lenguaje que las pestañas/cartel diagonal: apagada en reposo (fondo
+   casi negro, sin glow), se "enciende" al hover/focus/tap — recién ahí se
+   revela el mapa mockup + el botón de Google Maps (antes no ocupan espacio,
+   no solo están ocultos con opacity). */
+.location-card {
+  --neon: #ccff00;
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0d0d0e;
+  border: 1px solid #26262a;
+  cursor: pointer;
+  transition: border-color 360ms ease, box-shadow 360ms ease;
+}
+.location-card:hover,
+.location-card:focus-within,
+.location-card.is-open {
+  outline: none;
+  border-color: var(--neon);
+  box-shadow: 0 0 6px var(--neon), 0 0 20px var(--neon),
+    0 0 46px color-mix(in srgb, var(--neon) 55%, transparent);
+}
+.location-card-photo {
+  position: relative;
+  height: 170px;
+  overflow: hidden;
+}
+.location-card-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: saturate(0.9);
+}
+.location-card-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.55) 100%);
+  transition: opacity 360ms ease;
+}
+.location-card:hover .location-card-photo::after,
+.location-card:focus-within .location-card-photo::after,
+.location-card.is-open .location-card-photo::after {
+  opacity: 0.45;
+}
+.location-card-photo-label {
+  position: absolute;
+  bottom: 10px;
+  left: 14px;
+  right: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 14px;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+.location-card-body {
+  padding: 16px 16px 18px;
+}
+.location-card-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: #9b9995;
+  margin-bottom: 7px;
+  transition: color 360ms ease;
+}
+.location-card:hover .location-card-row,
+.location-card:focus-within .location-card-row,
+.location-card.is-open .location-card-row {
+  color: #d8d6d2;
+}
+.location-card-row svg {
+  transition: filter 360ms ease;
+}
+.location-card:hover .location-card-row svg,
+.location-card:focus-within .location-card-row svg,
+.location-card.is-open .location-card-row svg {
+  stroke: var(--neon);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--neon) 70%, transparent));
+}
+.location-card-reveal {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin-top: 0;
+  transition: max-height 380ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 280ms ease,
+    margin-top 380ms ease;
+}
+.location-card:hover .location-card-reveal,
+.location-card:focus-within .location-card-reveal,
+.location-card.is-open .location-card-reveal {
+  max-height: 220px;
+  opacity: 1;
+  margin-top: 12px;
+}
+.location-map-mock {
+  height: 74px;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  background: #0a0a0b;
+  border: 1px solid #26262a;
+  margin-bottom: 10px;
+}
+.location-map-pin {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -85%);
+}
+.location-maps-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 9px 0;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--neon) 8%, transparent);
+  border: 1px solid var(--neon);
+  color: var(--neon);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--neon) 60%, transparent);
+  box-shadow: inset 0 0 10px color-mix(in srgb, var(--neon) 15%, transparent),
+    0 0 10px color-mix(in srgb, var(--neon) 35%, transparent);
+  text-decoration: none;
+  transition: background 200ms ease;
+}
+.location-maps-btn:hover {
+  background: color-mix(in srgb, var(--neon) 16%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .location-card,
+  .location-card-reveal,
+  .location-card-photo::after {
+    transition-duration: 0.01ms;
+  }
+}
+
+/* ── Tarjetas de clase (carrusel) — solo Gym2 ─────────────────────────────
+   Mismo lenguaje que las tarjetas de sede: apagada en reposo, se "enciende"
+   con el halo #ccff00 al hover/focus/tap. A diferencia de las sedes, acá no
+   hay nada que revelar — todo el contenido (foto, horarios, botón) ya está
+   visible siempre; lo único que cambia es el borde/glow/color. */
+.gym-class-card {
+  --neon: #ccff00;
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0d0d0e;
+  border: 1px solid #26262a;
+  cursor: pointer;
+  transition: border-color 360ms ease, box-shadow 360ms ease;
+}
+.gym-class-card:hover,
+.gym-class-card:focus-within,
+.gym-class-card.is-open {
+  outline: none;
+  border-color: var(--neon);
+  box-shadow: 0 0 6px var(--neon), 0 0 20px var(--neon),
+    0 0 46px color-mix(in srgb, var(--neon) 55%, transparent);
+}
+.gym-class-card-photo {
+  position: relative;
+  overflow: hidden;
+}
+.gym-class-card-photo img {
+  filter: saturate(0.9);
+}
+.gym-class-card-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.5) 100%);
+  transition: opacity 360ms ease;
+}
+.gym-class-card:hover .gym-class-card-photo::after,
+.gym-class-card:focus-within .gym-class-card-photo::after,
+.gym-class-card.is-open .gym-class-card-photo::after {
+  opacity: 0.4;
+}
+.gym-class-card-category {
+  color: color-mix(in srgb, var(--neon) 65%, #9b9995 35%);
+  transition: color 360ms ease, text-shadow 360ms ease;
+}
+.gym-class-card:hover .gym-class-card-category,
+.gym-class-card:focus-within .gym-class-card-category,
+.gym-class-card.is-open .gym-class-card-category {
+  color: var(--neon);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--neon) 60%, transparent);
+}
+.gym-class-card-name {
+  color: #f2f1ee;
+}
+.gym-class-card-schedule {
+  color: #9b9995;
+  transition: color 360ms ease;
+}
+.gym-class-card:hover .gym-class-card-schedule,
+.gym-class-card:focus-within .gym-class-card-schedule,
+.gym-class-card.is-open .gym-class-card-schedule {
+  color: #d8d6d2;
+}
+.gym-class-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 9px 0;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--neon) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--neon) 35%, transparent);
+  color: color-mix(in srgb, var(--neon) 65%, #9b9995 35%);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  transition: border-color 360ms ease, color 360ms ease, box-shadow 360ms ease,
+    background 360ms ease, text-shadow 360ms ease;
+}
+.gym-class-card:hover .gym-class-btn,
+.gym-class-card:focus-within .gym-class-btn,
+.gym-class-card.is-open .gym-class-btn {
+  background: color-mix(in srgb, var(--neon) 8%, transparent);
+  border-color: var(--neon);
+  color: var(--neon);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--neon) 60%, transparent);
+  box-shadow: inset 0 0 10px color-mix(in srgb, var(--neon) 15%, transparent),
+    0 0 10px color-mix(in srgb, var(--neon) 35%, transparent);
+}
+.gym-class-btn:hover {
+  background: color-mix(in srgb, var(--neon) 16%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .gym-class-card,
+  .gym-class-card-photo::after,
+  .gym-class-btn {
+    transition-duration: 0.01ms;
+  }
+}

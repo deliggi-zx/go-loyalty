@@ -3,17 +3,16 @@ import type { GymClassData } from "./gym-data";
 
 interface GymClassesSectionProps {
   classes: GymClassData[];
-  primaryColor: string;
 }
 
-export function GymClassesSection({ classes, primaryColor }: GymClassesSectionProps) {
+export function GymClassesSection({ classes }: GymClassesSectionProps) {
   if (classes.length === 0) return null;
 
   return (
     <section id="clases" className="space-y-4">
       <h2 className="text-xl font-bold text-stone-900">Nuestras Clases</h2>
 
-      <GymClassesCarousel classes={classes} primaryColor={primaryColor} />
+      <GymClassesCarousel classes={classes} />
     </section>
   );
 }

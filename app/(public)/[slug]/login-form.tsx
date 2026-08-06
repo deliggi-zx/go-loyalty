@@ -6,9 +6,14 @@ import { createClient } from "@/lib/supabase/client";
 
 interface LoginFormProps {
   primaryColor: string;
+  // "card" (default): recuadro con fondo/borde/sombra propios, para vivir
+  // suelto en el cuerpo de la página (comportamiento de siempre).
+  // "bare": sin chrome propio, para vivir dentro de un contenedor que ya
+  // aporta el fondo/sombra (ej. el modal de login del ícono del header).
+  variant?: "card" | "bare";
 }
 
-export function LoginForm({ primaryColor }: LoginFormProps) {
+export function LoginForm({ primaryColor, variant = "card" }: LoginFormProps) {
   const supabase = createClient();
   const router = useRouter();
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -47,9 +52,18 @@ export function LoginForm({ primaryColor }: LoginFormProps) {
     setLoading(false);
   }
 
+  const wrapperClass =
+    variant === "card"
+      ? "bg-white rounded-2xl shadow-sm border border-stone-100 p-6 space-y-4"
+      : "space-y-4";
+  const successWrapperClass =
+    variant === "card"
+      ? "bg-white rounded-2xl shadow-sm border border-stone-100 p-6 text-center space-y-3"
+      : "text-center space-y-3";
+
   if (registered) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm border border-stone-100 p-6 text-center space-y-3">
+      <div className={successWrapperClass}>
         <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mx-auto">
           <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -71,7 +85,7 @@ export function LoginForm({ primaryColor }: LoginFormProps) {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-stone-100 p-6 space-y-4">
+    <div className={wrapperClass}>
       <div>
         <p className="text-xs font-medium text-stone-400 uppercase tracking-wide">
           {mode === "login" ? "Iniciar sesión" : "Crear cuenta"}

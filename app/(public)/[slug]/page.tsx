@@ -45,21 +45,43 @@ export default async function TenantPage({
 
   return (
     <>
-      {/* Login (solo si no hay sesión; si hay sesión, el badge de puntos ya se muestra en el layout) */}
-      {!user && (
+      {/* Login (solo si no hay sesión; si hay sesión, el badge de puntos ya se muestra en el layout).
+          Gym2 no usa este recuadro: ahí el login se abre desde el ícono de
+          usuario del header (ver hasGymFeatures + showLoginIcon en layout.tsx). */}
+      {!user && !hasGymFeatures && (
         <div className="max-w-lg mx-auto px-4 pt-4">
           <LoginForm primaryColor={primary} />
         </div>
       )}
 
+      {/* Quiénes Somos: para Gym2 sube por encima del carrusel principal
+          (antes vivía junto a Sedes/Clases, más abajo). */}
+      {hasGymFeatures && (
+        <div className="max-w-5xl mx-auto px-4 pt-6">
+          <GymAboutSection
+            aboutText={org.about_text}
+            bannerUrl={org.banner_url}
+            orgName={org.name}
+          />
+        </div>
+      )}
+
       {/* Content */}
-      <div className="max-w-lg mx-auto px-4 py-8 space-y-6">
-        {/* Carousel principal */}
-        {carouselItems.length > 0 && <Carousel items={carouselItems} />}
+      <div className="px-4 py-8 space-y-6">
+        {/* Carousel principal — en Gym2 usa un contenedor más ancho para
+            aprovechar mejor las pantallas de escritorio; el resto de las
+            orgs sigue con el ancho de siempre. El aspect-ratio 16:7 del
+            carrusel (carousel.tsx) no cambia, así que en mobile se ve igual
+            que antes: solo escala con el ancho disponible de la pantalla. */}
+        {carouselItems.length > 0 && (
+          <div className={hasGymFeatures ? "max-w-5xl mx-auto" : "max-w-lg mx-auto"}>
+            <Carousel items={carouselItems} />
+          </div>
+        )}
 
         {/* Promos, en columna */}
         {promoItems.length > 0 && (
-          <div className="space-y-4">
+          <div className="max-w-lg mx-auto space-y-4">
             {promoItems.map(
               (item) =>
                 item.image_url && (
@@ -76,16 +98,11 @@ export default async function TenantPage({
         )}
       </div>
 
-      {/* Funcionalidad de gimnasio (Quiénes Somos, Sedes, Clases, Comentarios) */}
+      {/* Funcionalidad de gimnasio (Sedes, Clases, Comentarios) */}
       {hasGymFeatures && (
         <div className="max-w-5xl mx-auto px-4 pb-8 space-y-10">
-          <GymAboutSection
-            aboutText={org.about_text}
-            bannerUrl={org.banner_url}
-            orgName={org.name}
-          />
-          <GymLocationsSection locations={gymLocations} primaryColor={primary} />
-          <GymClassesSection classes={gymClasses} primaryColor={primary} />
+          <GymLocationsSection locations={gymLocations} />
+          <GymClassesSection classes={gymClasses} />
           <GymTestimonialsSection
             testimonials={gymTestimonials}
             orgId={org.id}
