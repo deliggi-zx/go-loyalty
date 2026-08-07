@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
+import { X, CheckCircle2, UserPlus } from "lucide-react";
 import type { GymLocation, GymClassData } from "./gym-data";
 
 interface GymTrainingModalProps {
@@ -48,15 +48,20 @@ function sectionLabel(text: string) {
   );
 }
 
-// Fase 2 del showroom de entrenamiento de Gym2: modal de selección y
-// "reserva" de clase (cosmético — no escribe nada en base de datos). Se abre
-// desde cualquiera de las 3 tarjetas de gym-profile-header.tsx; las 3 llevan
-// acá, no hay diferencia funcional entre gym/casa/aire libre en esta fase.
+// Fases 2 y 3 del showroom de entrenamiento de Gym2: selección y "reserva"
+// de clase, y su confirmación — todo cosmético, no escribe nada en base de
+// datos. Se abre desde cualquiera de las 3 tarjetas de
+// gym-profile-header.tsx; las 3 llevan acá, no hay diferencia funcional
+// entre gym/casa/aire libre en esta fase. Al cerrar el modal se desmonta
+// (ver showBooking en gym-profile-header.tsx), así que no hace falta
+// resetear nada a mano: la próxima vez que se abre arranca de cero solo.
 export function GymTrainingModal({ modeLabel, locations, classes, onClose }: GymTrainingModalProps) {
   const [locationId, setLocationId] = useState<string | null>(null);
   const [bandId, setBandId] = useState<BandId | null>(null);
   const [time, setTime] = useState<string | null>(null);
   const [classId, setClassId] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
+  const [inviteSent, setInviteSent] = useState(false);
 
   const selectedBand = TIME_BANDS.find((b) => b.id === bandId);
   const selectedLocation = locations.find((l) => l.id === locationId);
@@ -67,6 +72,12 @@ export function GymTrainingModal({ modeLabel, locations, classes, onClose }: Gym
     setBandId(id);
     setTime(null); // la franja cambió: el horario elegido antes ya no aplica
   }
+
+  // Fecha decorativa para el resumen de la reserva — "Hoy, <fecha actual>".
+  // Se calcula al tocar "Reservar clase", no en cada render.
+  const [today] = useState(() =>
+    new Date().toLocaleDateString("es-AR", { day: "numeric", month: "long" })
+  );
 
   return (
     <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center">
@@ -82,6 +93,81 @@ export function GymTrainingModal({ modeLabel, locations, classes, onClose }: Gym
         </button>
 
         <div className="p-5 space-y-6">
+        {confirmed && selectedLocation && selectedBand && selectedClass ? (
+          <div className="space-y-6 text-center">
+            <div className="space-y-2">
+              <CheckCircle2 className="w-12 h-12 mx-auto neon-icon" />
+              <h2 className="text-xl font-bold text-white">¡Reserva confirmada!</h2>
+              <p className="text-xs text-[#9b9995]">vía {modeLabel}</p>
+            </div>
+
+            <div className="space-y-2.5 text-left bg-[#141416] border border-[#26262a] rounded-2xl p-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-[#6b6965]">Sede</span>
+                <span className="font-semibold text-white">
+                  {shortLocationName(selectedLocation.name)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-[#6b6965]">Día</span>
+                <span className="font-semibold text-white">Hoy, {today}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-[#6b6965]">Horario</span>
+                <span className="font-semibold text-white">
+                  {selectedBand.label} {time}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-[#6b6965]">Clase</span>
+                <span className="font-semibold text-white">{selectedClass.name}</span>
+              </div>
+
+              {(selectedClass.category || selectedClass.intensity) && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {selectedClass.category && (
+                    <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wide border border-[#ccff00]/40 bg-[#ccff00]/10 text-[#ccff00]">
+                      {selectedClass.category}
+                    </span>
+                  )}
+                  {selectedClass.intensity && (
+                    <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wide border border-[#ccff00]/40 bg-[#ccff00]/10 text-[#ccff00]">
+                      Intensidad {selectedClass.intensity}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              {/* Cosmético: no comparte nada real todavía (sin WhatsApp, sin
+                  link) — la integración real queda para una fase futura si
+                  se pide. */}
+              <button
+                type="button"
+                onClick={() => setInviteSent(true)}
+                disabled={inviteSent}
+                className={`w-full py-3 rounded-lg text-sm font-semibold uppercase tracking-wide border transition-colors flex items-center justify-center gap-2 ${
+                  inviteSent
+                    ? "border-[#26262a] text-[#6b6965]"
+                    : "bg-[#ccff00]/10 border-[#ccff00] text-[#ccff00]"
+                }`}
+              >
+                <UserPlus className="w-4 h-4" />
+                {inviteSent ? "¡Invitación enviada!" : "Invitar a un amigo a esta clase"}
+              </button>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full py-3 rounded-lg text-sm font-semibold uppercase tracking-wide text-[#d8d6d2] hover:text-[#ccff00] transition-colors"
+              >
+                Listo
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
           <div>
             <h2 className="text-lg font-semibold text-white">Reservá tu clase</h2>
             <p className="text-xs text-[#9b9995]">vía {modeLabel}</p>
@@ -188,6 +274,7 @@ export function GymTrainingModal({ modeLabel, locations, classes, onClose }: Gym
             <button
               type="button"
               disabled={!isComplete}
+              onClick={() => setConfirmed(true)}
               className={`w-full py-3 rounded-lg text-sm font-semibold uppercase tracking-wide border transition-colors ${
                 isComplete
                   ? "bg-[#ccff00]/10 border-[#ccff00] text-[#ccff00]"
@@ -196,10 +283,9 @@ export function GymTrainingModal({ modeLabel, locations, classes, onClose }: Gym
             >
               Reservar clase
             </button>
-            <p className="text-[11px] text-[#6b6965] text-center">
-              La confirmación de la reserva llega en la próxima fase.
-            </p>
           </div>
+          </>
+        )}
         </div>
       </div>
     </div>
