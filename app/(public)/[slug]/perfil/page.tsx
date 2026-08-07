@@ -9,6 +9,8 @@ import { GymProfileHeader } from "../gym-profile-header";
 import { GymQrAccess } from "../gym-qr-access";
 import { GymWorkoutPlan } from "../gym-workout-plan";
 import { GymGoalPicker } from "../gym-goal-picker";
+import { GymFeaturedBanner } from "../gym-featured-banner";
+import { GymRecommendedPopup } from "../gym-recommended-popup";
 
 export default async function PerfilPage({
   params,
@@ -72,6 +74,12 @@ export default async function PerfilPage({
       >
         ‹ Volver
       </Link>
+
+      {hasGymFeatures && (
+        <GymFeaturedBanner photoUrl={gymLocations[0]?.photo_url ?? null} />
+      )}
+
+      {hasGymFeatures && <GymRecommendedPopup />}
 
       {hasGymFeatures && (
         <GymProfileHeader
