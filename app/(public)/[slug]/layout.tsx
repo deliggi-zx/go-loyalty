@@ -95,7 +95,6 @@ export default async function TenantLayout({
             primaryColor: primary,
             catalogType: org.catalog_type,
             productCategories,
-            priceListLabel: hasGymFeatures ? "Planes" : undefined,
           }}
         />
 

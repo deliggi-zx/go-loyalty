@@ -6,6 +6,7 @@ import Link from "next/link";
 import { X, Phone, MessageCircle, LogOut, FileText, Receipt, User, Tag } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { SocialLinks } from "./social-links";
+import { GymSideMenuItems } from "./gym-side-menu-items";
 
 export interface SideMenuTransaction {
   id: string;
@@ -39,11 +40,11 @@ export interface SideMenuProps {
   catalogType?: string | null;
   productCategories?: SideMenuCategory[];
   // Estilo neón oscuro — hoy solo Gym2 (ver hasGymFeatures en layout.tsx).
-  // El resto de las orgs sigue con el menú claro de siempre.
+  // Cuando es true, el body del drawer lo arma GymSideMenuItems en vez del
+  // menú claro de siempre; este prop deja de leerse en ese caso.
   neonTheme?: boolean;
-  // En Gym2 ese ítem del menú lleva al catálogo de productos (no a price
-  // flyers), así que se renombra a "Planes" en vez de "Lista de precios".
-  // El resto de las orgs sigue con el label de siempre.
+  // Label del ítem de catálogo/precios en el menú claro de siempre (el de
+  // GymSideMenuItems no lo usa: ese tiene "Planes" y "Tienda" fijos).
   priceListLabel?: string;
 }
 
@@ -131,6 +132,25 @@ export function SideMenu({
         </div>
 
         <div className="p-5 space-y-6">
+          {neonTheme ? (
+            <GymSideMenuItems
+              slug={slug}
+              isLoggedIn={isLoggedIn}
+              userName={userName}
+              userEmail={userEmail}
+              whatsappNumber={whatsappNumber}
+              facebookUrl={facebookUrl}
+              instagramUrl={instagramUrl}
+              twitterUrl={twitterUrl}
+              youtubeUrl={youtubeUrl}
+              catalogType={catalogType}
+              productCategories={productCategories}
+              onClose={onClose}
+              onLogout={handleLogout}
+              loggingOut={loggingOut}
+            />
+          ) : (
+            <>
           <Link
             href={`/${slug}/precios`}
             onClick={onClose}
@@ -289,6 +309,8 @@ export function SideMenu({
               <LogOut className={`w-4 h-4 ${leadIcon}`} />
               {loggingOut ? "Cerrando sesión..." : "Cerrar sesión"}
             </button>
+          )}
+            </>
           )}
         </div>
       </div>
