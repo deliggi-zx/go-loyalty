@@ -8,6 +8,7 @@ import { GymAboutSection } from "./gym-about-section";
 import { GymLocationsSection } from "./gym-locations-section";
 import { GymClassesSection } from "./gym-classes-section";
 import { GymTestimonialsSection } from "./gym-testimonials-section";
+import { GymPlansSection } from "./gym-plans-section";
 
 export default async function TenantPage({
   params,
@@ -98,7 +99,7 @@ export default async function TenantPage({
         )}
       </div>
 
-      {/* Funcionalidad de gimnasio (Sedes, Clases, Comentarios) */}
+      {/* Funcionalidad de gimnasio (Sedes, Clases, Comentarios, Planes) */}
       {hasGymFeatures && (
         <div className="max-w-5xl mx-auto px-4 pb-8 space-y-10">
           <GymLocationsSection locations={gymLocations} />
@@ -112,6 +113,7 @@ export default async function TenantPage({
             backgroundUrl={org.banner_url}
             orgName={org.name}
           />
+          <GymPlansSection />
         </div>
       )}
 

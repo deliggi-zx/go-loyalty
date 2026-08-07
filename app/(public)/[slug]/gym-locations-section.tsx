@@ -9,7 +9,7 @@ export function GymLocationsSection({ locations }: GymLocationsSectionProps) {
   if (locations.length === 0) return null;
 
   return (
-    <section className="space-y-4">
+    <section id="sedes" className="space-y-4">
       <h2 className="text-xl font-bold text-stone-900">Nuestras Sedes</h2>
 
       {/* Mobile: carrusel horizontal deslizable (con 8 sedes, apiladas

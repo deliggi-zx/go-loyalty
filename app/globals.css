@@ -129,6 +129,34 @@
     display: none;
   }
 }
+/* Tablet/laptop angosto (640–1023px): con las 4 pestañas, el tamaño de
+   desktop (176px de alto c/u) ya no entra dentro del video 4:3 en este
+   rango y el contenedor las recorta (overflow-hidden). Tamaño intermedio
+   para que las 4 quepan sin romper el layout; desktop (≥1024px) sigue
+   con el tamaño de siempre. */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .neon-tab {
+    width: 38px;
+    height: 100px;
+  }
+  .neon-tab:hover,
+  .neon-tab:focus-visible,
+  .neon-tab.is-open {
+    width: 230px;
+    height: 100px;
+  }
+  .neon-tab-open {
+    padding: 0 16px 0 14px;
+    justify-content: center;
+    gap: 4px;
+  }
+  .neon-tab-open strong {
+    font-size: 15px;
+  }
+  .neon-tab-open em {
+    font-size: 12px;
+  }
+}
 
 /* ── Barras horizontales con ticker promocional — solo Gym2 ───────────────
    Reemplazan al cartel diagonal: una ancla al borde superior del video, la
@@ -454,6 +482,77 @@
   .gym-class-card,
   .gym-class-card-photo::after,
   .gym-class-btn {
+    transition-duration: 0.01ms;
+  }
+}
+
+/* ── Tarjetas de plan (sección Planes) — solo Gym2 ────────────────────────
+   Mismo lenguaje que las tarjetas de sede/clase: apagada en reposo, se
+   "enciende" con el halo #ccff00 al hover/focus/tap. Reutiliza el botón
+   .gym-class-btn (mismo patrón "Anotarme" → confirmación) agregando acá
+   las reglas de encendido con .gym-plan-card como ancestro. */
+.gym-plan-card {
+  --neon: #ccff00;
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0d0d0e;
+  border: 1px solid #26262a;
+  cursor: pointer;
+  transition: border-color 360ms ease, box-shadow 360ms ease;
+}
+.gym-plan-card:hover,
+.gym-plan-card:focus-within,
+.gym-plan-card.is-open {
+  outline: none;
+  border-color: var(--neon);
+  box-shadow: 0 0 6px var(--neon), 0 0 20px var(--neon),
+    0 0 46px color-mix(in srgb, var(--neon) 55%, transparent);
+}
+.gym-plan-card:hover .gym-class-btn,
+.gym-plan-card:focus-within .gym-class-btn,
+.gym-plan-card.is-open .gym-class-btn {
+  background: color-mix(in srgb, var(--neon) 8%, transparent);
+  border-color: var(--neon);
+  color: var(--neon);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--neon) 60%, transparent);
+  box-shadow: inset 0 0 10px color-mix(in srgb, var(--neon) 15%, transparent),
+    0 0 10px color-mix(in srgb, var(--neon) 35%, transparent);
+}
+/* La tarjeta destacada ("mejor precio") ya se ve tibiamente encendida en
+   reposo, para que resalte sobre las otras dos sin necesidad de hover. */
+.gym-plan-card-featured {
+  border-color: color-mix(in srgb, var(--neon) 45%, #26262a 55%);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--neon) 20%, transparent);
+}
+.gym-plan-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 1;
+  background: #ccff00;
+  color: #0d0d0e;
+  font-weight: 900;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  box-shadow: 0 0 10px color-mix(in srgb, #ccff00 70%, transparent);
+}
+.gym-plan-name {
+  color: #f2f1ee;
+}
+.gym-plan-price {
+  color: #ccff00;
+  text-shadow: 0 0 10px color-mix(in srgb, #ccff00 55%, transparent);
+}
+.gym-plan-check {
+  color: #ccff00;
+  filter: drop-shadow(0 0 3px color-mix(in srgb, #ccff00 60%, transparent));
+}
+@media (prefers-reduced-motion: reduce) {
+  .gym-plan-card {
     transition-duration: 0.01ms;
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 interface NeonTabConfig {
   id: string;
@@ -17,6 +17,12 @@ const TABS: NeonTabConfig[] = [
     target: "quienes-somos",
   },
   {
+    id: "sedes",
+    title: "Sucursales",
+    blurb: "Encontrá la sede más cercana a vos.",
+    target: "sedes",
+  },
+  {
     id: "clases",
     title: "Clases",
     blurb: "Funcional, spinning, yoga y más — elegí tu ritmo.",
@@ -25,28 +31,64 @@ const TABS: NeonTabConfig[] = [
   {
     id: "planes",
     title: "Planes",
-    blurb: "Mensual, trimestral o anual — muy pronto.",
-    target: null,
+    blurb: "Mensual, anual o flex — elegí el tuyo.",
+    target: "planes",
   },
 ];
 
 // Pestañas neón verticales ancladas al borde izquierdo del video del hero.
 // En reposo son solo franjas de vidrio coloreado, sin texto (ver .neon-tab
 // en globals.css); al hacer hover o tap "se encienden" y revelan título +
-// frase. Un tap en mobile expande y navega en el mismo gesto, sin necesidad
-// de un segundo toque. La pestaña "Planes" todavía no tiene sección propia,
-// así que se ve pero no navega a ningún lado.
+// frase.
+//
+// Desktop: el hover ya desplegó la pestaña antes del click, así que un
+// click siempre navega directo (nada que cambiar acá, lo resuelve el CSS).
+//
+// Mobile/táctil (sin hover real): el primer toque solo enciende/despliega
+// la pestaña, igual que el hover en desktop, sin navegar. Recién el
+// segundo toque — con esa misma pestaña ya desplegada — navega a la
+// sección. Tocar otra pestaña la despliega a ella (sin navegar) y apaga la
+// anterior. Si no llega un segundo toque, se apaga sola.
 export function NeonTabs() {
   const [openId, setOpenId] = useState<string | null>(null);
+  const closeTimer = useRef<number | null>(null);
 
-  function handleActivate(tab: NeonTabConfig) {
+  function clearCloseTimer() {
+    if (closeTimer.current !== null) {
+      window.clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  }
+
+  function scheduleClose(tabId: string, delay: number) {
+    clearCloseTimer();
+    closeTimer.current = window.setTimeout(() => {
+      setOpenId((current) => (current === tabId ? null : current));
+    }, delay);
+  }
+
+  function navigate(tab: NeonTabConfig) {
     setOpenId(tab.id);
     if (tab.target) {
       document.getElementById(tab.target)?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-    window.setTimeout(() => {
-      setOpenId((current) => (current === tab.id ? null : current));
-    }, 1600);
+    scheduleClose(tab.id, 1600);
+  }
+
+  function handleActivate(tab: NeonTabConfig) {
+    const isTouch = typeof window !== "undefined" && window.matchMedia("(hover: none)").matches;
+
+    if (isTouch && openId !== tab.id) {
+      // Primer toque en mobile: solo despliega/enciende, todavía no navega.
+      // Le damos más margen que al cierre post-navegación para que haya
+      // tiempo de dar el segundo toque.
+      setOpenId(tab.id);
+      scheduleClose(tab.id, 3000);
+      return;
+    }
+
+    // Desktop, o segundo toque sobre la pestaña ya desplegada en mobile.
+    navigate(tab);
   }
 
   return (
