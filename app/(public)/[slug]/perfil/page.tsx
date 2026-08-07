@@ -2,7 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantOrg, getTenantUser, getUserPointsBalance } from "../data";
+import { getGymLocations } from "../gym-data";
 import { PointsPanel } from "../points-panel";
+import { GymProfileHeader } from "../gym-profile-header";
 
 export default async function PerfilPage({
   params,
@@ -16,7 +18,7 @@ export default async function PerfilPage({
   if (!user) redirect(`/${params.slug}`);
 
   const supabase = createClient();
-  const [balance, { data: txs }] = await Promise.all([
+  const [balance, { data: txs }, { data: profile }, gymLocations] = await Promise.all([
     getUserPointsBalance(org.id, user.id),
     supabase
       .from("loyalty_transactions")
@@ -25,12 +27,22 @@ export default async function PerfilPage({
       .eq("org_id", org.id)
       .eq("status", "claimed")
       .order("claimed_at", { ascending: false }),
+    supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
+    getGymLocations(org.id),
   ]);
 
   const transactions = txs ?? [];
   const primary = org.primary_color ?? "#f59e0b";
   const threshold = org.next_reward_threshold ?? 1000;
   const progressPct = Math.min(100, Math.round((balance / threshold) * 100));
+
+  // Showroom de entrenamiento (Fase 1): solo para Gym2, mismo criterio
+  // hasGymFeatures que layout.tsx y page.tsx (orgs sin filas en
+  // gym_locations no ven este bloque, todo lo demás sigue igual).
+  const hasGymFeatures = gymLocations.length > 0;
+  const userName = profile?.full_name || user.email?.split("@")[0] || "Socio";
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Buen día" : hour < 19 ? "Buenas tardes" : "Buenas noches";
 
   return (
     <div className="max-w-lg mx-auto px-4 py-8 space-y-6">
@@ -40,6 +52,8 @@ export default async function PerfilPage({
       >
         ‹ Volver
       </Link>
+
+      {hasGymFeatures && <GymProfileHeader greeting={greeting} userName={userName} />}
 
       <div className="flex justify-center">
         <div className="w-full max-w-sm space-y-4">
