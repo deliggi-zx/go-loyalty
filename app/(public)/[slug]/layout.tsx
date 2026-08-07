@@ -77,6 +77,8 @@ export default async function TenantLayout({
           catalogType={org.catalog_type}
           showLoginIcon={hasGymFeatures && !user}
           neonTheme={hasGymFeatures}
+          requireInviteCode={hasGymFeatures}
+          orgId={org.id}
           menuProps={{
             slug: params.slug,
             orgName: org.name,

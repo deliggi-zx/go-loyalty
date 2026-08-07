@@ -21,6 +21,10 @@ interface ClientHeaderProps {
   // hasGymFeatures en layout.tsx). Independiente de showLoginIcon: este
   // controla color/tamaño, no si el ícono existe.
   neonTheme?: boolean;
+  // Fase 0a de "Gym2 funcional": se pasan tal cual hasta LoginForm (vía
+  // LoginModal), ver ahí el porqué de mantenerlos separados de neonTheme.
+  requireInviteCode?: boolean;
+  orgId?: string;
 }
 
 export function ClientHeader({
@@ -31,6 +35,8 @@ export function ClientHeader({
   catalogType,
   showLoginIcon = false,
   neonTheme = false,
+  requireInviteCode = false,
+  orgId,
 }: ClientHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
@@ -123,6 +129,8 @@ export function ClientHeader({
           onClose={() => setLoginOpen(false)}
           primaryColor={primaryColor}
           neonTheme={neonTheme}
+          requireInviteCode={requireInviteCode}
+          orgId={orgId}
         />
       )}
     </>

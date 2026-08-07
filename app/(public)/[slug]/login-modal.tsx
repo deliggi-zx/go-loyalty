@@ -10,12 +10,23 @@ interface LoginModalProps {
   // Estilo oscuro + acentos #ccff00 — hoy solo Gym2, decidido por quien
   // monta el modal (ClientHeader), no hay nada Gym2-específico acá.
   neonTheme?: boolean;
+  // Fase 0a de "Gym2 funcional": se pasan tal cual a LoginForm, ver ahí el
+  // porqué de mantenerlos separados de neonTheme.
+  requireInviteCode?: boolean;
+  orgId?: string;
 }
 
 // Modal centrado que aloja el mismo LoginForm de siempre (variant="bare",
 // sin su chrome de recuadro porque el modal ya aporta fondo/sombra). Es el
 // destino del ícono de usuario del header.
-export function LoginModal({ isOpen, onClose, primaryColor, neonTheme = false }: LoginModalProps) {
+export function LoginModal({
+  isOpen,
+  onClose,
+  primaryColor,
+  neonTheme = false,
+  requireInviteCode = false,
+  orgId,
+}: LoginModalProps) {
   const panelClass = neonTheme
     ? "bg-[#0a0a0b] border border-[#26262a]"
     : "bg-white";
@@ -50,7 +61,13 @@ export function LoginModal({ isOpen, onClose, primaryColor, neonTheme = false }:
             <X className="w-5 h-5" />
           </button>
 
-          <LoginForm primaryColor={primaryColor} variant="bare" neonTheme={neonTheme} />
+          <LoginForm
+            primaryColor={primaryColor}
+            variant="bare"
+            neonTheme={neonTheme}
+            requireInviteCode={requireInviteCode}
+            orgId={orgId}
+          />
         </div>
       </div>
     </>
