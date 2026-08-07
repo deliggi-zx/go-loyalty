@@ -8,6 +8,7 @@ import {
   Stamp,
   Gift,
   Package,
+  Ticket,
   ScanLine,
   Settings,
   LogOut,
@@ -24,6 +25,10 @@ const baseNavItems = [
 
 const catalogNavItem = { href: "/dashboard/catalogo", label: "Catálogo", icon: Package };
 
+// Solo para orgs con gym_locations (hoy Gym2, a futuro cualquier org con
+// features de gimnasio) — ver hasGymFeatures en dashboard/layout.tsx.
+const gymNavItem = { href: "/dashboard/invitaciones", label: "Invitaciones", icon: Ticket };
+
 const trailingNavItems = [
   { href: "/pos", label: "POS", icon: ScanLine },
   { href: "/dashboard/configuracion", label: "Configuración", icon: Settings },
@@ -32,13 +37,15 @@ const trailingNavItems = [
 interface SidebarProps {
   userEmail: string;
   showCatalog?: boolean;
+  showGym?: boolean;
 }
 
-export function Sidebar({ userEmail, showCatalog = false }: SidebarProps) {
+export function Sidebar({ userEmail, showCatalog = false, showGym = false }: SidebarProps) {
   const pathname = usePathname();
   const navItems = [
     ...baseNavItems,
     ...(showCatalog ? [catalogNavItem] : []),
+    ...(showGym ? [gymNavItem] : []),
     ...trailingNavItems,
   ];
 
