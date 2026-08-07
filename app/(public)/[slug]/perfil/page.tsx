@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantOrg, getTenantUser, getUserPointsBalance } from "../data";
 import { getGymLocations, getGymClasses } from "../gym-data";
 import { PointsPanel } from "../points-panel";
 import { GymProfileHeader } from "../gym-profile-header";
+import { GymQrAccess } from "../gym-qr-access";
 
 export default async function PerfilPage({
   params,
@@ -47,6 +49,19 @@ export default async function PerfilPage({
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Buen día" : hour < 19 ? "Buenas tardes" : "Buenas noches";
 
+  // Fase 4: QR de socio fijo (carnet de acceso) generado a partir del
+  // user.id — todavía no hay lector del lado del gym, así que el
+  // contenido no "significa" nada real por ahora. Server-side con el
+  // paquete "qrcode" ya instalado (remanente del viejo stamp-card.tsx),
+  // así el cliente no suma nada de JS para esto.
+  const qrDataUrl = hasGymFeatures
+    ? await QRCode.toDataURL(user.id, {
+        width: 384,
+        margin: 1,
+        color: { dark: "#0a0a0b", light: "#ffffff" },
+      })
+    : null;
+
   return (
     <div className="max-w-lg mx-auto px-4 py-8 space-y-6">
       <Link
@@ -63,6 +78,10 @@ export default async function PerfilPage({
           locations={gymLocations}
           classes={gymClasses}
         />
+      )}
+
+      {hasGymFeatures && qrDataUrl && (
+        <GymQrAccess qrDataUrl={qrDataUrl} userName={userName} />
       )}
 
       <div className="flex justify-center">
