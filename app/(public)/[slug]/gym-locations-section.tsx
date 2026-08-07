@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import { GymLocationCard } from "./gym-location-card";
 import type { GymLocation } from "./gym-data";
 
@@ -6,10 +9,32 @@ interface GymLocationsSectionProps {
 }
 
 export function GymLocationsSection({ locations }: GymLocationsSectionProps) {
+  // Estado de "sede encendida" levantado al padre: una sola tarjeta puede
+  // estar activa a la vez. En desktop el :hover de CSS sigue manejando el
+  // encendido visual por su cuenta (ver .location-card en globals.css); esto
+  // es solo para el camino táctil, donde no hay :hover que la "apague" al
+  // tocar otro lado.
+  const [activeLocationId, setActiveLocationId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!activeLocationId) return;
+
+    function handlePointerDown(e: PointerEvent) {
+      if (!containerRef.current) return;
+      if (!(e.target instanceof Node)) return;
+      if (containerRef.current.contains(e.target)) return;
+      setActiveLocationId(null);
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [activeLocationId]);
+
   if (locations.length === 0) return null;
 
   return (
-    <section id="sedes" className="space-y-4">
+    <section id="sedes" className="space-y-4" ref={containerRef}>
       <h2 className="text-xl font-bold text-stone-900">Nuestras Sedes</h2>
 
       {/* Mobile: carrusel horizontal deslizable (con 8 sedes, apiladas
@@ -25,7 +50,11 @@ export function GymLocationsSection({ locations }: GymLocationsSectionProps) {
       >
         {locations.map((loc) => (
           <div key={loc.id} className="shrink-0 w-[80%] snap-start sm:w-auto sm:shrink">
-            <GymLocationCard loc={loc} />
+            <GymLocationCard
+              loc={loc}
+              isActive={activeLocationId === loc.id}
+              onActivate={() => setActiveLocationId(loc.id)}
+            />
           </div>
         ))}
       </div>

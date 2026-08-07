@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { MapPin, Clock } from "lucide-react";
 import { LocationPlaceholder } from "./gym-placeholder";
 import type { GymLocation } from "./gym-data";
@@ -29,18 +28,28 @@ function StaticMapMockup() {
 // Tarjeta de sede con estilo neón (ver .location-card en globals.css): en
 // reposo está "apagada" (fondo casi negro, sin glow, sin mapa); al
 // hover/focus/tap se "enciende" — aparece el halo #ccff00 y recién ahí se
-// revela el mapa mockup + el botón de Google Maps. El click en la tarjeta
-// alterna `isOpen` para que el tap en mobile abra/cierre sin depender de
-// :hover (que ahí no existe).
-export function GymLocationCard({ loc }: { loc: GymLocation }) {
-  const [isOpen, setIsOpen] = useState(false);
+// revela el mapa mockup + el botón de Google Maps. En desktop el :hover de
+// CSS se encarga solo. En mobile no hay :hover real, así que el encendido
+// depende de `isActive` (estado de cuál sede está activa, manejado por el
+// padre — GymLocationsSection — para poder apagarla con un tap afuera).
+export function GymLocationCard({
+  loc,
+  isActive,
+  onActivate,
+}: {
+  loc: GymLocation;
+  isActive: boolean;
+  onActivate: () => void;
+}) {
   const mapsQuery = loc.address ?? loc.name;
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}`;
 
   return (
     <div
-      className={`location-card ${isOpen ? "is-open" : ""}`}
-      onClick={() => setIsOpen((v) => !v)}
+      className={`location-card ${isActive ? "is-open" : ""}`}
+      onClick={() => {
+        if (!isActive) onActivate();
+      }}
       role="group"
       aria-label={loc.name}
     >
