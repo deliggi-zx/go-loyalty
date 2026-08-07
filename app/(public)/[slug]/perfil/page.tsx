@@ -8,6 +8,7 @@ import { PointsPanel } from "../points-panel";
 import { GymProfileHeader } from "../gym-profile-header";
 import { GymQrAccess } from "../gym-qr-access";
 import { GymWorkoutPlan } from "../gym-workout-plan";
+import { GymGoalPicker } from "../gym-goal-picker";
 
 export default async function PerfilPage({
   params,
@@ -86,6 +87,8 @@ export default async function PerfilPage({
       )}
 
       {hasGymFeatures && <GymWorkoutPlan userName={userName} />}
+
+      {hasGymFeatures && <GymGoalPicker />}
 
       <div className="flex justify-center">
         <div className="w-full max-w-sm space-y-4">

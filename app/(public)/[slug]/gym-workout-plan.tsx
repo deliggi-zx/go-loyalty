@@ -13,7 +13,10 @@ interface GymWorkoutPlanProps {
 // bloques. Mismo set fijo de bloques/ejercicios para cualquier socio que
 // abra este acceso — no viene de gym_classes ni de ninguna tabla real, es
 // contenido de ejemplo tipo BIGG. No escribe nada en base de datos.
-const SHOWROOM_WORKOUT = {
+// Exportado para que gym-goal-picker.tsx (Fase 6) lo reutilice tal cual en
+// su sección "Recomendado para tu objetivo" — mismo dataset de ejemplo, no
+// una recomendación real personalizada por objetivo/deporte.
+export const SHOWROOM_WORKOUT = {
   title: "Full Body Burn",
   blocks: [
     {
@@ -66,6 +69,49 @@ const FILTERS = [
 ] as const;
 
 type FilterId = (typeof FILTERS)[number]["id"];
+
+// Extraído para que gym-goal-picker.tsx (Fase 6) pueda mostrar el mismo
+// listado de bloques en su sección "Recomendado para tu objetivo" sin
+// duplicar este markup — recibe blocks por prop en vez de leer
+// SHOWROOM_WORKOUT directamente, así en teoría también serviría para otro
+// set de bloques el día que haya alguno.
+interface WorkoutBlocksProps {
+  blocks: readonly {
+    id: string;
+    method: string;
+    format: string;
+    exercises: readonly string[];
+  }[];
+}
+
+export function WorkoutBlocks({ blocks }: WorkoutBlocksProps) {
+  return (
+    <div className="space-y-4">
+      {blocks.map((block, i) => (
+        <div
+          key={block.id}
+          className="space-y-3 bg-[#141416] border border-[#26262a] rounded-2xl p-4"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-bold text-white">Bloque {i + 1}</span>
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wide border border-[#ccff00]/40 bg-[#ccff00]/10 text-[#ccff00]">
+              {block.method}
+            </span>
+          </div>
+          <p className="text-xs text-[#9b9995]">{block.format}</p>
+          <ol className="space-y-1.5">
+            {block.exercises.map((exercise, j) => (
+              <li key={j} className="flex gap-2 text-sm text-[#d8d6d2]">
+                <span className="text-[#6b6965]">{j + 1}.</span>
+                {exercise}
+              </li>
+            ))}
+          </ol>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function GymWorkoutPlan({ userName }: GymWorkoutPlanProps) {
   const [open, setOpen] = useState(false);
@@ -140,30 +186,7 @@ export function GymWorkoutPlan({ userName }: GymWorkoutPlanProps) {
                 ))}
               </div>
 
-              <div className="space-y-4">
-                {SHOWROOM_WORKOUT.blocks.map((block, i) => (
-                  <div
-                    key={block.id}
-                    className="space-y-3 bg-[#141416] border border-[#26262a] rounded-2xl p-4"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-bold text-white">Bloque {i + 1}</span>
-                      <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wide border border-[#ccff00]/40 bg-[#ccff00]/10 text-[#ccff00]">
-                        {block.method}
-                      </span>
-                    </div>
-                    <p className="text-xs text-[#9b9995]">{block.format}</p>
-                    <ol className="space-y-1.5">
-                      {block.exercises.map((exercise, j) => (
-                        <li key={j} className="flex gap-2 text-sm text-[#d8d6d2]">
-                          <span className="text-[#6b6965]">{j + 1}.</span>
-                          {exercise}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                ))}
-              </div>
+              <WorkoutBlocks blocks={SHOWROOM_WORKOUT.blocks} />
             </div>
           </div>
         </div>
