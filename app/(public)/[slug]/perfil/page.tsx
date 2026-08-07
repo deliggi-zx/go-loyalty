@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantOrg, getTenantUser, getUserPointsBalance } from "../data";
-import { getGymLocations } from "../gym-data";
+import { getGymLocations, getGymClasses } from "../gym-data";
 import { PointsPanel } from "../points-panel";
 import { GymProfileHeader } from "../gym-profile-header";
 
@@ -36,10 +36,13 @@ export default async function PerfilPage({
   const threshold = org.next_reward_threshold ?? 1000;
   const progressPct = Math.min(100, Math.round((balance / threshold) * 100));
 
-  // Showroom de entrenamiento (Fase 1): solo para Gym2, mismo criterio
+  // Showroom de entrenamiento (Fase 1 + 2): solo para Gym2, mismo criterio
   // hasGymFeatures que layout.tsx y page.tsx (orgs sin filas en
-  // gym_locations no ven este bloque, todo lo demás sigue igual).
+  // gym_locations no ven este bloque, todo lo demás sigue igual). Las
+  // clases solo se piden si hace falta, para no sumarle una query más al
+  // resto de las organizaciones.
   const hasGymFeatures = gymLocations.length > 0;
+  const gymClasses = hasGymFeatures ? await getGymClasses(org.id) : [];
   const userName = profile?.full_name || user.email?.split("@")[0] || "Socio";
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Buen día" : hour < 19 ? "Buenas tardes" : "Buenas noches";
@@ -53,7 +56,14 @@ export default async function PerfilPage({
         ‹ Volver
       </Link>
 
-      {hasGymFeatures && <GymProfileHeader greeting={greeting} userName={userName} />}
+      {hasGymFeatures && (
+        <GymProfileHeader
+          greeting={greeting}
+          userName={userName}
+          locations={gymLocations}
+          classes={gymClasses}
+        />
+      )}
 
       <div className="flex justify-center">
         <div className="w-full max-w-sm space-y-4">

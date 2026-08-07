@@ -2,10 +2,14 @@
 
 import { useState } from "react";
 import { Dumbbell, Home, TreePine } from "lucide-react";
+import type { GymLocation, GymClassData } from "./gym-data";
+import { GymTrainingModal } from "./gym-training-modal";
 
 interface GymProfileHeaderProps {
   greeting: string;
   userName: string;
+  locations: GymLocation[];
+  classes: GymClassData[];
 }
 
 type TrainingMode = "gym" | "home" | "outdoor";
@@ -16,14 +20,21 @@ const MODES: { id: TrainingMode; label: string; icon: typeof Dumbbell }[] = [
   { id: "outdoor", label: "Entrenar al aire libre", icon: TreePine },
 ];
 
-// Cabecera del showroom de entrenamiento de Gym2 (Fase 1 de 7, inspirado en
-// BIGG): saludo + selector de modalidad. Los 3 accesos todavía no navegan a
-// ningún lado — eso llega en las fases siguientes — por ahora solo marcan
-// un estado "seleccionado" visual, mismo patrón de encendido/apagado que
-// las tarjetas de plan (.gym-plan-card en globals.css), sin escribir nada
-// en base de datos.
-export function GymProfileHeader({ greeting, userName }: GymProfileHeaderProps) {
+// Cabecera del showroom de entrenamiento de Gym2 (Fase 1: saludo + selector
+// de modalidad. Fase 2: cualquiera de las 3 tarjetas abre el mismo flujo de
+// selección/reserva de clase en GymTrainingModal — no hay diferencia
+// funcional entre gym/casa/aire libre todavía). Nada de esto escribe en
+// base de datos.
+export function GymProfileHeader({ greeting, userName, locations, classes }: GymProfileHeaderProps) {
   const [selectedMode, setSelectedMode] = useState<TrainingMode | null>(null);
+  const [showBooking, setShowBooking] = useState(false);
+
+  function handleSelectMode(id: TrainingMode) {
+    setSelectedMode(id);
+    setShowBooking(true);
+  }
+
+  const activeModeLabel = MODES.find((m) => m.id === selectedMode)?.label ?? "";
 
   return (
     <div className="space-y-5">
@@ -39,7 +50,7 @@ export function GymProfileHeader({ greeting, userName }: GymProfileHeaderProps) 
           <button
             key={id}
             type="button"
-            onClick={() => setSelectedMode(id)}
+            onClick={() => handleSelectMode(id)}
             aria-pressed={selectedMode === id}
             className={`gym-plan-card flex flex-col items-center justify-center gap-2 px-4 py-6 text-center ${
               selectedMode === id ? "is-open" : ""
@@ -50,6 +61,15 @@ export function GymProfileHeader({ greeting, userName }: GymProfileHeaderProps) 
           </button>
         ))}
       </div>
+
+      {showBooking && (
+        <GymTrainingModal
+          modeLabel={activeModeLabel}
+          locations={locations}
+          classes={classes}
+          onClose={() => setShowBooking(false)}
+        />
+      )}
     </div>
   );
 }
