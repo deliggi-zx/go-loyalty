@@ -29,7 +29,6 @@ export interface GymScheduleSlot {
   day_of_week: number; // 1=lunes .. 7=domingo
   start_time: string;
   end_time: string;
-  instructor_name: string | null;
   location_name: string;
 }
 
@@ -53,7 +52,7 @@ export const getGymClasses = cache(async (orgId: string): Promise<GymClassData[]
       .order("name", { ascending: true }),
     supabase
       .from("gym_class_schedule")
-      .select("id, class_id, location_id, day_of_week, start_time, end_time, instructor_name")
+      .select("id, class_id, location_id, day_of_week, start_time, end_time")
       .eq("org_id", orgId),
     supabase.from("gym_locations").select("id, name").eq("org_id", orgId),
   ]);
@@ -68,7 +67,6 @@ export const getGymClasses = cache(async (orgId: string): Promise<GymClassData[]
       day_of_week: s.day_of_week,
       start_time: s.start_time,
       end_time: s.end_time,
-      instructor_name: s.instructor_name,
       location_name: locationNames.get(s.location_id) ?? "",
     });
     scheduleByClass.set(s.class_id, list);
