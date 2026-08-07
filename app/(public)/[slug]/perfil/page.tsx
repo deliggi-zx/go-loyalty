@@ -7,6 +7,7 @@ import { getGymLocations, getGymClasses } from "../gym-data";
 import { PointsPanel } from "../points-panel";
 import { GymProfileHeader } from "../gym-profile-header";
 import { GymQrAccess } from "../gym-qr-access";
+import { GymWorkoutPlan } from "../gym-workout-plan";
 
 export default async function PerfilPage({
   params,
@@ -83,6 +84,8 @@ export default async function PerfilPage({
       {hasGymFeatures && qrDataUrl && (
         <GymQrAccess qrDataUrl={qrDataUrl} userName={userName} />
       )}
+
+      {hasGymFeatures && <GymWorkoutPlan userName={userName} />}
 
       <div className="flex justify-center">
         <div className="w-full max-w-sm space-y-4">
