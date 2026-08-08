@@ -8,6 +8,24 @@ import { WhatsAppButton } from "./whatsapp-button";
 import { HeroVideo } from "./hero-video";
 import { getGymLocations } from "./gym-data";
 
+// Copy de las franjas del hero, por org (keyed por slug). Cada org que
+// quiera el ticker agrega su propia entrada acá — el componente no
+// hardcodea texto de ninguna org. Frases de "bike" son placeholder de demo,
+// ajustables después.
+const TICKER_PHRASES: Record<string, { top: string[]; bottom: string[] }> = {
+  gym2: {
+    top: ["10% off en el plan anual", "Nueva sede en Sede Norte"],
+    bottom: [
+      "Clases ilimitadas en el plan Trimestral",
+      "¡Sumate a Cross Funcional esta semana!",
+    ],
+  },
+  bike: {
+    top: ["Envíos a todo el país", "Financiación disponible"],
+    bottom: ["Service técnico", "Repuestos originales en stock"],
+  },
+};
+
 export default async function TenantLayout({
   children,
   params,
@@ -123,7 +141,11 @@ export default async function TenantLayout({
         )}
 
         {/* Video: sección aparte debajo del banner, 4:3, autoplay muteado en loop */}
-        <HeroVideo videoUrl={org.hero_video_url} showNeonOverlay={hasGymFeatures} />
+        <HeroVideo
+          videoUrl={org.hero_video_url}
+          showNeonTabs={hasGymFeatures}
+          tickerPhrases={TICKER_PHRASES[params.slug] ?? null}
+        />
 
         {children}
 

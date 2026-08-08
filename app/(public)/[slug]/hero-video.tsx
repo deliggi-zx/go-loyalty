@@ -5,16 +5,24 @@ import { PromoTicker } from "./promo-ticker";
 // muteado y en loop. Si la org no tiene hero_video_url cargado (ej. Gym1),
 // no renderiza nada.
 //
-// `showNeonOverlay` agrega las pestañas neón + el cartel diagonal (Gym2-only,
-// condicionado por el caller a que la org tenga datos gym_* cargados). Van
-// absolute dentro de este bloque, nunca fixed a toda la pantalla, para que
-// no puedan chocar con el botón de WhatsApp.
+// `showNeonTabs` agrega las pestañas neón verticales (Sedes/Clases/Planes) —
+// específicas del showroom de gimnasio, el caller solo las prende si la org
+// tiene datos gym_* cargados.
+//
+// `tickerPhrases` agrega las franjas ("ticker bars") con texto en loop
+// arriba y abajo del video — genérico, cualquier org puede usarlas pasando
+// su propio copy (ver TICKER_PHRASES en layout.tsx). null/undefined = sin
+// franjas.
+//
+// Ambos overlays van absolute dentro de este bloque, nunca fixed a toda la
+// pantalla, para que no puedan chocar con el botón de WhatsApp.
 interface HeroVideoProps {
   videoUrl: string | null;
-  showNeonOverlay?: boolean;
+  showNeonTabs?: boolean;
+  tickerPhrases?: { top: string[]; bottom: string[] } | null;
 }
 
-export function HeroVideo({ videoUrl, showNeonOverlay = false }: HeroVideoProps) {
+export function HeroVideo({ videoUrl, showNeonTabs = false, tickerPhrases = null }: HeroVideoProps) {
   if (!videoUrl) return null;
 
   return (
@@ -23,11 +31,9 @@ export function HeroVideo({ videoUrl, showNeonOverlay = false }: HeroVideoProps)
         <source src={videoUrl} />
       </video>
 
-      {showNeonOverlay && (
-        <>
-          <NeonTabs />
-          <PromoTicker />
-        </>
+      {showNeonTabs && <NeonTabs />}
+      {tickerPhrases && (
+        <PromoTicker topPhrases={tickerPhrases.top} bottomPhrases={tickerPhrases.bottom} />
       )}
     </div>
   );
