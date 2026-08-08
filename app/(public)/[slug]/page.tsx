@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getTenantOrg, getTenantUser } from "./data";
+import { getTenantOrg, getTenantUser, getFeaturedProducts } from "./data";
 import { getGymLocations, getGymClasses, getGymTestimonials } from "./gym-data";
 import { LoginForm } from "./login-form";
 import { Carousel } from "./carousel";
@@ -9,6 +9,14 @@ import { GymLocationsSection } from "./gym-locations-section";
 import { GymClassesSection } from "./gym-classes-section";
 import { GymTestimonialsSection } from "./gym-testimonials-section";
 import { GymPlansSection } from "./gym-plans-section";
+import { FeaturedProductsGrid } from "./featured-products-grid";
+
+// Título arriba de la sección de promos + destacados, por org (keyed por
+// slug, mismo patrón que TICKER_PHRASES/VERTICAL_TABS en layout.tsx). Otras
+// orgs no tienen entrada acá — no se les fuerza el texto de bike.
+const PROMOS_SECTION_TITLE: Record<string, string> = {
+  bike: "IMPERDIBLES",
+};
 
 export default async function TenantPage({
   params,
@@ -31,6 +39,13 @@ export default async function TenantPage({
 
   const carouselItems = content?.filter((c) => c.type === "carousel") ?? [];
   const promoItems = content?.filter((c) => c.type === "promo") ?? [];
+
+  // Productos destacados (products.is_featured) — solo tiene sentido para
+  // orgs con catálogo de productos. Vive debajo de las promos existentes,
+  // en la misma sección "Imperdibles" (ver Fase 3b).
+  const featuredProducts =
+    org.catalog_type === "products" ? await getFeaturedProducts(org.id) : [];
+  const promosSectionTitle = PROMOS_SECTION_TITLE[params.slug];
 
   // Funcionalidad de gimnasio (Sedes, Clases, Comentarios): solo se muestra si
   // esta organización tiene datos cargados en las tablas gym_*. Ninguna otra
@@ -90,11 +105,20 @@ export default async function TenantPage({
           </div>
         )}
 
-        {/* Promos, en columna. id="imperdibles": destino de la pestaña
-            "Imperdibles" de SectionNavTabs (ver SECTION_NAV_TABS en
-            layout.tsx). */}
-        {promoItems.length > 0 && (
+        {/* Promos + destacados. id="imperdibles": destino de la pestaña
+            "Imperdibles" de SectionNavTabs/VerticalGlassTabs (ver layout.tsx).
+            El wrapper aparece si hay promos O destacados, para que el ancla
+            siempre tenga algo a donde apuntar. Las fotos de promo son
+            EXACTAMENTE las de siempre, sin tocar; la grilla de productos
+            destacados (Fase 3b) es un bloque nuevo, aparte, debajo. */}
+        {(promoItems.length > 0 || featuredProducts.length > 0) && (
           <div id="imperdibles" className="max-w-lg mx-auto space-y-4 scroll-mt-16">
+            {promosSectionTitle && (
+              <h2 className="bike-section-title text-2xl sm:text-3xl text-center">
+                {promosSectionTitle}
+              </h2>
+            )}
+
             {promoItems.map(
               (item) =>
                 item.image_url && (
@@ -107,6 +131,12 @@ export default async function TenantPage({
                   />
                 )
             )}
+
+            <FeaturedProductsGrid
+              products={featuredProducts}
+              primaryColor={primary}
+              catalogHref={`/${params.slug}/precios`}
+            />
           </div>
         )}
       </div>

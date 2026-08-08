@@ -170,6 +170,22 @@ export async function toggleProductActive(id: string, active: boolean) {
   revalidatePath("/dashboard/catalogo");
 }
 
+// Estrellita de "destacado" — campo genérico (products.is_featured), no
+// exclusivo de ninguna org. Alimenta la grilla de productos destacados en
+// la sección "Imperdibles" del sitio público (ver featured-products-grid.tsx).
+export async function toggleProductFeatured(id: string, featured: boolean) {
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+
+  await supabase
+    .from("products")
+    .update({ is_featured: featured })
+    .eq("id", id)
+    .eq("org_id", orgId);
+
+  revalidatePath("/dashboard/catalogo");
+}
+
 export async function deleteProduct(id: string) {
   const supabase = createClient();
   const orgId = await requireOrgId();

@@ -833,3 +833,16 @@
     drop-shadow(0 0 10px color-mix(in srgb, var(--accent-bike) 70%, transparent))
     drop-shadow(0 0 18px color-mix(in srgb, var(--accent-bike) 40%, transparent));
 }
+
+/* Título de sección con el acento naranja de bike (Fase 3b) — hoy solo lo
+   usa "IMPERDIBLES" arriba de promos + destacados (ver PROMOS_SECTION_TITLE
+   en page.tsx). Mismo --accent-bike que el resto, sin glow en capas (es
+   texto de página normal, no un overlay sobre el video). */
+.bike-section-title {
+  --accent-bike: #ff6b00;
+  color: var(--accent-bike);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-shadow: 0 0 10px color-mix(in srgb, var(--accent-bike) 40%, transparent);
+}

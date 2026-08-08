@@ -3,15 +3,16 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ToggleLeft, ToggleRight, Pencil, Package } from "lucide-react";
+import { ToggleLeft, ToggleRight, Pencil, Package, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toggleProductActive } from "./actions";
+import { toggleProductActive, toggleProductFeatured } from "./actions";
 
 export interface ProductRow {
   id: string;
   name: string;
   price: number;
   active: boolean;
+  is_featured: boolean;
   category_id: string | null;
   mainImageUrl: string | null;
 }
@@ -33,6 +34,16 @@ export function ProductsList({ products: initialProducts, categories }: Products
     );
     startTransition(async () => {
       await toggleProductActive(id, !currentActive);
+      router.refresh();
+    });
+  }
+
+  function handleToggleFeatured(id: string, currentFeatured: boolean) {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, is_featured: !p.is_featured } : p))
+    );
+    startTransition(async () => {
+      await toggleProductFeatured(id, !currentFeatured);
       router.refresh();
     });
   }
@@ -142,18 +153,33 @@ export function ProductsList({ products: initialProducts, categories }: Products
                       {categoryName(product.category_id)}
                     </p>
                   </div>
-                  <button
-                    onClick={() => handleToggle(product.id, product.active)}
-                    disabled={isPending}
-                    className="shrink-0 text-stone-400 hover:text-amber-500 transition-colors disabled:opacity-50"
-                    title={product.active ? "Desactivar" : "Activar"}
-                  >
-                    {product.active ? (
-                      <ToggleRight className="w-6 h-6 text-amber-500" />
-                    ) : (
-                      <ToggleLeft className="w-6 h-6" />
-                    )}
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => handleToggleFeatured(product.id, product.is_featured)}
+                      disabled={isPending}
+                      className="text-stone-300 hover:text-amber-500 transition-colors disabled:opacity-50"
+                      title={product.is_featured ? "Quitar de destacados" : "Marcar como destacado"}
+                    >
+                      <Star
+                        className={cn(
+                          "w-5 h-5",
+                          product.is_featured && "fill-amber-400 text-amber-500"
+                        )}
+                      />
+                    </button>
+                    <button
+                      onClick={() => handleToggle(product.id, product.active)}
+                      disabled={isPending}
+                      className="text-stone-400 hover:text-amber-500 transition-colors disabled:opacity-50"
+                      title={product.active ? "Desactivar" : "Activar"}
+                    >
+                      {product.active ? (
+                        <ToggleRight className="w-6 h-6 text-amber-500" />
+                      ) : (
+                        <ToggleLeft className="w-6 h-6" />
+                      )}
+                    </button>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold text-stone-900 tabular-nums">

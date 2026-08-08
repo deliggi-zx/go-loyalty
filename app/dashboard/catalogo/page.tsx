@@ -26,7 +26,7 @@ export default async function CatalogoPage() {
       .order("display_order", { ascending: true }),
     supabase
       .from("products")
-      .select("id, name, price, active, category_id, display_order")
+      .select("id, name, price, active, is_featured, category_id, display_order")
       .eq("org_id", orgId)
       .order("display_order", { ascending: true }),
   ]);
@@ -56,6 +56,7 @@ export default async function CatalogoPage() {
     name: p.name,
     price: p.price,
     active: p.active ?? true,
+    is_featured: p.is_featured ?? false,
     category_id: p.category_id,
     mainImageUrl: mainImageByProduct.get(p.id) ?? null,
   }));

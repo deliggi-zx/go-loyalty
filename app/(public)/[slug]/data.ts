@@ -104,3 +104,52 @@ export const getProductCatalog = cache(async (orgId: string): Promise<CatalogPro
     images: imagesByProduct.get(p.id) ?? [],
   }));
 });
+
+export interface FeaturedProduct {
+  id: string;
+  name: string;
+  price: number;
+  imageUrl: string | null;
+}
+
+// Productos marcados como destacados desde el admin (products.is_featured,
+// ver toggleProductFeatured en dashboard/catalogo/actions.ts) — campo
+// genérico, cualquier org con catalog_type='products' puede usarlo.
+// Alimenta la grilla debajo de las promos en la sección "Imperdibles" (ver
+// featured-products-grid.tsx). Si ningún producto está marcado, devuelve [].
+export const getFeaturedProducts = cache(async (orgId: string): Promise<FeaturedProduct[]> => {
+  const supabase = createClient();
+  const { data: productsData } = await supabase
+    .from("products")
+    .select("id, name, price, display_order")
+    .eq("org_id", orgId)
+    .eq("active", true)
+    .eq("is_featured", true)
+    .order("display_order", { ascending: true });
+
+  const products = productsData ?? [];
+  const productIds = products.map((p) => p.id);
+
+  const { data: imagesData } =
+    productIds.length > 0
+      ? await supabase
+          .from("product_images")
+          .select("product_id, image_url, display_order")
+          .in("product_id", productIds)
+          .order("display_order", { ascending: true })
+      : { data: [] as { product_id: string; image_url: string; display_order: number }[] };
+
+  const mainImageByProduct = new Map<string, string>();
+  for (const img of imagesData ?? []) {
+    if (!mainImageByProduct.has(img.product_id)) {
+      mainImageByProduct.set(img.product_id, img.image_url);
+    }
+  }
+
+  return products.map((p) => ({
+    id: p.id,
+    name: p.name,
+    price: p.price,
+    imageUrl: mainImageByProduct.get(p.id) ?? null,
+  }));
+});
