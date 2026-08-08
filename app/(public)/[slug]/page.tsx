@@ -102,7 +102,7 @@ export default async function TenantPage({
       {/* Funcionalidad de gimnasio (Sedes, Clases, Comentarios, Planes) */}
       {hasGymFeatures && (
         <div className="max-w-5xl mx-auto px-4 pb-8 space-y-10">
-          <GymLocationsSection locations={gymLocations} />
+          <GymLocationsSection locations={gymLocations} slug={params.slug} />
           <GymClassesSection classes={gymClasses} />
           <GymTestimonialsSection
             testimonials={gymTestimonials}

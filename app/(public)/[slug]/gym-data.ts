@@ -22,6 +22,30 @@ export const getGymLocations = cache(async (orgId: string): Promise<GymLocation[
   return data ?? [];
 });
 
+// Fase 0c-i de "Gym2 funcional": galería por sede. Hoy (0c-i) ninguna sede
+// tiene filas acá todavía — el fallback al photo_url único de gym_locations
+// lo resuelve quien consume esto (gym-location-gallery.tsx), no esta
+// función. Sede "Centro" va a ser la primera con fotos reales en la
+// siguiente fase (0c-ii).
+export interface GymLocationPhoto {
+  id: string;
+  photo_url: string;
+  display_order: number;
+}
+
+export const getGymLocationPhotos = cache(
+  async (locationId: string): Promise<GymLocationPhoto[]> => {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("gym_location_photos")
+      .select("id, photo_url, display_order")
+      .eq("location_id", locationId)
+      .order("display_order", { ascending: true });
+
+    return data ?? [];
+  }
+);
+
 // ── Clases + horarios ────────────────────────────────────────────────────
 
 export interface GymScheduleSlot {
@@ -29,6 +53,7 @@ export interface GymScheduleSlot {
   day_of_week: number; // 1=lunes .. 7=domingo
   start_time: string;
   end_time: string;
+  location_id: string;
   location_name: string;
 }
 
@@ -67,6 +92,7 @@ export const getGymClasses = cache(async (orgId: string): Promise<GymClassData[]
       day_of_week: s.day_of_week,
       start_time: s.start_time,
       end_time: s.end_time,
+      location_id: s.location_id,
       location_name: locationNames.get(s.location_id) ?? "",
     });
     scheduleByClass.set(s.class_id, list);

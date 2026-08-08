@@ -1,6 +1,7 @@
 "use client";
 
-import { MapPin, Clock } from "lucide-react";
+import Link from "next/link";
+import { MapPin, Clock, Building2 } from "lucide-react";
 import { LocationPlaceholder } from "./gym-placeholder";
 import type { GymLocation } from "./gym-data";
 
@@ -36,10 +37,12 @@ export function GymLocationCard({
   loc,
   isActive,
   onActivate,
+  slug,
 }: {
   loc: GymLocation;
   isActive: boolean;
   onActivate: () => void;
+  slug: string;
 }) {
   const mapsQuery = loc.address ?? loc.name;
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}`;
@@ -77,8 +80,16 @@ export function GymLocationCard({
           </p>
         )}
 
-        <div className="location-card-reveal">
+        <div className="location-card-reveal space-y-2">
           <StaticMapMockup />
+          <Link
+            href={`/${slug}/sede/${loc.id}`}
+            className="location-maps-btn"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Building2 className="w-3.5 h-3.5" aria-hidden="true" />
+            Ver sede
+          </Link>
           <a
             href={mapsUrl}
             target="_blank"

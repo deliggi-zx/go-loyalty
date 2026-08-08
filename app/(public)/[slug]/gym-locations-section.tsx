@@ -6,9 +6,10 @@ import type { GymLocation } from "./gym-data";
 
 interface GymLocationsSectionProps {
   locations: GymLocation[];
+  slug: string;
 }
 
-export function GymLocationsSection({ locations }: GymLocationsSectionProps) {
+export function GymLocationsSection({ locations, slug }: GymLocationsSectionProps) {
   // Estado de "sede encendida" levantado al padre: una sola tarjeta puede
   // estar activa a la vez. En desktop el :hover de CSS sigue manejando el
   // encendido visual por su cuenta (ver .location-card en globals.css); esto
@@ -35,7 +36,10 @@ export function GymLocationsSection({ locations }: GymLocationsSectionProps) {
 
   return (
     <section id="sedes" className="space-y-4" ref={containerRef}>
-      <h2 className="text-xl font-bold text-stone-900">Nuestras Sedes</h2>
+      {/* text-white, no stone-900: mismo bug de contraste que
+          gym-classes-section.tsx (fondo real casi negro en orgs con
+          hasGymFeatures) — encontrado y corregido en la Fase 0c-i. */}
+      <h2 className="text-xl font-bold text-white">Nuestras Sedes</h2>
 
       {/* Mobile: carrusel horizontal deslizable (con 8 sedes, apiladas
           verticalmente ocupaba demasiado espacio). Desktop (≥640px): vuelve
@@ -54,6 +58,7 @@ export function GymLocationsSection({ locations }: GymLocationsSectionProps) {
               loc={loc}
               isActive={activeLocationId === loc.id}
               onActivate={() => setActiveLocationId(loc.id)}
+              slug={slug}
             />
           </div>
         ))}
