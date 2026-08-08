@@ -31,13 +31,30 @@ const TICKER_PHRASES: Record<string, { top: string[]; bottom: string[] }> = {
 // que TICKER_PHRASES). "Catálogo" usa `href` en vez de `targetId` porque el
 // listado de productos vive en /[slug]/precios, no en esta página — por eso
 // es una función de slug y no un array fijo, para poder armar esa ruta.
-const SECTION_NAV_TABS: Record<string, (slug: string) => SectionNavTabItem[]> = {
-  bike: (slug) => [
-    { label: "Quiénes somos", targetId: "quienes-somos" },
-    { label: "Nuevos ingresos", targetId: "nuevos-ingresos" },
-    { label: "Catálogo", href: `/${slug}/precios` },
-    { label: "Imperdibles", targetId: "imperdibles" },
-  ],
+// El componente sigue disponible para cualquier org futura que quiera la
+// fila horizontal — "bike" se movió a VERTICAL_TABS (Fase 3d), no tiene
+// entrada acá.
+const SECTION_NAV_TABS: Record<string, (slug: string) => SectionNavTabItem[]> = {};
+
+// Pestañas de vidrio verticales a los costados del video (ver
+// VerticalGlassTabs), por org — mismo patrón slug-keyed, mismos items que
+// antes vivían en SECTION_NAV_TABS. Hoy solo "bike" (Fase 3d): reemplaza ahí
+// a la fila horizontal por la mecánica visual de NeonTabs (glass, hover/tap)
+// pero en naranja y a ambos costados.
+const VERTICAL_TABS: Record<
+  string,
+  (slug: string) => { left: SectionNavTabItem[]; right: SectionNavTabItem[] }
+> = {
+  bike: (slug) => ({
+    left: [
+      { label: "Quiénes somos", targetId: "quienes-somos" },
+      { label: "Nuevos ingresos", targetId: "nuevos-ingresos" },
+    ],
+    right: [
+      { label: "Catálogo", href: `/${slug}/precios` },
+      { label: "Imperdibles", targetId: "imperdibles" },
+    ],
+  }),
 };
 
 // Header flotante transparente sobre el banner, con acento naranja propio
@@ -188,6 +205,7 @@ export default async function TenantLayout({
         <HeroVideo
           videoUrl={org.hero_video_url}
           showNeonTabs={hasGymFeatures}
+          verticalTabs={VERTICAL_TABS[params.slug]?.(params.slug) ?? null}
           tickerPhrases={TICKER_PHRASES[params.slug] ?? null}
         />
 

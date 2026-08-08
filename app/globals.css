@@ -158,6 +158,151 @@
   }
 }
 
+/* ── Pestañas de vidrio verticales — generalización de .neon-tab, hoy solo
+   "bike" (Fase 3d) ────────────────────────────────────────────────────────
+   Misma anatomía que .neon-tab (letrero de neón apagado → se enciende con
+   hover/tap), pero soporta anclarse a left-0 O right-0 (.glass-tab-left /
+   .glass-tab-right) y usa --accent-bike (naranja) en vez de --neon
+   (verde-limón de Gym2). NO reemplaza ni toca .neon-tab — Gym2 sigue
+   usándolo tal cual, ver VerticalGlassTabs para la generalización JS. */
+.glass-tab {
+  --accent-bike: #ff6b00;
+  position: relative;
+  width: 52px;
+  height: 176px;
+  background: color-mix(in srgb, var(--accent-bike) 55%, #101012 45%);
+  border: 1px solid color-mix(in srgb, var(--accent-bike) 35%, #000 65%);
+  overflow: hidden;
+  text-decoration: none;
+  transition: width 320ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 320ms ease,
+    border-color 320ms ease, background 320ms ease;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent-bike) 30%, transparent),
+    inset 0 0 6px color-mix(in srgb, var(--accent-bike) 20%, transparent);
+}
+.glass-tab-left {
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+}
+.glass-tab-right {
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+}
+.glass-tab:hover,
+.glass-tab:focus-visible,
+.glass-tab.is-open {
+  width: 310px;
+  outline: none;
+  background: linear-gradient(180deg, #141414, #050505);
+  border-color: var(--accent-bike);
+  box-shadow: 0 0 6px var(--accent-bike), 0 0 18px var(--accent-bike),
+    0 0 38px color-mix(in srgb, var(--accent-bike) 70%, transparent),
+    inset 0 0 10px color-mix(in srgb, var(--accent-bike) 55%, transparent);
+}
+.glass-tab-glow {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    120% 100% at 0% 50%,
+    color-mix(in srgb, var(--accent-bike) 20%, transparent),
+    transparent 70%
+  );
+}
+.glass-tab-right .glass-tab-glow {
+  background: radial-gradient(
+    120% 100% at 100% 50%,
+    color-mix(in srgb, var(--accent-bike) 20%, transparent),
+    transparent 70%
+  );
+}
+.glass-tab:hover .glass-tab-glow,
+.glass-tab:focus-visible .glass-tab-glow,
+.glass-tab.is-open .glass-tab-glow {
+  animation: glass-tab-flicker 380ms steps(1) 1;
+  opacity: 1;
+}
+@keyframes glass-tab-flicker {
+  0% { opacity: 0.35; }
+  8% { opacity: 1; }
+  12% { opacity: 0.45; }
+  20% { opacity: 1; }
+  28% { opacity: 0.55; }
+  36% { opacity: 1; }
+  100% { opacity: 1; }
+}
+.glass-tab-open {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 18px 24px 18px 22px;
+  opacity: 0;
+  transition: opacity 200ms ease 60ms;
+}
+.glass-tab:hover .glass-tab-open,
+.glass-tab:focus-visible .glass-tab-open,
+.glass-tab.is-open .glass-tab-open {
+  opacity: 1;
+}
+.glass-tab-open strong {
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 20px;
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-shadow: 0 0 2px #fff, 0 0 6px var(--accent-bike),
+    0 0 16px color-mix(in srgb, var(--accent-bike) 70%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .glass-tab {
+    transition-duration: 0.01ms;
+  }
+  .glass-tab-glow {
+    animation: none !important;
+  }
+}
+@media (max-width: 639px) {
+  .glass-tab {
+    width: 26px;
+    height: 46px;
+  }
+  .glass-tab:hover,
+  .glass-tab:focus-visible,
+  .glass-tab.is-open {
+    width: 168px;
+    height: 46px;
+  }
+  .glass-tab-open {
+    padding: 0 14px 0 12px;
+    justify-content: center;
+  }
+  .glass-tab-open strong {
+    font-size: 12px;
+    white-space: nowrap;
+  }
+}
+@media (min-width: 640px) and (max-width: 1023px) {
+  .glass-tab {
+    width: 38px;
+    height: 100px;
+  }
+  .glass-tab:hover,
+  .glass-tab:focus-visible,
+  .glass-tab.is-open {
+    width: 230px;
+    height: 100px;
+  }
+  .glass-tab-open {
+    padding: 0 16px 0 14px;
+    justify-content: center;
+  }
+  .glass-tab-open strong {
+    font-size: 15px;
+  }
+}
+
 /* ── Barras horizontales con ticker promocional — solo Gym2 ───────────────
    Reemplazan al cartel diagonal: una ancla al borde superior del video, la
    otra al inferior. Ancho completo, mismo criterio de "siempre encendido"
