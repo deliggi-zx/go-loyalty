@@ -6,6 +6,7 @@ import { PointsBadge } from "./points-badge";
 import { CartProvider } from "./cart-context";
 import { WhatsAppButton } from "./whatsapp-button";
 import { HeroVideo } from "./hero-video";
+import { SectionNavTabs, type SectionNavTabItem } from "./section-nav-tabs";
 import { getGymLocations } from "./gym-data";
 
 // Copy de las franjas del hero, por org (keyed por slug). Cada org que
@@ -25,6 +26,25 @@ const TICKER_PHRASES: Record<string, { top: string[]; bottom: string[] }> = {
     bottom: ["Service técnico", "Repuestos originales en stock"],
   },
 };
+
+// Pestañas de navegación por anclas, por org (keyed por slug, mismo patrón
+// que TICKER_PHRASES). "Catálogo" usa `href` en vez de `targetId` porque el
+// listado de productos vive en /[slug]/precios, no en esta página — por eso
+// es una función de slug y no un array fijo, para poder armar esa ruta.
+const SECTION_NAV_TABS: Record<string, (slug: string) => SectionNavTabItem[]> = {
+  bike: (slug) => [
+    { label: "Quiénes somos", targetId: "quienes-somos" },
+    { label: "Nuevos ingresos", targetId: "nuevos-ingresos" },
+    { label: "Catálogo", href: `/${slug}/precios` },
+    { label: "Imperdibles", targetId: "imperdibles" },
+  ],
+};
+
+// Header flotante transparente sobre el banner, con acento naranja propio
+// (ver .bike-icon en globals.css) — hoy solo "bike" (Fase 3c). Mismo patrón
+// slug-keyed que TICKER_PHRASES/SECTION_NAV_TABS: Cafetería de Prueba,
+// Bicicletería de Prueba y Gym2 siguen con la barra sólida de siempre.
+const FLOATING_HEADER_SLUGS = new Set(["bike"]);
 
 export default async function TenantLayout({
   children,
@@ -73,6 +93,7 @@ export default async function TenantLayout({
   // esta llamada no duplica la query que hace page.tsx en el mismo request.
   const gymLocations = await getGymLocations(org.id);
   const hasGymFeatures = gymLocations.length > 0;
+  const isFloatingHeaderOrg = FLOATING_HEADER_SLUGS.has(params.slug);
 
   const bodyStyle: React.CSSProperties = org.background_url
     ? {
@@ -85,60 +106,83 @@ export default async function TenantLayout({
     ? { backgroundColor: org.background_color }
     : { backgroundColor: "#fafaf9" };
 
+  const header = (
+    <ClientHeader
+      orgName={org.name}
+      primaryColor={primary}
+      userDisplayName={user ? userDisplayName : null}
+      catalogType={org.catalog_type}
+      showLoginIcon={hasGymFeatures && !user}
+      neonTheme={hasGymFeatures}
+      requireInviteCode={hasGymFeatures}
+      orgId={org.id}
+      floatingOverlay={isFloatingHeaderOrg}
+      showScanIcon={!isFloatingHeaderOrg}
+      menuProps={{
+        slug: params.slug,
+        orgName: org.name,
+        isLoggedIn: !!user,
+        userName: userDisplayName,
+        userEmail: user?.email ?? null,
+        transactions,
+        aboutText: org.about_text,
+        phoneNumber: org.phone_number,
+        whatsappNumber: org.whatsapp_number,
+        facebookUrl: org.facebook_url,
+        instagramUrl: org.instagram_url,
+        twitterUrl: org.twitter_url,
+        youtubeUrl: org.youtube_url,
+        termsText: org.terms_text,
+        primaryColor: primary,
+        catalogType: org.catalog_type,
+        productCategories,
+      }}
+    />
+  );
+
+  const pointsBadge = user && (
+    <PointsBadge
+      tierLabel={org.member_tier_label ?? "Socio Frecuente"}
+      balance={pointsBalance}
+    />
+  );
+
+  const banner = org.banner_url ? (
+    <div className="w-full h-48 sm:h-64 overflow-hidden">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={org.banner_url} alt={org.name} className="w-full h-full object-cover" />
+    </div>
+  ) : (
+    <div
+      className="w-full h-48 sm:h-64 flex items-center justify-center"
+      style={{ backgroundColor: primary }}
+    >
+      <h1 className="text-3xl sm:text-4xl font-bold text-white drop-shadow">{org.name}</h1>
+    </div>
+  );
+
   return (
     <CartProvider key={org.id}>
       <div className="min-h-screen" style={bodyStyle}>
-        <ClientHeader
-          orgName={org.name}
-          primaryColor={primary}
-          userDisplayName={user ? userDisplayName : null}
-          catalogType={org.catalog_type}
-          showLoginIcon={hasGymFeatures && !user}
-          neonTheme={hasGymFeatures}
-          requireInviteCode={hasGymFeatures}
-          orgId={org.id}
-          menuProps={{
-            slug: params.slug,
-            orgName: org.name,
-            isLoggedIn: !!user,
-            userName: userDisplayName,
-            userEmail: user?.email ?? null,
-            transactions,
-            aboutText: org.about_text,
-            phoneNumber: org.phone_number,
-            whatsappNumber: org.whatsapp_number,
-            facebookUrl: org.facebook_url,
-            instagramUrl: org.instagram_url,
-            twitterUrl: org.twitter_url,
-            youtubeUrl: org.youtube_url,
-            termsText: org.terms_text,
-            primaryColor: primary,
-            catalogType: org.catalog_type,
-            productCategories,
-          }}
-        />
-
-        {user && (
-          <PointsBadge
-            tierLabel={org.member_tier_label ?? "Socio Frecuente"}
-            balance={pointsBalance}
-          />
-        )}
-
-        {/* Banner */}
-        {org.banner_url ? (
-          <div className="w-full h-48 sm:h-64 overflow-hidden">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={org.banner_url} alt={org.name} className="w-full h-full object-cover" />
+        {/* Header + banner: "bike" (Fase 3c) los envuelve juntos en un
+            contenedor relative para que el header flote transparente
+            ENCIMA del banner (position absolute adentro). El resto de las
+            orgs sigue con el header como barra sólida en flujo normal,
+            arriba del banner — estructura sin cambios. */}
+        {isFloatingHeaderOrg ? (
+          <div className="relative">
+            {header}
+            {banner}
           </div>
         ) : (
-          <div
-            className="w-full h-48 sm:h-64 flex items-center justify-center"
-            style={{ backgroundColor: primary }}
-          >
-            <h1 className="text-3xl sm:text-4xl font-bold text-white drop-shadow">{org.name}</h1>
-          </div>
+          <>
+            {header}
+            {pointsBadge}
+            {banner}
+          </>
         )}
+
+        {isFloatingHeaderOrg && pointsBadge}
 
         {/* Video: sección aparte debajo del banner, 4:3, autoplay muteado en loop */}
         <HeroVideo
@@ -146,6 +190,8 @@ export default async function TenantLayout({
           showNeonTabs={hasGymFeatures}
           tickerPhrases={TICKER_PHRASES[params.slug] ?? null}
         />
+
+        <SectionNavTabs items={SECTION_NAV_TABS[params.slug]?.(params.slug) ?? []} />
 
         {children}
 

@@ -25,6 +25,17 @@ interface ClientHeaderProps {
   // LoginModal), ver ahí el porqué de mantenerlos separados de neonTheme.
   requireInviteCode?: boolean;
   orgId?: string;
+  // Fase 3c, hoy solo "bike": header transparente flotando ENCIMA del
+  // banner (position absolute + scrim), en vez de barra sólida arriba de
+  // él. Independiente de neonTheme — usa su propio acento naranja
+  // (.bike-icon/.bike-icon-active en globals.css), no toca el verde-limón
+  // de Gym2. Cuando está prendido, el header no muestra texto central
+  // (ni saludo ni nombre de org): el banner de bike ya trae su propio
+  // branding en la imagen, repetirlo encima quedaría redundante.
+  floatingOverlay?: boolean;
+  // Ícono de escaneo QR — hoy se saca por completo (no solo se oculta)
+  // para "bike" (Fase 3c), no tiene lector del otro lado todavía.
+  showScanIcon?: boolean;
 }
 
 export function ClientHeader({
@@ -37,6 +48,8 @@ export function ClientHeader({
   neonTheme = false,
   requireInviteCode = false,
   orgId,
+  floatingOverlay = false,
+  showScanIcon = true,
 }: ClientHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
@@ -44,12 +57,17 @@ export function ClientHeader({
   const { totalQuantity } = useCart();
   const showCart = catalogType === "products";
 
-  const iconColorClass = neonTheme ? "neon-icon" : "text-white";
+  const iconColorClass = neonTheme ? "neon-icon" : floatingOverlay ? "bike-icon" : "text-white";
+  const iconActiveClass = neonTheme ? "neon-icon-active" : floatingOverlay ? "bike-icon-active" : "";
   const menuIconSizeClass = neonTheme ? "w-7 h-7" : "w-5 h-5";
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Buenos días" : hour < 19 ? "Buenas tardes" : "Buenas noches";
-  const centerText = userDisplayName ? `${greeting}, ${userDisplayName}` : orgName;
+  const centerText = floatingOverlay
+    ? null
+    : userDisplayName
+    ? `${greeting}, ${userDisplayName}`
+    : orgName;
 
   function handleScan() {
     console.log("scan");
@@ -58,8 +76,12 @@ export function ClientHeader({
   return (
     <>
       <header
-        className="sticky top-0 z-50 flex items-center justify-between px-4 h-14 shrink-0"
-        style={{ backgroundColor: primaryColor || "#f59e0b" }}
+        className={
+          floatingOverlay
+            ? "bike-header-scrim absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 h-14 shrink-0"
+            : "sticky top-0 z-50 flex items-center justify-between px-4 h-14 shrink-0"
+        }
+        style={floatingOverlay ? undefined : { backgroundColor: primaryColor || "#f59e0b" }}
       >
         <button
           onClick={() => setMenuOpen(true)}
@@ -69,9 +91,12 @@ export function ClientHeader({
           <Menu className={`${menuIconSizeClass} ${iconColorClass}`} />
         </button>
 
-        <p className="flex-1 text-center text-sm font-medium text-white truncate px-2">
-          {centerText}
-        </p>
+        {centerText && (
+          <p className="flex-1 text-center text-sm font-medium text-white truncate px-2">
+            {centerText}
+          </p>
+        )}
+        {!centerText && <div className="flex-1" />}
 
         <div className="flex items-center -mr-2">
           {showCart && (
@@ -81,9 +106,7 @@ export function ClientHeader({
               className="relative p-2"
             >
               <ShoppingCart
-                className={`w-5 h-5 ${iconColorClass} ${
-                  neonTheme && totalQuantity > 0 ? "neon-icon-active" : ""
-                }`}
+                className={`w-5 h-5 ${iconColorClass} ${totalQuantity > 0 ? iconActiveClass : ""}`}
               />
               {totalQuantity > 0 && (
                 <span
@@ -95,9 +118,11 @@ export function ClientHeader({
               )}
             </button>
           )}
-          <button onClick={handleScan} aria-label="Escanear código" className="p-2">
-            <ScanLine className={`w-5 h-5 ${iconColorClass}`} />
-          </button>
+          {showScanIcon && (
+            <button onClick={handleScan} aria-label="Escanear código" className="p-2">
+              <ScanLine className={`w-5 h-5 ${iconColorClass}`} />
+            </button>
+          )}
           {showLoginIcon && (
             <button
               onClick={() => setLoginOpen(true)}

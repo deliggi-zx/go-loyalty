@@ -11,7 +11,7 @@ export function GymAboutSection({ aboutText, bannerUrl, orgName }: GymAboutSecti
   if (!aboutText) return null;
 
   return (
-    <section id="quienes-somos" className="space-y-4">
+    <section id="quienes-somos" className="space-y-4 scroll-mt-16">
       {bannerUrl && (
         <div className="relative h-28 sm:h-36 rounded-2xl overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}

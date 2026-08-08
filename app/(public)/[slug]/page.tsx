@@ -56,9 +56,12 @@ export default async function TenantPage({
       )}
 
       {/* Quiénes Somos: para Gym2 sube por encima del carrusel principal
-          (antes vivía junto a Sedes/Clases, más abajo). */}
-      {hasGymFeatures && (
-        <div className="max-w-5xl mx-auto px-4 pt-6">
+          (antes vivía junto a Sedes/Clases, más abajo). Se muestra para
+          cualquier org que tenga about_text cargado — el componente ya es
+          genérico, no hace falta estar atado a hasGymFeatures. Si la org no
+          cargó about_text, no renderiza nada (ver GymAboutSection). */}
+      {(hasGymFeatures || org.about_text) && (
+        <div className={hasGymFeatures ? "max-w-5xl mx-auto px-4 pt-6" : "max-w-lg mx-auto px-4 pt-6"}>
           <GymAboutSection
             aboutText={org.about_text}
             bannerUrl={org.banner_url}
@@ -73,16 +76,25 @@ export default async function TenantPage({
             aprovechar mejor las pantallas de escritorio; el resto de las
             orgs sigue con el ancho de siempre. El aspect-ratio 16:7 del
             carrusel (carousel.tsx) no cambia, así que en mobile se ve igual
-            que antes: solo escala con el ancho disponible de la pantalla. */}
+            que antes: solo escala con el ancho disponible de la pantalla.
+            id="nuevos-ingresos": destino de la pestaña "Nuevos ingresos" de
+            SectionNavTabs (ver SECTION_NAV_TABS en layout.tsx). */}
         {carouselItems.length > 0 && (
-          <div className={hasGymFeatures ? "max-w-5xl mx-auto" : "max-w-lg mx-auto"}>
+          <div
+            id="nuevos-ingresos"
+            className={
+              (hasGymFeatures ? "max-w-5xl mx-auto" : "max-w-lg mx-auto") + " scroll-mt-16"
+            }
+          >
             <Carousel items={carouselItems} />
           </div>
         )}
 
-        {/* Promos, en columna */}
+        {/* Promos, en columna. id="imperdibles": destino de la pestaña
+            "Imperdibles" de SectionNavTabs (ver SECTION_NAV_TABS en
+            layout.tsx). */}
         {promoItems.length > 0 && (
-          <div className="max-w-lg mx-auto space-y-4">
+          <div id="imperdibles" className="max-w-lg mx-auto space-y-4 scroll-mt-16">
             {promoItems.map(
               (item) =>
                 item.image_url && (

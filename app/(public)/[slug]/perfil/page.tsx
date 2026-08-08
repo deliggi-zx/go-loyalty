@@ -75,6 +75,16 @@ export default async function PerfilPage({
         ‹ Volver
       </Link>
 
+      {/* Saludo que antes vivía en el header — se sacó de ahí para "bike"
+          (Fase 3c, header flotante transparente) y se movió acá. Scopeado
+          al slug, no a "cualquier org sin gym_locations", para no cambiar
+          el Mi Perfil de Cafetería/Bicicletería/Gym1 en esta fase. */}
+      {params.slug === "bike" && (
+        <p className="text-lg font-semibold text-stone-900">
+          {greeting}, {userName}
+        </p>
+      )}
+
       {hasGymFeatures && (
         <GymFeaturedBanner photoUrl={gymLocations[0]?.photo_url ?? null} />
       )}

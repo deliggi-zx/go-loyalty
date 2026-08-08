@@ -228,6 +228,62 @@
   }
 }
 
+/* ── Pestañas de navegación por anclas (SectionNavTabs) ──────────────────
+   Fila horizontal debajo del video, config-driven por org (ver
+   SECTION_NAV_TABS en layout.tsx). Reusa el mismo --neon lima y el
+   tratamiento tipográfico (glow, bold uppercase) que .neon-tab, pero es un
+   componente aparte: acá el texto está siempre visible (sin hover-to-reveal)
+   y cada pestaña es un botón/link normal, no un switcher de contenido. */
+.section-nav-tabs {
+  --neon: #ccff00;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: #0a0a0a;
+}
+.section-nav-tab {
+  appearance: none;
+  border: 1px solid color-mix(in srgb, var(--neon) 45%, #000 55%);
+  background: color-mix(in srgb, var(--neon) 12%, #101012 88%);
+  color: #fff;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  padding: 8px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  text-decoration: none;
+  text-shadow: 0 0 2px #fff, 0 0 6px var(--neon),
+    0 0 14px color-mix(in srgb, var(--neon) 60%, transparent);
+  box-shadow: 0 0 4px color-mix(in srgb, var(--neon) 30%, transparent),
+    inset 0 0 4px color-mix(in srgb, var(--neon) 15%, transparent);
+  transition: background 200ms ease, box-shadow 200ms ease, border-color 200ms ease,
+    transform 150ms ease;
+}
+.section-nav-tab:hover,
+.section-nav-tab:focus-visible {
+  outline: none;
+  background: linear-gradient(180deg, #1a1a1a, #050505);
+  border-color: var(--neon);
+  box-shadow: 0 0 6px var(--neon), 0 0 18px var(--neon),
+    0 0 34px color-mix(in srgb, var(--neon) 60%, transparent);
+  transform: translateY(-1px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .section-nav-tab {
+    transition-duration: 0.01ms;
+  }
+}
+@media (min-width: 640px) {
+  .section-nav-tab {
+    font-size: 13px;
+    padding: 10px 20px;
+  }
+}
+
 /* Barra horizontal para no mostrar la scrollbar nativa en los carruseles
    táctiles (clases en mobile, sedes en mobile) sin perder el scroll real. */
 .no-scrollbar {
@@ -582,4 +638,25 @@
 .neon-amount {
   color: #ccff00;
   text-shadow: 0 0 6px rgba(204, 255, 0, 0.5);
+}
+
+/* ── Header flotante — solo "bike" (Fase 3c) ──────────────────────────────
+   Mismo mecanismo de glow que .neon-icon (color + drop-shadow en capas),
+   pero con --accent-bike propio en vez de #ccff00, para no compartir
+   variable ni valor con Gym2. El header en sí (position/transparencia) se
+   resuelve en client-header.tsx vía el prop floatingOverlay; acá solo el
+   color de los íconos y el scrim de contraste detrás de ellos. */
+.bike-header-scrim {
+  --accent-bike: #ff6b00;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.45), transparent);
+}
+.bike-icon {
+  color: var(--accent-bike);
+  filter: drop-shadow(0 0 2px color-mix(in srgb, var(--accent-bike) 85%, transparent))
+    drop-shadow(0 0 6px color-mix(in srgb, var(--accent-bike) 55%, transparent));
+}
+.bike-icon-active {
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--accent-bike) 95%, transparent))
+    drop-shadow(0 0 10px color-mix(in srgb, var(--accent-bike) 70%, transparent))
+    drop-shadow(0 0 18px color-mix(in srgb, var(--accent-bike) 40%, transparent));
 }
