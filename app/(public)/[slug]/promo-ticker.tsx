@@ -1,10 +1,19 @@
-function PromoBar({ position, phrases }: { position: "top" | "bottom"; phrases: string[] }) {
+function PromoBar({
+  position,
+  phrases,
+  accent,
+}: {
+  position: "top" | "bottom";
+  phrases: string[];
+  accent: "neon" | "bike";
+}) {
   // Contenido duplicado una vez para que translateX(-50%) haga un loop sin
   // corte visible.
   const items = [...phrases, ...phrases];
+  const accentClass = accent === "bike" ? "promo-bar-bike" : "";
 
   return (
-    <div className={`promo-bar promo-bar-${position}`} aria-hidden="true">
+    <div className={`promo-bar promo-bar-${position} ${accentClass}`} aria-hidden="true">
       <div className="promo-bar-track">
         {items.map((phrase, i) => (
           <span key={i} className="flex items-center gap-6">
@@ -20,6 +29,10 @@ function PromoBar({ position, phrases }: { position: "top" | "bottom"; phrases: 
 interface PromoTickerProps {
   topPhrases: string[];
   bottomPhrases: string[];
+  // "neon" (verde-limón, default) = Gym2, sin cambios. "bike" = naranja
+  // (Fase 3e), pisa --neon con --accent-bike vía .promo-bar-bike en
+  // globals.css — no hardcodea ningún color acá, solo elige la clase.
+  accent?: "neon" | "bike";
 }
 
 // Dos barras horizontales con frases en loop — reemplazan al cartel diagonal
@@ -31,11 +44,11 @@ interface PromoTickerProps {
 //
 // Componente genérico: las frases las decide el caller (ver TICKER_PHRASES
 // en layout.tsx) — no hardcodea copy de ninguna org en particular.
-export function PromoTicker({ topPhrases, bottomPhrases }: PromoTickerProps) {
+export function PromoTicker({ topPhrases, bottomPhrases, accent = "neon" }: PromoTickerProps) {
   return (
     <>
-      <PromoBar position="top" phrases={topPhrases} />
-      <PromoBar position="bottom" phrases={bottomPhrases} />
+      <PromoBar position="top" phrases={topPhrases} accent={accent} />
+      <PromoBar position="bottom" phrases={bottomPhrases} accent={accent} />
     </>
   );
 }

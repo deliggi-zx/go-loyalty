@@ -70,10 +70,19 @@ function GlassTabGroup({ items, side }: { items: SectionNavTabItem[]; side: "lef
 
   const positionClass = side === "left" ? "left-0" : "right-0";
   const sideClass = side === "left" ? "glass-tab-left" : "glass-tab-right";
+  // El contenedor no tiene ancho explícito (shrink-to-fit al hijo más ancho
+  // en cada momento) — para el grupo derecho eso hacía que, al expandirse
+  // una pestaña, la otra (con align-items:flex-start por default) quedara
+  // alineada contra el borde IZQUIERDO del contenedor ahora más ancho, en
+  // vez de contra el borde derecho real del video. items-end (flex-end)
+  // ancla cada pestaña a su propio borde, independiente del ancho que tenga
+  // su par en ese momento. El grupo izquierdo ya estaba bien con el default
+  // (flex-start = izquierda, coincide con su lado).
+  const alignClass = side === "right" ? "items-end" : "";
 
   return (
     <div
-      className={`absolute ${positionClass} top-1/2 -translate-y-1/2 z-20 flex flex-col gap-1.5 sm:gap-3`}
+      className={`absolute ${positionClass} top-1/2 -translate-y-1/2 z-20 flex flex-col ${alignClass} gap-1.5 sm:gap-3`}
     >
       {items.map((item) =>
         item.href ? (
@@ -87,6 +96,7 @@ function GlassTabGroup({ items, side }: { items: SectionNavTabItem[]; side: "lef
             <span className="glass-tab-glow" aria-hidden="true" />
             <span className="glass-tab-open">
               <strong>{item.label}</strong>
+              {item.subtitle && <em>{item.subtitle}</em>}
             </span>
           </Link>
         ) : (
@@ -100,6 +110,7 @@ function GlassTabGroup({ items, side }: { items: SectionNavTabItem[]; side: "lef
             <span className="glass-tab-glow" aria-hidden="true" />
             <span className="glass-tab-open">
               <strong>{item.label}</strong>
+              {item.subtitle && <em>{item.subtitle}</em>}
             </span>
           </button>
         )

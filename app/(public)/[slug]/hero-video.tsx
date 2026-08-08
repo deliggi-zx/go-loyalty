@@ -19,7 +19,8 @@ import type { SectionNavTabItem } from "./section-nav-tabs";
 // `tickerPhrases` agrega las franjas ("ticker bars") con texto en loop
 // arriba y abajo del video — genérico, cualquier org puede usarlas pasando
 // su propio copy (ver TICKER_PHRASES en layout.tsx). null/undefined = sin
-// franjas.
+// franjas. `accent` adentro es opcional (default "neon" = Gym2, sin
+// cambios); "bike" pinta las franjas de naranja (Fase 3e).
 //
 // Los tres overlays van absolute dentro de este bloque (que tiene
 // overflow-hidden), nunca fixed a toda la pantalla, para que no puedan
@@ -28,7 +29,7 @@ interface HeroVideoProps {
   videoUrl: string | null;
   showNeonTabs?: boolean;
   verticalTabs?: { left: SectionNavTabItem[]; right: SectionNavTabItem[] } | null;
-  tickerPhrases?: { top: string[]; bottom: string[] } | null;
+  tickerPhrases?: { top: string[]; bottom: string[]; accent?: "neon" | "bike" } | null;
 }
 
 export function HeroVideo({
@@ -50,7 +51,11 @@ export function HeroVideo({
         <VerticalGlassTabs leftItems={verticalTabs.left} rightItems={verticalTabs.right} />
       )}
       {tickerPhrases && (
-        <PromoTicker topPhrases={tickerPhrases.top} bottomPhrases={tickerPhrases.bottom} />
+        <PromoTicker
+          topPhrases={tickerPhrases.top}
+          bottomPhrases={tickerPhrases.bottom}
+          accent={tickerPhrases.accent}
+        />
       )}
     </div>
   );

@@ -168,14 +168,14 @@
 .glass-tab {
   --accent-bike: #ff6b00;
   position: relative;
-  width: 52px;
-  height: 176px;
-  background: color-mix(in srgb, var(--accent-bike) 55%, #101012 45%);
+  width: 66px;
+  height: 224px;
+  background: color-mix(in srgb, var(--accent-bike) 32%, #101012 68%);
   border: 1px solid color-mix(in srgb, var(--accent-bike) 35%, #000 65%);
   overflow: hidden;
   text-decoration: none;
-  transition: width 320ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 320ms ease,
-    border-color 320ms ease, background 320ms ease;
+  transition: width 320ms cubic-bezier(0.2, 0.8, 0.2, 1), height 320ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 320ms ease, border-color 320ms ease, background 320ms ease;
   box-shadow: 0 0 8px color-mix(in srgb, var(--accent-bike) 30%, transparent),
     inset 0 0 6px color-mix(in srgb, var(--accent-bike) 20%, transparent);
 }
@@ -190,7 +190,8 @@
 .glass-tab:hover,
 .glass-tab:focus-visible,
 .glass-tab.is-open {
-  width: 310px;
+  width: 350px;
+  height: 244px;
   outline: none;
   background: linear-gradient(180deg, #141414, #050505);
   border-color: var(--accent-bike);
@@ -237,6 +238,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  gap: 6px;
   padding: 18px 24px 18px 22px;
   opacity: 0;
   transition: opacity 200ms ease 60ms;
@@ -255,6 +257,16 @@
   text-shadow: 0 0 2px #fff, 0 0 6px var(--accent-bike),
     0 0 16px color-mix(in srgb, var(--accent-bike) 70%, transparent);
 }
+/* Subtítulo: segunda línea más chica y con menos glow que el título — solo
+   una capa de sombra, radio corto, sin el núcleo blanco del título. */
+.glass-tab-open em {
+  font-style: normal;
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.35;
+  color: #d8d6d2;
+  text-shadow: 0 0 4px color-mix(in srgb, var(--accent-bike) 45%, transparent);
+}
 @media (prefers-reduced-motion: reduce) {
   .glass-tab {
     transition-duration: 0.01ms;
@@ -265,41 +277,49 @@
 }
 @media (max-width: 639px) {
   .glass-tab {
-    width: 26px;
-    height: 46px;
+    width: 33px;
+    height: 58px;
   }
   .glass-tab:hover,
   .glass-tab:focus-visible,
   .glass-tab.is-open {
-    width: 168px;
-    height: 46px;
+    width: 190px;
+    height: 90px;
   }
   .glass-tab-open {
-    padding: 0 14px 0 12px;
+    padding: 8px 14px 8px 12px;
     justify-content: center;
+    gap: 3px;
   }
   .glass-tab-open strong {
     font-size: 12px;
     white-space: nowrap;
   }
+  .glass-tab-open em {
+    font-size: 10px;
+  }
 }
 @media (min-width: 640px) and (max-width: 1023px) {
   .glass-tab {
-    width: 38px;
-    height: 100px;
+    width: 48px;
+    height: 127px;
   }
   .glass-tab:hover,
   .glass-tab:focus-visible,
   .glass-tab.is-open {
-    width: 230px;
-    height: 100px;
+    width: 260px;
+    height: 150px;
   }
   .glass-tab-open {
-    padding: 0 16px 0 14px;
+    padding: 14px 16px 14px 14px;
     justify-content: center;
+    gap: 4px;
   }
   .glass-tab-open strong {
     font-size: 15px;
+  }
+  .glass-tab-open em {
+    font-size: 11px;
   }
 }
 
@@ -319,6 +339,14 @@
   overflow: hidden;
   z-index: 15;
   background: linear-gradient(180deg, #141414, #050505);
+}
+/* Variante de color — hoy solo "bike" (Fase 3e). Pisa --neon con el naranja
+   de la org; todo lo demás del ticker (.promo-bar-top/bottom/track/dot) ya
+   referencia var(--neon), así que no hace falta tocar ninguna otra regla.
+   Doble clase para asegurar que gane por especificidad sin depender del
+   orden de las reglas en el archivo. Gym2 sigue sin esta clase, sin cambios. */
+.promo-bar.promo-bar-bike {
+  --neon: #ff6b00;
 }
 .promo-bar-top {
   top: 0;

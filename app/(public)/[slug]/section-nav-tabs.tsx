@@ -9,6 +9,9 @@ export interface SectionNavTabItem {
   /** Navegación real a otra ruta, para secciones que no viven en esta página
    *  (ej. Catálogo → /[slug]/precios). Si viene seteado, gana sobre targetId. */
   href?: string;
+  /** Segunda línea opcional, más chica, debajo del título — hoy solo la usa
+   *  VerticalGlassTabs (Fase 3e); SectionNavTabs no la renderiza. */
+  subtitle?: string;
 }
 
 interface SectionNavTabsProps {

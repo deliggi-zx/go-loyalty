@@ -13,7 +13,7 @@ import { getGymLocations } from "./gym-data";
 // quiera el ticker agrega su propia entrada acá — el componente no
 // hardcodea texto de ninguna org. Frases de "bike" son placeholder de demo,
 // ajustables después.
-const TICKER_PHRASES: Record<string, { top: string[]; bottom: string[] }> = {
+const TICKER_PHRASES: Record<string, { top: string[]; bottom: string[]; accent?: "neon" | "bike" }> = {
   gym2: {
     top: ["10% off en el plan anual", "Nueva sede en Sede Norte"],
     bottom: [
@@ -24,6 +24,8 @@ const TICKER_PHRASES: Record<string, { top: string[]; bottom: string[] }> = {
   bike: {
     top: ["Envíos a todo el país", "Financiación disponible"],
     bottom: ["Service técnico", "Repuestos originales en stock"],
+    // Fase 3e: franjas en naranja para bike, Gym2 sigue en lima (default).
+    accent: "bike",
   },
 };
 
@@ -47,12 +49,28 @@ const VERTICAL_TABS: Record<
 > = {
   bike: (slug) => ({
     left: [
-      { label: "Quiénes somos", targetId: "quienes-somos" },
-      { label: "Nuevos ingresos", targetId: "nuevos-ingresos" },
+      {
+        label: "Quiénes somos",
+        targetId: "quienes-somos",
+        subtitle: "Mundo Bike, un mundo en dos ruedas",
+      },
+      {
+        label: "Nuevos ingresos",
+        targetId: "nuevos-ingresos",
+        subtitle: "Recién llegados, sé el primero en conocerlos.",
+      },
     ],
     right: [
-      { label: "Catálogo", href: `/${slug}/precios` },
-      { label: "Imperdibles", targetId: "imperdibles" },
+      {
+        label: "Catálogo",
+        href: `/${slug}/precios`,
+        subtitle: "Conocé nuestra tienda online.",
+      },
+      {
+        label: "Imperdibles",
+        targetId: "imperdibles",
+        subtitle: "Ofertas y productos destacados.",
+      },
     ],
   }),
 };
