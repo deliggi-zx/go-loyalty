@@ -47,6 +47,11 @@ export default async function TenantPage({
     org.catalog_type === "products" ? await getFeaturedProducts(org.id) : [];
   const promosSectionTitle = PROMOS_SECTION_TITLE[params.slug];
 
+  // Carrusel más grande + click para pausar/ampliar (Fase 3g) — hoy solo
+  // "bike". Mismo criterio simple que ya usamos en perfil/page.tsx (slug
+  // directo, no un mapa) porque es un único flag booleano en este archivo.
+  const isBike = params.slug === "bike";
+
   // Funcionalidad de gimnasio (Sedes, Clases, Comentarios): solo se muestra si
   // esta organización tiene datos cargados en las tablas gym_*. Ninguna otra
   // organización de Go Loyalty tiene filas ahí, así que no aparece para ellas.
@@ -93,15 +98,24 @@ export default async function TenantPage({
             carrusel (carousel.tsx) no cambia, así que en mobile se ve igual
             que antes: solo escala con el ancho disponible de la pantalla.
             id="nuevos-ingresos": destino de la pestaña "Nuevos ingresos" de
-            SectionNavTabs (ver SECTION_NAV_TABS en layout.tsx). */}
+            SectionNavTabs (ver SECTION_NAV_TABS en layout.tsx).
+            "bike" (Fase 3g): sin max-w acá — Carousel arma su propio ancho
+            vía size="large" (ver sizeWrapperClass en carousel.tsx), así que
+            un tope compitiendo acá lo recortaría de nuevo. */}
         {carouselItems.length > 0 && (
           <div
             id="nuevos-ingresos"
             className={
-              (hasGymFeatures ? "max-w-5xl mx-auto" : "max-w-lg mx-auto") + " scroll-mt-16"
+              (hasGymFeatures ? "max-w-5xl mx-auto" : isBike ? "" : "max-w-lg mx-auto") +
+              " scroll-mt-16"
             }
           >
-            <Carousel items={carouselItems} />
+            <Carousel
+              items={carouselItems}
+              size={isBike ? "large" : "default"}
+              enableLightbox={isBike}
+              lightboxHref={isBike ? `/${params.slug}/precios` : undefined}
+            />
           </div>
         )}
 
