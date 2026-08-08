@@ -113,12 +113,6 @@ export default async function TenantPage({
             destacados (Fase 3b) es un bloque nuevo, aparte, debajo. */}
         {(promoItems.length > 0 || featuredProducts.length > 0) && (
           <div id="imperdibles" className="max-w-lg mx-auto space-y-4 scroll-mt-16">
-            {promosSectionTitle && (
-              <h2 className="bike-section-title text-2xl sm:text-3xl text-center">
-                {promosSectionTitle}
-              </h2>
-            )}
-
             {promoItems.map(
               (item) =>
                 item.image_url && (
@@ -130,6 +124,15 @@ export default async function TenantPage({
                     className="w-full h-auto rounded-2xl object-contain"
                   />
                 )
+            )}
+
+            {/* Fase 3f: el título se movió de arriba de las promos a acá,
+                pegado a la grilla — misma condición que ya usa la grilla
+                para no dejar huecos (sin destacados, ni título ni grilla). */}
+            {promosSectionTitle && featuredProducts.length > 0 && (
+              <h2 className="bike-section-title text-2xl sm:text-3xl text-center">
+                {promosSectionTitle}
+              </h2>
             )}
 
             <FeaturedProductsGrid
