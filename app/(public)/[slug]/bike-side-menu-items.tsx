@@ -163,7 +163,7 @@ export function BikeSideMenuItems({
         className="flex items-center gap-2 text-sm font-medium transition-colors bike-menu-link"
       >
         <Users className="w-4 h-4 bike-icon shrink-0" />
-        Quiénes somos
+        Nosotros
       </button>
 
       {/* Contacto y redes sociales: mismo contenido/estructura que el menú

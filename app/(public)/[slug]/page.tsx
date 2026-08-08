@@ -10,6 +10,7 @@ import { GymClassesSection } from "./gym-classes-section";
 import { GymTestimonialsSection } from "./gym-testimonials-section";
 import { GymPlansSection } from "./gym-plans-section";
 import { FeaturedProductsGrid } from "./featured-products-grid";
+import { BikePromoImage } from "./bike-promo-image";
 
 // Título arriba de la sección de promos + destacados, por org (keyed por
 // slug, mismo patrón que TICKER_PHRASES/VERTICAL_TABS en layout.tsx). Otras
@@ -86,6 +87,7 @@ export default async function TenantPage({
             aboutText={org.about_text}
             bannerUrl={org.banner_url}
             orgName={org.name}
+            title={isBike ? "Nosotros" : undefined}
           />
         </div>
       )}
@@ -119,41 +121,48 @@ export default async function TenantPage({
           </div>
         )}
 
-        {/* Promos + destacados. id="imperdibles": destino de la pestaña
-            "Imperdibles" de SectionNavTabs/VerticalGlassTabs (ver layout.tsx).
-            El wrapper aparece si hay promos O destacados, para que el ancla
-            siempre tenga algo a donde apuntar. Las fotos de promo son
-            EXACTAMENTE las de siempre, sin tocar; la grilla de productos
-            destacados (Fase 3b) es un bloque nuevo, aparte, debajo. */}
+        {/* Promos + destacados. Las fotos de promo son EXACTAMENTE las de
+            siempre, sin tocar (solo "bike" les suma el glow al click, ver
+            BikePromoImage). id="imperdibles" NO va acá arriba — Fase 3i,
+            Gate 6: antes arrancaba en la primera promo, por eso la pestaña
+            "Imperdibles" caía arriba de las promos en vez de en el
+            título+grilla. Ahora el ancla está en el wrapper de abajo,
+            justo donde arranca ese bloque (siempre presente cuando esta
+            sección se renderiza, así la pestaña nunca apunta a la nada
+            aunque en el momento no haya ningún destacado). */}
         {(promoItems.length > 0 || featuredProducts.length > 0) && (
-          <div id="imperdibles" className="max-w-lg mx-auto space-y-4 scroll-mt-16">
-            {promoItems.map(
-              (item) =>
-                item.image_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={item.id}
-                    src={item.image_url}
-                    alt={item.title ?? ""}
-                    className="w-full h-auto rounded-2xl object-contain"
-                  />
-                )
-            )}
+          <div className="max-w-lg mx-auto space-y-4">
+            {promoItems.map((item) => {
+              if (!item.image_url) return null;
+              return isBike ? (
+                <BikePromoImage key={item.id} imageUrl={item.image_url} alt={item.title ?? ""} />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={item.id}
+                  src={item.image_url}
+                  alt={item.title ?? ""}
+                  className="w-full h-auto rounded-2xl object-contain"
+                />
+              );
+            })}
 
             {/* Fase 3f: el título se movió de arriba de las promos a acá,
                 pegado a la grilla — misma condición que ya usa la grilla
                 para no dejar huecos (sin destacados, ni título ni grilla). */}
-            {promosSectionTitle && featuredProducts.length > 0 && (
-              <h2 className="bike-section-title text-2xl sm:text-3xl text-center">
-                {promosSectionTitle}
-              </h2>
-            )}
+            <div id="imperdibles" className="space-y-4 scroll-mt-16">
+              {promosSectionTitle && featuredProducts.length > 0 && (
+                <h2 className="bike-section-title text-2xl sm:text-3xl text-center">
+                  {promosSectionTitle}
+                </h2>
+              )}
 
-            <FeaturedProductsGrid
-              products={featuredProducts}
-              primaryColor={primary}
-              catalogHref={`/${params.slug}/precios`}
-            />
+              <FeaturedProductsGrid
+                products={featuredProducts}
+                primaryColor={primary}
+                catalogHref={`/${params.slug}/precios`}
+              />
+            </div>
           </div>
         )}
       </div>

@@ -78,10 +78,14 @@ export function Carousel({
   if (items.length === 0) return null;
 
   const currentItem = items[current];
-  // Edge-to-edge en mobile (cancela el px-4 del contenedor padre) + tope más
-  // ancho desde sm/lg — ~30-35% más grande que el max-w-lg (512px) de
-  // siempre en los breakpoints donde antes sí tenía un tope.
-  const sizeWrapperClass = size === "large" ? "-mx-4 sm:mx-auto sm:max-w-2xl lg:max-w-3xl" : "";
+  // Edge-to-edge en mobile (cancela el px-4 del contenedor padre). Desde
+  // sm crece por tramos hasta max-w-6xl (1152px) en xl — más ancho que el
+  // max-w-5xl (1024px) que usa Gym2 para su propio carrusel, así que en
+  // pantallas grandes ya no se ve chico al lado del resto (Fase 3i, Gate 4:
+  // el techo anterior, max-w-3xl/768px, no crecía más allá de lg y quedaba
+  // corto en monitores anchos).
+  const sizeWrapperClass =
+    size === "large" ? "-mx-4 sm:mx-auto sm:max-w-2xl lg:max-w-4xl xl:max-w-6xl" : "";
 
   return (
     <div className={`space-y-3 ${sizeWrapperClass}`}>

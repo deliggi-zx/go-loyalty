@@ -170,14 +170,16 @@
   position: relative;
   width: 66px;
   height: 224px;
-  background: color-mix(in srgb, var(--accent-bike) 32%, #101012 68%);
-  border: 1px solid color-mix(in srgb, var(--accent-bike) 35%, #000 65%);
+  /* Fase 3i: mezcla con transparent (no con un negro sólido) — deja ver el
+     video real detrás y lee naranja limpio en vez de marrón apagado. */
+  background: color-mix(in srgb, var(--accent-bike) 38%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-bike) 55%, transparent);
   overflow: hidden;
   text-decoration: none;
   transition: width 320ms cubic-bezier(0.2, 0.8, 0.2, 1), height 320ms cubic-bezier(0.2, 0.8, 0.2, 1),
     box-shadow 320ms ease, border-color 320ms ease, background 320ms ease;
-  box-shadow: 0 0 8px color-mix(in srgb, var(--accent-bike) 30%, transparent),
-    inset 0 0 6px color-mix(in srgb, var(--accent-bike) 20%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent-bike) 45%, transparent),
+    inset 0 0 8px color-mix(in srgb, var(--accent-bike) 30%, transparent);
 }
 .glass-tab-left {
   border-left: none;
@@ -195,9 +197,10 @@
   outline: none;
   background: linear-gradient(180deg, #141414, #050505);
   border-color: var(--accent-bike);
-  box-shadow: 0 0 6px var(--accent-bike), 0 0 18px var(--accent-bike),
-    0 0 38px color-mix(in srgb, var(--accent-bike) 70%, transparent),
-    inset 0 0 10px color-mix(in srgb, var(--accent-bike) 55%, transparent);
+  /* Fase 3i: glow reforzado — radios y opacidades más altos que antes. */
+  box-shadow: 0 0 8px var(--accent-bike), 0 0 26px var(--accent-bike),
+    0 0 54px color-mix(in srgb, var(--accent-bike) 85%, transparent),
+    inset 0 0 16px color-mix(in srgb, var(--accent-bike) 70%, transparent);
 }
 .glass-tab-glow {
   position: absolute;

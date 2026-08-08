@@ -50,7 +50,7 @@ const VERTICAL_TABS: Record<
   bike: (slug) => ({
     left: [
       {
-        label: "Quiénes somos",
+        label: "Nosotros",
         targetId: "quienes-somos",
         subtitle: "Mundo Bike, un mundo en dos ruedas",
       },
