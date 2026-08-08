@@ -139,6 +139,7 @@ export function ClientHeader({
         isOpen={menuOpen}
         onClose={() => setMenuOpen(false)}
         neonTheme={neonTheme}
+        bikeTheme={floatingOverlay}
         {...menuProps}
       />
       {showCart && (

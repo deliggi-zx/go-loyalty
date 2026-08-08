@@ -7,6 +7,7 @@ import { X, Phone, MessageCircle, LogOut, FileText, Receipt, User, Tag } from "l
 import { createClient } from "@/lib/supabase/client";
 import { SocialLinks } from "./social-links";
 import { GymSideMenuItems } from "./gym-side-menu-items";
+import { BikeSideMenuItems } from "./bike-side-menu-items";
 
 export interface SideMenuTransaction {
   id: string;
@@ -43,6 +44,11 @@ export interface SideMenuProps {
   // Cuando es true, el body del drawer lo arma GymSideMenuItems en vez del
   // menú claro de siempre; este prop deja de leerse en ese caso.
   neonTheme?: boolean;
+  // Estilo oscuro+naranja — hoy solo "bike" (Fase 3h, ver isFloatingHeaderOrg
+  // en layout.tsx). Mismo mecanismo que neonTheme: el body del drawer lo
+  // arma BikeSideMenuItems. Mutuamente excluyente con neonTheme (ninguna org
+  // tiene ambos hoy).
+  bikeTheme?: boolean;
   // Label del ítem de catálogo/precios en el menú claro de siempre (el de
   // GymSideMenuItems no lo usa: ese tiene "Planes" y "Tienda" fijos).
   priceListLabel?: string;
@@ -69,6 +75,7 @@ export function SideMenu({
   catalogType,
   productCategories = [],
   neonTheme = false,
+  bikeTheme = false,
   priceListLabel = "Lista de precios",
 }: SideMenuProps) {
   const router = useRouter();
@@ -77,12 +84,18 @@ export function SideMenu({
   const hasSocials = facebookUrl || instagramUrl || twitterUrl || youtubeUrl;
 
   // Clases condicionadas al tema — mismo criterio que showLoginIcon: una
-  // sola variante de estilo por prop, no un side-menu-gym2.tsx paralelo.
-  const drawerBg = neonTheme ? "bg-[#0a0a0b]" : "bg-white";
-  const headerBorder = neonTheme ? "border-[#26262a]" : "border-stone-100";
-  const titleText = neonTheme ? "text-white" : "text-stone-900";
+  // variante de estilo por prop, no un side-menu-<org>.tsx paralelo por
+  // cada tema. neonTheme y bikeTheme comparten el chrome oscuro (fondo,
+  // borde, texto del header); solo cambia el color de hover del botón
+  // cerrar y, más abajo, qué componente arma el body del drawer.
+  const darkChrome = neonTheme || bikeTheme;
+  const drawerBg = darkChrome ? "bg-[#0a0a0b]" : "bg-white";
+  const headerBorder = darkChrome ? "border-[#26262a]" : "border-stone-100";
+  const titleText = darkChrome ? "text-white" : "text-stone-900";
   const closeBtn = neonTheme
     ? "text-[#9b9995] hover:text-[#ccff00]"
+    : bikeTheme
+    ? "text-[#9b9995] hover:text-[#ff6b00]"
     : "text-stone-400 hover:text-stone-700";
   const linkText = neonTheme ? "neon-menu-link" : "text-stone-700 hover:text-stone-900";
   const linkTextMuted = neonTheme ? "neon-menu-link" : "text-stone-600 hover:text-stone-900";
@@ -143,6 +156,23 @@ export function SideMenu({
               instagramUrl={instagramUrl}
               twitterUrl={twitterUrl}
               youtubeUrl={youtubeUrl}
+              catalogType={catalogType}
+              productCategories={productCategories}
+              onClose={onClose}
+              onLogout={handleLogout}
+              loggingOut={loggingOut}
+            />
+          ) : bikeTheme ? (
+            <BikeSideMenuItems
+              slug={slug}
+              isLoggedIn={isLoggedIn}
+              phoneNumber={phoneNumber}
+              whatsappNumber={whatsappNumber}
+              facebookUrl={facebookUrl}
+              instagramUrl={instagramUrl}
+              twitterUrl={twitterUrl}
+              youtubeUrl={youtubeUrl}
+              termsText={termsText}
               catalogType={catalogType}
               productCategories={productCategories}
               onClose={onClose}

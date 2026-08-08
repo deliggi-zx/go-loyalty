@@ -846,3 +846,18 @@
   letter-spacing: 0.03em;
   text-shadow: 0 0 10px color-mix(in srgb, var(--accent-bike) 40%, transparent);
 }
+
+/* Menú lateral de bike (Fase 3h) — mismo mecanismo que .neon-menu-link
+   (color base + text-shadow en hover), con --accent-bike en vez de lima.
+   El fondo oscuro del drawer se resuelve en side-menu.tsx (bikeTheme),
+   acá solo el color de los links. */
+.bike-menu-link {
+  --accent-bike: #ff6b00;
+  color: #d8d6d2;
+  transition: color 220ms ease, text-shadow 220ms ease;
+}
+.bike-menu-link:hover,
+.bike-menu-link:focus-visible {
+  color: var(--accent-bike);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--accent-bike) 55%, transparent);
+}
