@@ -10,6 +10,12 @@ interface LoginModalProps {
   // Estilo oscuro + acentos #ccff00 — hoy solo Gym2, decidido por quien
   // monta el modal (ClientHeader), no hay nada Gym2-específico acá.
   neonTheme?: boolean;
+  // Estilo oscuro + acentos #ff6b00 — hoy solo "bike" (Fase 3j), mismo
+  // mecanismo que neonTheme (ver darkChrome en login-form.tsx). El modal en
+  // sí no se monta hoy para "bike" (showLoginIcon depende de hasGymFeatures
+  // en layout.tsx), pero queda listo/consistente con el resto de
+  // componentes que ya soportan ambos temas (ver side-menu.tsx).
+  bikeTheme?: boolean;
   // Fase 0a de "Gym2 funcional": se pasan tal cual a LoginForm, ver ahí el
   // porqué de mantenerlos separados de neonTheme.
   requireInviteCode?: boolean;
@@ -24,14 +30,18 @@ export function LoginModal({
   onClose,
   primaryColor,
   neonTheme = false,
+  bikeTheme = false,
   requireInviteCode = false,
   orgId,
 }: LoginModalProps) {
-  const panelClass = neonTheme
+  const darkChrome = neonTheme || bikeTheme;
+  const panelClass = darkChrome
     ? "bg-[#0a0a0b] border border-[#26262a]"
     : "bg-white";
   const closeBtnClass = neonTheme
     ? "text-[#9b9995] hover:text-[#ccff00]"
+    : bikeTheme
+    ? "text-[#9b9995] hover:text-[#ff6b00]"
     : "text-stone-400 hover:text-stone-700";
 
   return (
@@ -65,6 +75,7 @@ export function LoginModal({
             primaryColor={primaryColor}
             variant="bare"
             neonTheme={neonTheme}
+            bikeTheme={bikeTheme}
             requireInviteCode={requireInviteCode}
             orgId={orgId}
           />

@@ -72,7 +72,7 @@ export default async function TenantPage({
           usuario del header (ver hasGymFeatures + showLoginIcon en layout.tsx). */}
       {!user && !hasGymFeatures && (
         <div className="max-w-lg mx-auto px-4 pt-4">
-          <LoginForm primaryColor={primary} />
+          <LoginForm primaryColor={primary} bikeTheme={isBike} />
         </div>
       )}
 
