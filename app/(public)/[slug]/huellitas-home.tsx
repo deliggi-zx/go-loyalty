@@ -42,21 +42,24 @@ interface PawButtonProps {
 
 function PawButton({ href, label, color }: PawButtonProps) {
   return (
-    <Link href={href} className="group flex flex-col items-center gap-2 sm:gap-2.5">
+    <Link href={href} className="group flex flex-col items-center gap-[0.6svh]">
+      {/* Tamaño en svh (con piso/techo en px vía clamp), NO en breakpoints
+          de ancho — el bug que arreglamos era de ALTO disponible, no de
+          ancho: un viewport ancho pero bajo rompía igual que uno angosto.
+          Con svh, la huella siempre es la misma proporción de la altura
+          real del video, así que el grupo entero nunca se sale de
+          h-[100svh] sin importar el aspect ratio de la pantalla. */}
       <svg
         viewBox="0 0 64 64"
-        className="w-20 h-20 sm:w-28 sm:h-28 drop-shadow-md transition-transform duration-200 group-hover:scale-110 group-active:scale-95"
+        className="w-[clamp(2.75rem,9svh,6.25rem)] h-[clamp(2.75rem,9svh,6.25rem)] drop-shadow-md transition-transform duration-200 group-hover:scale-110 group-active:scale-95"
         aria-hidden="true"
       >
         <PawShape color={color} />
       </svg>
       {/* Chip oscuro semi-transparente detrás del texto (en vez de solo
-          sombra) — el trail de botones ahora pisa tanto el video (fondo
-          oscuro) como el marfil de abajo (fondo claro, ver -mt negativo en
-          HuellitasHome), y blanco+sombra solo se leía bien sobre el video. */}
-      <span
-        className="text-xs sm:text-sm font-medium text-white tracking-wide text-center bg-black/35 backdrop-blur-[2px] px-2 py-0.5 rounded-full"
-      >
+          sombra) — más contraste garantizado contra cualquier parte del
+          video, clara u oscura. */}
+      <span className="text-[clamp(9px,2svh,13px)] font-medium text-white tracking-wide text-center bg-black/35 backdrop-blur-[2px] px-1.5 py-0.5 rounded-full leading-tight whitespace-nowrap">
         {label}
       </span>
     </Link>
@@ -104,15 +107,19 @@ export function HuellitasHome({ slug, videos }: HuellitasHomeProps) {
 
   return (
     <div className="bg-[#faf6ef]">
-      {/* Hero: video a pantalla completa en loop, sin audio, con el logo
-          arriba (position absolute adentro de este contenedor relative —
-          mismo patrón que el header flotante de bike sobre su banner, ver
-          isFloatingHeaderOrg en layout.tsx). Los 7 botones YA NO viven acá
-          adentro: con 7 huellas más grandes y escalonadas no entran garantizado
-          en un h-[100svh] con overflow-hidden sin arriesgar que en pantallas
-          chicas queden recortadas e invisibles. Viven en el bloque de abajo,
-          en flujo normal, con margen negativo para seguir "flotando" sobre
-          la parte inferior del video sin el riesgo de clipping. */}
+      {/* Hero: video a pantalla completa en loop, sin audio. Logo Y los 7
+          botones huella viven los dos ENTERAMENTE adentro de este
+          contenedor relative + h-[100svh] + overflow-hidden (position
+          absolute, mismo patrón que el header flotante de bike sobre su
+          banner — ver isFloatingHeaderOrg en layout.tsx). TODAS las
+          medidas verticales (logo, huellas, gaps, offsets) están en svh
+          en vez de píxeles fijos + breakpoints de ancho: así el conjunto
+          es siempre la misma proporción de la altura real del contenedor,
+          sin importar si la pantalla es angosta y alta (mobile portrait) o
+          ancha y baja (ventana chica de escritorio) — las dos formas en
+          que esto se salía antes. Presupuesto en svh, de arriba a abajo:
+          2 (offset) + 15 (logo) + ~52 (4 filas de botones) + 1 (offset) ≈
+          70svh usados, con ~30svh de margen de sobra. */}
       <section className="relative w-full h-[100svh] overflow-hidden">
         {activeVideo && (
           <video
@@ -128,8 +135,7 @@ export function HuellitasHome({ slug, videos }: HuellitasHomeProps) {
         <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/10 to-black/55" />
 
         {/* Filete fino cerca de los bordes de la pantalla + huellas
-            decorativas — antes vivían en la sección ivory de abajo, ahora
-            enmarcan el video full-screen. */}
+            decorativas, muy sutiles. */}
         <div className="pointer-events-none absolute inset-3 sm:inset-5 border border-white/25 rounded-sm" />
         <PawMark
           className="pointer-events-none absolute bottom-6 right-6 w-9 h-9 rotate-12"
@@ -140,10 +146,13 @@ export function HuellitasHome({ slug, videos }: HuellitasHomeProps) {
           color="#ffffff14"
         />
 
-        <div className="absolute inset-x-0 top-10 sm:top-14 flex justify-center px-4">
-          <div className="relative w-[65vw] max-w-[340px]">
-            {/* Halo/blur detrás del logo — mismo criterio que la sombra de
-                texto de los botones, para que no se pierda contra las
+        <div className="absolute inset-x-0 top-[2svh] flex justify-center px-4">
+          {/* w-fit: el wrapper toma el ancho real de la imagen (que se
+              dimensiona por ALTO, ver la img de abajo), así el halo
+              (absolute inset-0) calza justo con el logo sin importar su
+              aspect ratio. */}
+          <div className="relative w-fit">
+            {/* Halo/blur detrás del logo para que no se pierda contra las
                 partes claras del video. */}
             <div
               className="pointer-events-none absolute inset-0 scale-90 rounded-full bg-white/30 blur-2xl"
@@ -153,47 +162,43 @@ export function HuellitasHome({ slug, videos }: HuellitasHomeProps) {
             <img
               src={LOGO_URL}
               alt="Huellitas Veterinaria"
-              className="relative w-full h-auto drop-shadow-[0_4px_16px_rgba(0,0,0,0.5)]"
+              className="relative h-[clamp(4.5rem,15svh,11.5rem)] w-auto drop-shadow-[0_4px_16px_rgba(0,0,0,0.5)]"
             />
           </div>
         </div>
-      </section>
 
-      {/* Navegación: 7 botones huella, grid de 2 columnas (4 filas, la
-          última con 1 solo botón centrado). Columna derecha con un
-          leve translate-y hacia abajo respecto de la izquierda — evoca el
-          paso alternado de una mascota caminando (un "rastro") sin usar un
-          zigzag de una sola columna, que con huellas este tamaño no
-          entraba de forma prolija/segura en mobile (ver nota en la
-          sección de arriba). Si este stagger se ve raro en algún viewport,
-          sacar la clase de translate-y del array STAGGER_CLASS de abajo y
-          queda la grilla ordenada de siempre — es el fallback que se pidió.
-          Margen negativo para "flotar" sobre el borde inferior del video
-          sin depender de position absolute + altura fija. */}
-      <div className="relative -mt-24 sm:-mt-32 px-4 pb-8 sm:pb-10">
-        <div className="max-w-[300px] sm:max-w-[380px] mx-auto grid grid-cols-2 gap-x-6 sm:gap-x-10 gap-y-6 sm:gap-y-8">
-          {NAV_BUTTONS.map((btn, i) => {
-            const isLast = i === NAV_BUTTONS.length - 1;
-            const staggerDown = !isLast && i % 2 === 1;
-            return (
-              <div
-                key={btn.label}
-                className={
-                  (isLast ? "col-span-2" : "") +
-                  " flex justify-center" +
-                  (staggerDown ? " translate-y-3 sm:translate-y-4" : "")
-                }
-              >
-                <PawButton
-                  href={`/${slug}${btn.hrefSuffix}`}
-                  label={btn.label}
-                  color={btn.color}
-                />
-              </div>
-            );
-          })}
+        {/* Navegación: 7 botones huella, grid de 2 columnas (4 filas, la
+            última con Turnos solo y centrado). Columna derecha con un leve
+            translate-y hacia abajo respecto de la izquierda — evoca el
+            paso alternado de una mascota caminando (un "rastro"), con un
+            offset chico a propósito para no arriesgar que se salga del
+            contenedor. Si en algún viewport se ve mal, sacar el translate
+            y queda la grilla ordenada de siempre — fallback ya pedido. */}
+        <div className="absolute inset-x-0 bottom-[1svh] px-4">
+          <div className="max-w-[260px] sm:max-w-[360px] mx-auto grid grid-cols-2 gap-x-5 sm:gap-x-8 gap-y-[1.8svh]">
+            {NAV_BUTTONS.map((btn, i) => {
+              const isLast = i === NAV_BUTTONS.length - 1;
+              const staggerDown = !isLast && i % 2 === 1;
+              return (
+                <div
+                  key={btn.label}
+                  className={
+                    (isLast ? "col-span-2" : "") +
+                    " flex justify-center" +
+                    (staggerDown ? " translate-y-[1svh]" : "")
+                  }
+                >
+                  <PawButton
+                    href={`/${slug}${btn.hrefSuffix}`}
+                    label={btn.label}
+                    color={btn.color}
+                  />
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
