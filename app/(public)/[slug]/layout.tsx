@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getTenantOrg, getTenantUser, getUserPointsBalance, getProductCategories } from "./data";
+import { getTenantOrg, getTenantUser, getUserPointsBalance, getProductCategories, isVetOrgSlug } from "./data";
+import { VetChromeGate } from "./vet-chrome-gate";
 import { ClientHeader } from "./client-header";
 import { PointsBadge } from "./points-badge";
 import { CartProvider } from "./cart-context";
@@ -130,6 +131,13 @@ export default async function TenantLayout({
   const hasGymFeatures = gymLocations.length > 0;
   const isFloatingHeaderOrg = FLOATING_HEADER_SLUGS.has(params.slug);
 
+  // Veterinaria (Fase 0, Huellitas): la home es una pantalla bespoke propia
+  // (video full-screen + botones huella, ver page.tsx/huellitas-home.tsx),
+  // sin el header/banner/hero-video/ticker estándar de esta plantilla. En
+  // subpáginas (Pet Shop, Perfil) esa chrome estándar sigue igual que
+  // siempre — ver VetChromeGate.
+  const hasVetFeatures = isVetOrgSlug(params.slug);
+
   const bodyStyle: React.CSSProperties = org.background_url
     ? {
         backgroundImage: `url(${org.background_url})`,
@@ -197,38 +205,52 @@ export default async function TenantLayout({
     </div>
   );
 
+  // Header + banner + video + tabs de siempre — sin cambios en su
+  // contenido. Para orgs vet (hasVetFeatures) esto se envuelve en
+  // VetChromeGate más abajo, que lo oculta solo en la home; en cualquier
+  // otra org se renderiza siempre, igual que antes de esta fase.
+  const standardChrome = (
+    <>
+      {/* Header + banner: "bike" (Fase 3c) los envuelve juntos en un
+          contenedor relative para que el header flote transparente
+          ENCIMA del banner (position absolute adentro). El resto de las
+          orgs sigue con el header como barra sólida en flujo normal,
+          arriba del banner — estructura sin cambios. */}
+      {isFloatingHeaderOrg ? (
+        <div className="relative">
+          {header}
+          {banner}
+        </div>
+      ) : (
+        <>
+          {header}
+          {pointsBadge}
+          {banner}
+        </>
+      )}
+
+      {isFloatingHeaderOrg && pointsBadge}
+
+      {/* Video: sección aparte debajo del banner, 4:3, autoplay muteado en loop */}
+      <HeroVideo
+        videoUrl={org.hero_video_url}
+        showNeonTabs={hasGymFeatures}
+        verticalTabs={VERTICAL_TABS[params.slug]?.(params.slug) ?? null}
+        tickerPhrases={TICKER_PHRASES[params.slug] ?? null}
+      />
+
+      <SectionNavTabs items={SECTION_NAV_TABS[params.slug]?.(params.slug) ?? []} />
+    </>
+  );
+
   return (
     <CartProvider key={org.id}>
       <div className="min-h-screen" style={bodyStyle}>
-        {/* Header + banner: "bike" (Fase 3c) los envuelve juntos en un
-            contenedor relative para que el header flote transparente
-            ENCIMA del banner (position absolute adentro). El resto de las
-            orgs sigue con el header como barra sólida en flujo normal,
-            arriba del banner — estructura sin cambios. */}
-        {isFloatingHeaderOrg ? (
-          <div className="relative">
-            {header}
-            {banner}
-          </div>
+        {hasVetFeatures ? (
+          <VetChromeGate slug={params.slug}>{standardChrome}</VetChromeGate>
         ) : (
-          <>
-            {header}
-            {pointsBadge}
-            {banner}
-          </>
+          standardChrome
         )}
-
-        {isFloatingHeaderOrg && pointsBadge}
-
-        {/* Video: sección aparte debajo del banner, 4:3, autoplay muteado en loop */}
-        <HeroVideo
-          videoUrl={org.hero_video_url}
-          showNeonTabs={hasGymFeatures}
-          verticalTabs={VERTICAL_TABS[params.slug]?.(params.slug) ?? null}
-          tickerPhrases={TICKER_PHRASES[params.slug] ?? null}
-        />
-
-        <SectionNavTabs items={SECTION_NAV_TABS[params.slug]?.(params.slug) ?? []} />
 
         {children}
 

@@ -14,6 +14,20 @@ export const getTenantOrg = cache(async (slug: string) => {
   return data;
 });
 
+// Orgs de rubro Veterinaria con home bespoke propio (Fase 0, Huellitas) —
+// config-driven por slug, nada atado a org_id. Se consulta desde más de un
+// archivo (layout.tsx y page.tsx), por eso vive acá centralizado en vez de
+// duplicar el Set en cada uno — mismo criterio que TICKER_PHRASES/
+// VERTICAL_TABS/FLOATING_HEADER_SLUGS en layout.tsx, pero con un único
+// origen de verdad. Sumar acá cualquier org nueva del rubro que quiera el
+// mismo tratamiento (video full-screen, sin header/banner estándar en la
+// home).
+const VET_ORG_SLUGS = new Set(["huellitas"]);
+
+export function isVetOrgSlug(slug: string): boolean {
+  return VET_ORG_SLUGS.has(slug);
+}
+
 export const getTenantUser = cache(async () => {
   const supabase = createClient();
   const {
