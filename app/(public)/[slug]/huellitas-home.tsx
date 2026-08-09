@@ -37,15 +37,20 @@ interface PawButtonProps {
 
 function PawButton({ href, label, color }: PawButtonProps) {
   return (
-    <Link href={href} className="group flex flex-col items-center gap-2">
+    <Link href={href} className="group flex flex-col items-center gap-1.5 sm:gap-2">
       <svg
         viewBox="0 0 64 64"
-        className="w-16 h-16 sm:w-20 sm:h-20 drop-shadow-sm transition-transform duration-200 group-hover:scale-110 group-active:scale-95"
+        className="w-14 h-14 sm:w-20 sm:h-20 drop-shadow-md transition-transform duration-200 group-hover:scale-110 group-active:scale-95"
         aria-hidden="true"
       >
         <PawShape color={color} />
       </svg>
-      <span className="text-xs sm:text-sm font-medium text-stone-700 tracking-wide text-center">
+      {/* Texto blanco con sombra — antes vivía sobre fondo ivory, ahora
+          flota sobre el video (mismo criterio que el título). */}
+      <span
+        className="text-xs sm:text-sm font-medium text-white tracking-wide text-center"
+        style={{ textShadow: "0 1px 6px rgba(0,0,0,0.65)" }}
+      >
         {label}
       </span>
     </Link>
@@ -87,7 +92,12 @@ export function HuellitasHome({ slug, orgName, videos }: HuellitasHomeProps) {
   return (
     <div className="bg-[#faf6ef]">
       {/* Hero: video a pantalla completa en loop, sin audio, con el nombre
-          de la marca centrado arriba y un velo sutil para legibilidad. */}
+          de la marca arriba y los 6 botones huella flotando ENCIMA del
+          video (position absolute adentro de este mismo contenedor
+          relative) — mismo patrón que el header flotante de bike sobre su
+          banner (ver isFloatingHeaderOrg en layout.tsx), acá aplicado al
+          video en vez de a una imagen. Un velo sutil de arriba a abajo da
+          contraste tanto al título como a las etiquetas de los botones. */}
       <section className="relative w-full h-[100svh] overflow-hidden">
         {activeVideo && (
           <video
@@ -100,9 +110,22 @@ export function HuellitasHome({ slug, orgName, videos }: HuellitasHomeProps) {
             playsInline
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/10 to-black/50" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/10 to-black/55" />
 
-        <div className="absolute inset-x-0 top-12 sm:top-16 flex justify-center px-4">
+        {/* Filete fino cerca de los bordes de la pantalla + huellas
+            decorativas — antes vivían en la sección ivory de abajo, ahora
+            enmarcan el video full-screen. */}
+        <div className="pointer-events-none absolute inset-3 sm:inset-5 border border-white/25 rounded-sm" />
+        <PawMark
+          className="pointer-events-none absolute bottom-6 right-6 w-9 h-9 rotate-12"
+          color="#ffffff1a"
+        />
+        <PawMark
+          className="pointer-events-none absolute top-8 left-8 w-8 h-8 -rotate-12"
+          color="#ffffff14"
+        />
+
+        <div className="absolute inset-x-0 top-10 sm:top-14 flex justify-center px-4">
           <h1
             className={`${playfair.className} text-4xl sm:text-6xl text-white tracking-wide text-center`}
             style={{ textShadow: "0 2px 18px rgba(0,0,0,0.55)" }}
@@ -110,40 +133,21 @@ export function HuellitasHome({ slug, orgName, videos }: HuellitasHomeProps) {
             {orgName}
           </h1>
         </div>
-      </section>
 
-      {/* Navegación: 2 filas x 3 botones huella sobre fondo marfil/hueso,
-          con filete fino cerca de los bordes y unas pocas huellas
-          decorativas de fondo, todo en opacidad baja y sutil. */}
-      <section className="relative px-4 sm:px-8 py-14 sm:py-20">
-        <div className="pointer-events-none absolute inset-3 sm:inset-5 border border-[#c9ae8c]/30 rounded-sm" />
-
-        <PawMark
-          className="pointer-events-none absolute bottom-8 right-8 w-9 h-9 rotate-12"
-          color="#c9ae8c1a"
-        />
-        <PawMark
-          className="pointer-events-none absolute bottom-20 right-20 w-6 h-6 -rotate-6"
-          color="#c9ae8c1a"
-        />
-        <PawMark
-          className="pointer-events-none absolute bottom-10 right-32 w-7 h-7 rotate-45"
-          color="#c9ae8c14"
-        />
-        <PawMark
-          className="pointer-events-none absolute top-8 left-8 w-8 h-8 -rotate-12"
-          color="#c9ae8c14"
-        />
-
-        <div className="relative max-w-md sm:max-w-xl mx-auto grid grid-cols-3 gap-x-6 gap-y-10 sm:gap-x-10 sm:gap-y-14">
-          {NAV_BUTTONS.map((btn) => (
-            <PawButton
-              key={btn.label}
-              href={`/${slug}${btn.hrefSuffix}`}
-              label={btn.label}
-              color={btn.color}
-            />
-          ))}
+        {/* Navegación: 2 filas x 3 botones huella, superpuestos al video
+            cerca del borde inferior. Misma distribución y mismos pasteles
+            de siempre — solo cambió el posicionamiento. */}
+        <div className="absolute inset-x-0 bottom-6 sm:bottom-10 px-4">
+          <div className="max-w-md sm:max-w-xl mx-auto grid grid-cols-3 gap-x-4 gap-y-4 sm:gap-x-10 sm:gap-y-8">
+            {NAV_BUTTONS.map((btn) => (
+              <PawButton
+                key={btn.label}
+                href={`/${slug}${btn.hrefSuffix}`}
+                label={btn.label}
+                color={btn.color}
+              />
+            ))}
+          </div>
         </div>
       </section>
     </div>
