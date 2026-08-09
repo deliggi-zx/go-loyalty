@@ -179,6 +179,7 @@ export default async function TenantLayout({
     <PointsBadge
       tierLabel={org.member_tier_label ?? "Socio Frecuente"}
       balance={pointsBalance}
+      bikeTheme={isFloatingHeaderOrg}
     />
   );
 

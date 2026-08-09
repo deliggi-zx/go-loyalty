@@ -42,6 +42,10 @@ export default async function PerfilPage({
   const threshold = org.next_reward_threshold ?? 1000;
   const progressPct = Math.min(100, Math.round((balance / threshold) * 100));
 
+  // Fase P4: puntos con estética oscuro+naranja — mismo criterio simple
+  // (slug directo) que ya usa el saludo más abajo y page.tsx (isBike).
+  const isBike = params.slug === "bike";
+
   // Showroom de entrenamiento (Fase 1 + 2): solo para Gym2, mismo criterio
   // hasGymFeatures que layout.tsx y page.tsx (orgs sin filas en
   // gym_locations no ven este bloque, todo lo demás sigue igual). Las
@@ -114,17 +118,30 @@ export default async function PerfilPage({
             label={org.member_tier_label ?? "Socio Frecuente"}
             balance={balance}
             primaryColor={primary}
+            bikeTheme={isBike}
           />
 
-          {/* Barra de progreso */}
-          <div className="space-y-2">
-            <div className="w-full h-2 bg-stone-200 rounded-full overflow-hidden">
+          {/* Barra de progreso — "bike" (Fase P4) suma el track oscuro y el
+              relleno/texto en naranja, mismo acento que PointsPanel arriba.
+              El resto de las orgs sigue con el track claro de siempre. */}
+          <div
+            className={
+              isBike
+                ? "bg-[#0a0a0b] rounded-2xl border border-[#26262a] p-4 space-y-2"
+                : "space-y-2"
+            }
+          >
+            <div
+              className={`w-full h-2 rounded-full overflow-hidden ${
+                isBike ? "bg-[#26262a]" : "bg-stone-200"
+              }`}
+            >
               <div
                 className="h-full rounded-full transition-all"
-                style={{ width: `${progressPct}%`, backgroundColor: primary }}
+                style={{ width: `${progressPct}%`, backgroundColor: isBike ? "#ff6b00" : primary }}
               />
             </div>
-            <p className="text-center text-xs text-stone-500">
+            <p className={`text-center text-xs ${isBike ? "text-[#9b9995]" : "text-stone-500"}`}>
               {balance >= threshold
                 ? "¡Ya alcanzaste tu próxima recompensa!"
                 : `Te faltan ${threshold - balance} puntos para tu próxima recompensa`}
