@@ -42,19 +42,20 @@ interface PawButtonProps {
 
 function PawButton({ href, label, color }: PawButtonProps) {
   return (
-    <Link href={href} className="group flex flex-col items-center gap-1.5 sm:gap-2">
+    <Link href={href} className="group flex flex-col items-center gap-2 sm:gap-2.5">
       <svg
         viewBox="0 0 64 64"
-        className="w-14 h-14 sm:w-20 sm:h-20 drop-shadow-md transition-transform duration-200 group-hover:scale-110 group-active:scale-95"
+        className="w-20 h-20 sm:w-28 sm:h-28 drop-shadow-md transition-transform duration-200 group-hover:scale-110 group-active:scale-95"
         aria-hidden="true"
       >
         <PawShape color={color} />
       </svg>
-      {/* Texto blanco con sombra — antes vivía sobre fondo ivory, ahora
-          flota sobre el video (mismo criterio que el título). */}
+      {/* Chip oscuro semi-transparente detrás del texto (en vez de solo
+          sombra) — el trail de botones ahora pisa tanto el video (fondo
+          oscuro) como el marfil de abajo (fondo claro, ver -mt negativo en
+          HuellitasHome), y blanco+sombra solo se leía bien sobre el video. */}
       <span
-        className="text-xs sm:text-sm font-medium text-white tracking-wide text-center"
-        style={{ textShadow: "0 1px 6px rgba(0,0,0,0.65)" }}
+        className="text-xs sm:text-sm font-medium text-white tracking-wide text-center bg-black/35 backdrop-blur-[2px] px-2 py-0.5 rounded-full"
       >
         {label}
       </span>
@@ -62,13 +63,17 @@ function PawButton({ href, label, color }: PawButtonProps) {
   );
 }
 
+// Colores con canal alfa (últimos 2 dígitos hex, "99" ≈ 60% opacidad) — más
+// transparentes que el relleno sólido de antes. "Turnos" es el 7° botón
+// nuevo; el resto son los mismos 6 de siempre, mismos tonos pastel base.
 const NAV_BUTTONS: { label: string; hrefSuffix: string; color: string }[] = [
-  { label: "Nosotros", hrefSuffix: "/nosotros", color: "#d8c3a5" },
-  { label: "Pet Shop", hrefSuffix: "/precios", color: "#c9a3a3" },
-  { label: "Peluquería", hrefSuffix: "/peluqueria", color: "#a7c0cc" },
-  { label: "Refugio", hrefSuffix: "/refugio", color: "#a8b799" },
-  { label: "Perdidos", hrefSuffix: "/perdidos", color: "#b6a3ab" },
-  { label: "Consejos", hrefSuffix: "/consejos", color: "#a3a79c" },
+  { label: "Nosotros", hrefSuffix: "/nosotros", color: "#d8c3a599" },
+  { label: "Pet Shop", hrefSuffix: "/precios", color: "#c9a3a399" },
+  { label: "Peluquería", hrefSuffix: "/peluqueria", color: "#a7c0cc99" },
+  { label: "Refugio", hrefSuffix: "/refugio", color: "#a8b79999" },
+  { label: "Perdidos", hrefSuffix: "/perdidos", color: "#b6a3ab99" },
+  { label: "Consejos", hrefSuffix: "/consejos", color: "#a3a79c99" },
+  { label: "Turnos", hrefSuffix: "/turnos", color: "#8fac9b99" },
 ];
 
 interface HuellitasHomeProps {
@@ -99,13 +104,15 @@ export function HuellitasHome({ slug, videos }: HuellitasHomeProps) {
 
   return (
     <div className="bg-[#faf6ef]">
-      {/* Hero: video a pantalla completa en loop, sin audio, con el nombre
-          de la marca arriba y los 6 botones huella flotando ENCIMA del
-          video (position absolute adentro de este mismo contenedor
-          relative) — mismo patrón que el header flotante de bike sobre su
-          banner (ver isFloatingHeaderOrg en layout.tsx), acá aplicado al
-          video en vez de a una imagen. Un velo sutil de arriba a abajo da
-          contraste tanto al título como a las etiquetas de los botones. */}
+      {/* Hero: video a pantalla completa en loop, sin audio, con el logo
+          arriba (position absolute adentro de este contenedor relative —
+          mismo patrón que el header flotante de bike sobre su banner, ver
+          isFloatingHeaderOrg en layout.tsx). Los 7 botones YA NO viven acá
+          adentro: con 7 huellas más grandes y escalonadas no entran garantizado
+          en un h-[100svh] con overflow-hidden sin arriesgar que en pantallas
+          chicas queden recortadas e invisibles. Viven en el bloque de abajo,
+          en flujo normal, con margen negativo para seguir "flotando" sobre
+          la parte inferior del video sin el riesgo de clipping. */}
       <section className="relative w-full h-[100svh] overflow-hidden">
         {activeVideo && (
           <video
@@ -150,23 +157,43 @@ export function HuellitasHome({ slug, videos }: HuellitasHomeProps) {
             />
           </div>
         </div>
-
-        {/* Navegación: 2 filas x 3 botones huella, superpuestos al video
-            cerca del borde inferior. Misma distribución y mismos pasteles
-            de siempre — solo cambió el posicionamiento. */}
-        <div className="absolute inset-x-0 bottom-6 sm:bottom-10 px-4">
-          <div className="max-w-md sm:max-w-xl mx-auto grid grid-cols-3 gap-x-4 gap-y-4 sm:gap-x-10 sm:gap-y-8">
-            {NAV_BUTTONS.map((btn) => (
-              <PawButton
-                key={btn.label}
-                href={`/${slug}${btn.hrefSuffix}`}
-                label={btn.label}
-                color={btn.color}
-              />
-            ))}
-          </div>
-        </div>
       </section>
+
+      {/* Navegación: 7 botones huella, grid de 2 columnas (4 filas, la
+          última con 1 solo botón centrado). Columna derecha con un
+          leve translate-y hacia abajo respecto de la izquierda — evoca el
+          paso alternado de una mascota caminando (un "rastro") sin usar un
+          zigzag de una sola columna, que con huellas este tamaño no
+          entraba de forma prolija/segura en mobile (ver nota en la
+          sección de arriba). Si este stagger se ve raro en algún viewport,
+          sacar la clase de translate-y del array STAGGER_CLASS de abajo y
+          queda la grilla ordenada de siempre — es el fallback que se pidió.
+          Margen negativo para "flotar" sobre el borde inferior del video
+          sin depender de position absolute + altura fija. */}
+      <div className="relative -mt-24 sm:-mt-32 px-4 pb-8 sm:pb-10">
+        <div className="max-w-[300px] sm:max-w-[380px] mx-auto grid grid-cols-2 gap-x-6 sm:gap-x-10 gap-y-6 sm:gap-y-8">
+          {NAV_BUTTONS.map((btn, i) => {
+            const isLast = i === NAV_BUTTONS.length - 1;
+            const staggerDown = !isLast && i % 2 === 1;
+            return (
+              <div
+                key={btn.label}
+                className={
+                  (isLast ? "col-span-2" : "") +
+                  " flex justify-center" +
+                  (staggerDown ? " translate-y-3 sm:translate-y-4" : "")
+                }
+              >
+                <PawButton
+                  href={`/${slug}${btn.hrefSuffix}`}
+                  label={btn.label}
+                  color={btn.color}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
