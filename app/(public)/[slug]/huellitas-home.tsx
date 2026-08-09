@@ -157,6 +157,9 @@ interface HuellitasHomeProps {
   // huecos si algún upload falló — se resuelve con un fallback simple.
   videos: (string | null)[];
   primaryColor: string;
+  // Org de esta home — LoginModal lo necesita para el fix genérico de
+  // Fase 1 (crear loyalty_members al registrarse, ver login-form.tsx).
+  orgId: string;
   // Botón-huella de WhatsApp (esquina inferior derecha) solo aparece si la
   // org tiene número cargado — mismo criterio que el WhatsAppButton
   // genérico de layout.tsx (que además queda oculto acá, ver
@@ -177,6 +180,7 @@ export function HuellitasHome({
   slug,
   videos,
   primaryColor,
+  orgId,
   whatsappNumber,
   facebookUrl,
   instagramUrl,
@@ -356,6 +360,7 @@ export function HuellitasHome({
         isOpen={loginOpen}
         onClose={() => setLoginOpen(false)}
         primaryColor={primaryColor}
+        orgId={orgId}
       />
     </div>
   );
