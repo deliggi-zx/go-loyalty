@@ -240,6 +240,14 @@ export default async function TenantLayout({
       />
 
       <SectionNavTabs items={SECTION_NAV_TABS[params.slug]?.(params.slug) ?? []} />
+
+      {/* Vive adentro de standardChrome (no como hermano suelto) para que
+          VetChromeGate lo oculte en la home de orgs vet igual que el resto
+          de la chrome estándar — si no, el día que Huellitas cargue un
+          whatsapp_number quedaría duplicado con el botón-huella de
+          WhatsApp propio de HuellitasHome. En subpáginas (Pet Shop, etc.)
+          sigue apareciendo como siempre. */}
+      <WhatsAppButton whatsappNumber={org.whatsapp_number} />
     </>
   );
 
@@ -253,8 +261,6 @@ export default async function TenantLayout({
         )}
 
         {children}
-
-        <WhatsAppButton whatsappNumber={org.whatsapp_number} />
       </div>
     </CartProvider>
   );

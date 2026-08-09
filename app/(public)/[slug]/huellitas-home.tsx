@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { MessageCircle, User } from "lucide-react";
+import { LoginModal } from "./login-modal";
 
 // Logo con wordmark ("Huellitas" + "Veterinaria | Petshop"), fondo
 // transparente — reemplaza el título en texto (antes en Playfair Display).
@@ -66,6 +68,71 @@ function PawButton({ href, label, color }: PawButtonProps) {
   );
 }
 
+// Botón huella "de esquina" — mismo PawShape que PawButton pero con un
+// ícono centrado ENCIMA de la huella (en vez de una etiqueta como único
+// contenido) y posicionado suelto en una esquina del video, no en el
+// rastro de navegación. Se usa para WhatsApp (inferior derecha) y para
+// login/registro (superior derecha, más chico — ver ambos usos abajo).
+interface CornerPawButtonProps {
+  label: string;
+  color: string;
+  icon: React.ReactNode;
+  sizeClass: string;
+  positionClass: string;
+  href?: string;
+  external?: boolean;
+  onClick?: () => void;
+}
+
+function CornerPawButton({
+  label,
+  color,
+  icon,
+  sizeClass,
+  positionClass,
+  href,
+  external,
+  onClick,
+}: CornerPawButtonProps) {
+  const className = `absolute ${positionClass} z-10 group flex flex-col items-center gap-[0.5svh] transition-transform duration-200 hover:scale-110 active:scale-95`;
+
+  const content = (
+    <>
+      <span className={`relative block ${sizeClass}`}>
+        <svg viewBox="0 0 64 64" className="absolute inset-0 w-full h-full drop-shadow-md" aria-hidden="true">
+          <PawShape color={color} />
+        </svg>
+        <span className="absolute inset-0 flex items-center justify-center text-white">
+          {icon}
+        </span>
+      </span>
+      <span className="text-[clamp(8px,1.6svh,11px)] font-medium text-white tracking-wide text-center bg-black/35 backdrop-blur-[2px] px-1.5 py-0.5 rounded-full leading-tight whitespace-nowrap">
+        {label}
+      </span>
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} aria-label={label} className={className}>
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <a
+      href={href}
+      target={external ? "_blank" : undefined}
+      rel={external ? "noopener noreferrer" : undefined}
+      aria-label={label}
+      className={className}
+    >
+      {content}
+    </a>
+  );
+}
+
 // Colores con canal alfa (últimos 2 dígitos hex, "99" ≈ 60% opacidad) — más
 // transparentes que el relleno sólido de antes. "Turnos" es el 7° botón
 // nuevo; el resto son los mismos 6 de siempre, mismos tonos pastel base.
@@ -88,9 +155,18 @@ interface HuellitasHomeProps {
   // 7 URLs, índice = Date.getDay() (0 domingo .. 6 sábado). Puede traer
   // huecos si algún upload falló — se resuelve con un fallback simple.
   videos: (string | null)[];
+  primaryColor: string;
+  // Botón-huella de WhatsApp (esquina inferior derecha) solo aparece si la
+  // org tiene número cargado — mismo criterio que el WhatsAppButton
+  // genérico de layout.tsx (que además queda oculto acá, ver
+  // VetChromeGate/standardChrome), para no mostrar un botón que no lleva a
+  // ningún lado.
+  whatsappNumber: string | null;
 }
 
-export function HuellitasHome({ slug, videos }: HuellitasHomeProps) {
+export function HuellitasHome({ slug, videos, primaryColor, whatsappNumber }: HuellitasHomeProps) {
+  const [loginOpen, setLoginOpen] = useState(false);
+
   // Día de la semana: se resuelve en el cliente después del montaje para no
   // arriesgar un mismatch de hidratación entre el día del server y el del
   // navegador del usuario (distintas zonas horarias). El primer render
@@ -118,8 +194,9 @@ export function HuellitasHome({ slug, videos }: HuellitasHomeProps) {
           sin importar si la pantalla es angosta y alta (mobile portrait) o
           ancha y baja (ventana chica de escritorio) — las dos formas en
           que esto se salía antes. Presupuesto en svh, de arriba a abajo:
-          2 (offset) + 15 (logo) + ~52 (4 filas de botones) + 1 (offset) ≈
-          70svh usados, con ~30svh de margen de sobra. */}
+          2 (offset) + 15 (logo) + ~52 (4 filas de botones) + 6 (offset) ≈
+          75svh usados, con ~25svh de margen (el rastro subió un poco desde
+          la versión anterior, que dejaba 1svh nada más pegado al borde). */}
       <section className="relative w-full h-[100svh] overflow-hidden">
         {activeVideo && (
           <video
@@ -134,17 +211,49 @@ export function HuellitasHome({ slug, videos }: HuellitasHomeProps) {
         )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/10 to-black/55" />
 
-        {/* Filete fino cerca de los bordes de la pantalla + huellas
-            decorativas, muy sutiles. */}
+        {/* Filete fino cerca de los bordes de la pantalla + huella
+            decorativa, muy sutil. La que iba en la esquina inferior
+            derecha se saca: ahí vive ahora el botón-huella real de
+            WhatsApp (ver más abajo). */}
         <div className="pointer-events-none absolute inset-3 sm:inset-5 border border-white/25 rounded-sm" />
-        <PawMark
-          className="pointer-events-none absolute bottom-6 right-6 w-9 h-9 rotate-12"
-          color="#ffffff1a"
-        />
         <PawMark
           className="pointer-events-none absolute top-8 left-8 w-8 h-8 -rotate-12"
           color="#ffffff14"
         />
+
+        {/* Botón-huella de cuenta (login/registro): mismo LoginModal +
+            LoginForm que usan el resto de las orgs (ver ClientHeader),
+            tema claro (sin neonTheme/bikeTheme) — es el mismo flujo, solo
+            que acá se abre desde una huella en vez de un ícono de header
+            (la home no tiene header, ver VetChromeGate). Pastel más
+            opaco (alfa "cc" en vez de "99") + ícono de persona para que
+            se lea como "acción de cuenta", no como destino de
+            navegación del rastro de abajo. */}
+        <CornerPawButton
+          label="Mi cuenta"
+          color="#d4b06acc"
+          icon={<User className="w-[45%] h-[45%]" />}
+          sizeClass="w-[clamp(1.75rem,6svh,3.75rem)] h-[clamp(1.75rem,6svh,3.75rem)]"
+          positionClass="top-[2svh] right-4"
+          onClick={() => setLoginOpen(true)}
+        />
+
+        {/* Botón-huella de WhatsApp: mismo componente de huella que los 7
+            de navegación, con el ícono de MessageCircle centrado encima
+            en vez de más chico al costado. Solo se muestra si la org
+            tiene whatsapp_number cargado (hoy no lo tiene) — mismo
+            criterio que el WhatsAppButton genérico que reemplaza acá. */}
+        {whatsappNumber && (
+          <CornerPawButton
+            label="WhatsApp"
+            color="#25d366e6"
+            icon={<MessageCircle className="w-[45%] h-[45%]" />}
+            sizeClass="w-[clamp(2.5rem,8svh,5.5rem)] h-[clamp(2.5rem,8svh,5.5rem)]"
+            positionClass="bottom-[2svh] right-4"
+            href={`https://wa.me/${whatsappNumber.replace(/\D/g, "")}`}
+            external
+          />
+        )}
 
         <div className="absolute inset-x-0 top-[2svh] flex justify-center px-4">
           {/* w-fit: el wrapper toma el ancho real de la imagen (que se
@@ -174,7 +283,7 @@ export function HuellitasHome({ slug, videos }: HuellitasHomeProps) {
             offset chico a propósito para no arriesgar que se salga del
             contenedor. Si en algún viewport se ve mal, sacar el translate
             y queda la grilla ordenada de siempre — fallback ya pedido. */}
-        <div className="absolute inset-x-0 bottom-[1svh] px-4">
+        <div className="absolute inset-x-0 bottom-[6svh] px-4">
           <div className="max-w-[260px] sm:max-w-[360px] mx-auto grid grid-cols-2 gap-x-5 sm:gap-x-8 gap-y-[1.8svh]">
             {NAV_BUTTONS.map((btn, i) => {
               const isLast = i === NAV_BUTTONS.length - 1;
@@ -199,6 +308,15 @@ export function HuellitasHome({ slug, videos }: HuellitasHomeProps) {
           </div>
         </div>
       </section>
+
+      {/* Mismo LoginModal/LoginForm de siempre — tema claro (sin
+          neonTheme/bikeTheme, sin requireInviteCode: Huellitas no tiene
+          registro por código de invitación como Gym2). */}
+      <LoginModal
+        isOpen={loginOpen}
+        onClose={() => setLoginOpen(false)}
+        primaryColor={primaryColor}
+      />
     </div>
   );
 }

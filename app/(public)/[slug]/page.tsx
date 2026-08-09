@@ -56,6 +56,8 @@ export default async function TenantPage({
         slug={params.slug}
         orgName={org.name}
         videos={VET_HOME_VIDEOS[params.slug] ?? []}
+        primaryColor={org.primary_color ?? "#b98a72"}
+        whatsappNumber={org.whatsapp_number}
       />
     );
   }
