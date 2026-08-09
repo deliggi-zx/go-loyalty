@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getTenantOrg, getTenantUser, getFeaturedProducts } from "./data";
+import { getTenantOrg, getTenantUser, getFeaturedProducts, isVetOrgSlug } from "./data";
 import { getGymLocations, getGymClasses, getGymTestimonials } from "./gym-data";
 import { LoginForm } from "./login-form";
 import { Carousel } from "./carousel";
@@ -11,6 +11,24 @@ import { GymTestimonialsSection } from "./gym-testimonials-section";
 import { GymPlansSection } from "./gym-plans-section";
 import { FeaturedProductsGrid } from "./featured-products-grid";
 import { BikePromoImage } from "./bike-promo-image";
+import { HuellitasHome } from "./huellitas-home";
+
+// Videos del hero de la home vet, por org (keyed por slug, mismo patrón que
+// TICKER_PHRASES/VERTICAL_TABS en layout.tsx). 7 URLs, índice = Date.getDay()
+// del cliente (0 domingo .. 6 sábado) — rotación simple sin tabla nueva ni
+// backend, ver huellitas-home.tsx. Placeholders de stock (Pexels) hasta que
+// se suba el material definitivo de la marca.
+const VET_HOME_VIDEOS: Record<string, string[]> = {
+  huellitas: [
+    "https://inlmzasbkhngqamduugq.supabase.co/storage/v1/object/public/loyalty-content/hero-videos/5a1d6e9e-a105-4c15-9fa2-1b05215797a3/domingo-grupo-mascotas.mp4",
+    "https://inlmzasbkhngqamduugq.supabase.co/storage/v1/object/public/loyalty-content/hero-videos/5a1d6e9e-a105-4c15-9fa2-1b05215797a3/lunes-perro-corriendo.mp4",
+    "https://inlmzasbkhngqamduugq.supabase.co/storage/v1/object/public/loyalty-content/hero-videos/5a1d6e9e-a105-4c15-9fa2-1b05215797a3/martes-gato-jugando.mp4",
+    "https://inlmzasbkhngqamduugq.supabase.co/storage/v1/object/public/loyalty-content/hero-videos/5a1d6e9e-a105-4c15-9fa2-1b05215797a3/miercoles-revision-vet.mp4",
+    "https://inlmzasbkhngqamduugq.supabase.co/storage/v1/object/public/loyalty-content/hero-videos/5a1d6e9e-a105-4c15-9fa2-1b05215797a3/jueves-bano-peluqueria.mp4",
+    "https://inlmzasbkhngqamduugq.supabase.co/storage/v1/object/public/loyalty-content/hero-videos/5a1d6e9e-a105-4c15-9fa2-1b05215797a3/viernes-cachorro.mp4",
+    "https://inlmzasbkhngqamduugq.supabase.co/storage/v1/object/public/loyalty-content/hero-videos/5a1d6e9e-a105-4c15-9fa2-1b05215797a3/sabado-gato-relax.mp4",
+  ],
+};
 
 // Título arriba de la sección de promos + destacados, por org (keyed por
 // slug, mismo patrón que TICKER_PHRASES/VERTICAL_TABS en layout.tsx). Otras
@@ -26,6 +44,21 @@ export default async function TenantPage({
 }) {
   const org = await getTenantOrg(params.slug);
   if (!org) return null;
+
+  // Home de Veterinaria (Fase 0, Huellitas): pantalla bespoke propia (video
+  // full-screen + botones huella), reemplaza todo el contenido de siempre
+  // de esta página. layout.tsx ya se encarga de ocultar el header/banner/
+  // hero-video estándar acá (ver VetChromeGate) — subpáginas como Pet Shop
+  // siguen usando esta misma TenantPage sin este branch.
+  if (isVetOrgSlug(params.slug)) {
+    return (
+      <HuellitasHome
+        slug={params.slug}
+        orgName={org.name}
+        videos={VET_HOME_VIDEOS[params.slug] ?? []}
+      />
+    );
+  }
 
   const supabase = createClient();
   const user = await getTenantUser();
