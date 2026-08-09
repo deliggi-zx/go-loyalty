@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getTenantOrg, getTenantUser, getFeaturedProducts, isVetOrgSlug } from "./data";
+import { getTenantOrg, getTenantUser, getFeaturedProducts, getUserPointsBalance, isVetOrgSlug, isCornerOrgSlug } from "./data";
 import { getGymLocations, getGymClasses, getGymTestimonials } from "./gym-data";
 import { LoginForm } from "./login-form";
 import { Carousel } from "./carousel";
@@ -12,6 +12,7 @@ import { GymPlansSection } from "./gym-plans-section";
 import { FeaturedProductsGrid } from "./featured-products-grid";
 import { BikePromoImage } from "./bike-promo-image";
 import { HuellitasHome } from "./huellitas-home";
+import { CornerHome } from "./corner-home";
 
 // Videos del hero de la home vet, por org (keyed por slug, mismo patrón que
 // TICKER_PHRASES/VERTICAL_TABS en layout.tsx). 7 URLs, índice = Date.getDay()
@@ -56,6 +57,45 @@ export default async function TenantPage({
         slug={params.slug}
         orgName={org.name}
         videos={VET_HOME_VIDEOS[params.slug] ?? []}
+      />
+    );
+  }
+
+  // Home de Corner (showroom de fútbol 5/7/11, Fase 2): pantalla bespoke
+  // propia, todo cosmético — mismo criterio que Huellitas arriba
+  // (layout.tsx oculta la chrome estándar en la home vía
+  // CornerChromeGate; el bottom nav nuevo vive en todas las rutas, ver
+  // layout.tsx). "Tus puntos" es real si hay sesión y balance cargado;
+  // si no, corner-home.tsx cae a un dato fijo de demo.
+  if (isCornerOrgSlug(params.slug)) {
+    const supabase = createClient();
+    const cornerUser = await getTenantUser();
+
+    const [{ data: profile }, balance, { data: content }] = await Promise.all([
+      cornerUser
+        ? supabase.from("profiles").select("full_name").eq("id", cornerUser.id).maybeSingle()
+        : Promise.resolve({ data: null }),
+      cornerUser ? getUserPointsBalance(org.id, cornerUser.id) : Promise.resolve(null),
+      supabase
+        .from("loyalty_content")
+        .select("id, image_url, title, sort_order")
+        .eq("org_id", org.id)
+        .eq("is_active", true)
+        .eq("type", "carousel")
+        .order("sort_order", { ascending: true }),
+    ]);
+
+    const userName = profile?.full_name || cornerUser?.email?.split("@")[0] || "Socio";
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? "Buen día" : hour < 19 ? "Buenas tardes" : "Buenas noches";
+
+    return (
+      <CornerHome
+        slug={params.slug}
+        greeting={greeting}
+        userName={userName}
+        pointsBalance={cornerUser ? balance : null}
+        carouselItems={content ?? []}
       />
     );
   }
