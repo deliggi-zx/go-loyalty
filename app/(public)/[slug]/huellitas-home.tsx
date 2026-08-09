@@ -194,9 +194,9 @@ export function HuellitasHome({ slug, videos, primaryColor, whatsappNumber }: Hu
           sin importar si la pantalla es angosta y alta (mobile portrait) o
           ancha y baja (ventana chica de escritorio) — las dos formas en
           que esto se salía antes. Presupuesto en svh, de arriba a abajo:
-          2 (offset) + 15 (logo) + ~52 (4 filas de botones) + 6 (offset) ≈
-          75svh usados, con ~25svh de margen (el rastro subió un poco desde
-          la versión anterior, que dejaba 1svh nada más pegado al borde). */}
+          2 (offset) + 19 (logo) + ~52 (4 filas de botones) + 6 (offset) ≈
+          79svh usados, con ~21svh de margen entre el logo y el rastro —
+          sigue sobrando de sobra aunque el logo creció bastante. */}
       <section className="relative w-full h-[100svh] overflow-hidden">
         {activeVideo && (
           <video
@@ -221,22 +221,22 @@ export function HuellitasHome({ slug, videos, primaryColor, whatsappNumber }: Hu
           color="#ffffff14"
         />
 
-        {/* Botón-huella de cuenta (login/registro): mismo LoginModal +
-            LoginForm que usan el resto de las orgs (ver ClientHeader),
-            tema claro (sin neonTheme/bikeTheme) — es el mismo flujo, solo
-            que acá se abre desde una huella en vez de un ícono de header
-            (la home no tiene header, ver VetChromeGate). Pastel más
-            opaco (alfa "cc" en vez de "99") + ícono de persona para que
-            se lea como "acción de cuenta", no como destino de
-            navegación del rastro de abajo. */}
-        <CornerPawButton
-          label="Mi cuenta"
-          color="#d4b06acc"
-          icon={<User className="w-[45%] h-[45%]" />}
-          sizeClass="w-[clamp(1.75rem,6svh,3.75rem)] h-[clamp(1.75rem,6svh,3.75rem)]"
-          positionClass="top-[2svh] right-4"
+        {/* Ícono de cuenta (login/registro): ya no es un botón-huella —
+            eran demasiadas huellas en pantalla. Es el mismo ícono simple
+            que usa ClientHeader para showLoginIcon (User, sin forma de
+            huella alrededor), reposicionado acá porque esta pantalla no
+            tiene header (ver VetChromeGate). Mismo LoginModal/LoginForm
+            de siempre, tema claro. drop-shadow en vez de chip de fondo —
+            ClientHeader tampoco le pone chip, ahí vive sobre una barra
+            sólida; acá alcanza con la sombra porque es un ícono chico. */}
+        <button
+          type="button"
           onClick={() => setLoginOpen(true)}
-        />
+          aria-label="Iniciar sesión"
+          className="absolute top-[2svh] right-4 z-10 p-2 text-white drop-shadow-md transition-transform duration-200 hover:scale-110 active:scale-95"
+        >
+          <User className="w-6 h-6" />
+        </button>
 
         {/* Botón-huella de WhatsApp: mismo componente de huella que los 7
             de navegación, con el ícono de MessageCircle centrado encima
@@ -262,16 +262,19 @@ export function HuellitasHome({ slug, videos, primaryColor, whatsappNumber }: Hu
               aspect ratio. */}
           <div className="relative w-fit">
             {/* Halo/blur detrás del logo para que no se pierda contra las
-                partes claras del video. */}
+                partes claras del video — reforzado (blur-3xl, más opaco)
+                respecto de la versión anterior porque el logo creció y el
+                texto del wordmark es lo que más sufre la falta de
+                contraste. */}
             <div
-              className="pointer-events-none absolute inset-0 scale-90 rounded-full bg-white/30 blur-2xl"
+              className="pointer-events-none absolute inset-0 scale-95 rounded-full bg-white/40 blur-3xl"
               aria-hidden="true"
             />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={LOGO_URL}
               alt="Huellitas Veterinaria"
-              className="relative h-[clamp(4.5rem,15svh,11.5rem)] w-auto drop-shadow-[0_4px_16px_rgba(0,0,0,0.5)]"
+              className="relative h-[clamp(5.5rem,19svh,15rem)] w-auto drop-shadow-[0_4px_20px_rgba(0,0,0,0.65)]"
             />
           </div>
         </div>
