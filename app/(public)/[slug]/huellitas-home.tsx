@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MessageCircle, User } from "lucide-react";
 import { LoginModal } from "./login-modal";
+import { SocialLinks } from "./social-links";
 
 // Logo con wordmark ("Huellitas" + "Veterinaria | Petshop"), fondo
 // transparente — reemplaza el título en texto (antes en Playfair Display).
@@ -162,9 +163,26 @@ interface HuellitasHomeProps {
   // VetChromeGate/standardChrome), para no mostrar un botón que no lleva a
   // ningún lado.
   whatsappNumber: string | null;
+  // Fila de redes al pie del video — mismo patrón condicional que
+  // SocialLinks ya usa en side-menu.tsx para el resto de las orgs (cada
+  // ícono solo aparece si su URL no es null). null si la org no cargó esa
+  // red en particular.
+  facebookUrl: string | null;
+  instagramUrl: string | null;
+  twitterUrl: string | null;
+  youtubeUrl: string | null;
 }
 
-export function HuellitasHome({ slug, videos, primaryColor, whatsappNumber }: HuellitasHomeProps) {
+export function HuellitasHome({
+  slug,
+  videos,
+  primaryColor,
+  whatsappNumber,
+  facebookUrl,
+  instagramUrl,
+  twitterUrl,
+  youtubeUrl,
+}: HuellitasHomeProps) {
   const [loginOpen, setLoginOpen] = useState(false);
 
   // Día de la semana: se resuelve en el cliente después del montaje para no
@@ -194,9 +212,11 @@ export function HuellitasHome({ slug, videos, primaryColor, whatsappNumber }: Hu
           sin importar si la pantalla es angosta y alta (mobile portrait) o
           ancha y baja (ventana chica de escritorio) — las dos formas en
           que esto se salía antes. Presupuesto en svh, de arriba a abajo:
-          2 (offset) + 19 (logo) + ~52 (4 filas de botones) + 6 (offset) ≈
-          79svh usados, con ~21svh de margen entre el logo y el rastro —
-          sigue sobrando de sobra aunque el logo creció bastante. */}
+          2 (offset) + 19 (logo) + ~52 (4 filas de botones) + 14 (offset,
+          antes 6 — el rastro subió para dejarle lugar a las redes) ≈
+          87svh usados. Quedan ~13svh entre el logo y el rastro, y las
+          redes (chip chico + 3svh de offset) entran cómodas en el hueco
+          que dejó el rastro al subir. */}
       <section className="relative w-full h-[100svh] overflow-hidden">
         {activeVideo && (
           <video
@@ -286,7 +306,7 @@ export function HuellitasHome({ slug, videos, primaryColor, whatsappNumber }: Hu
             offset chico a propósito para no arriesgar que se salga del
             contenedor. Si en algún viewport se ve mal, sacar el translate
             y queda la grilla ordenada de siempre — fallback ya pedido. */}
-        <div className="absolute inset-x-0 bottom-[6svh] px-4">
+        <div className="absolute inset-x-0 bottom-[14svh] px-4">
           <div className="max-w-[260px] sm:max-w-[360px] mx-auto grid grid-cols-2 gap-x-5 sm:gap-x-8 gap-y-[1.8svh]">
             {NAV_BUTTONS.map((btn, i) => {
               const isLast = i === NAV_BUTTONS.length - 1;
@@ -310,6 +330,23 @@ export function HuellitasHome({ slug, videos, primaryColor, whatsappNumber }: Hu
             })}
           </div>
         </div>
+
+        {/* Redes sociales, al pie del video, debajo del rastro. Íconos
+            chicos y simples — SIN forma de huella, para no competir con
+            las 7 de navegación — con el mismo chip oscuro semi-
+            transparente que las etiquetas de los botones, para que se
+            lean igual de bien sobre cualquier parte del video.
+            SocialLinks ya filtra por null internamente (mismo patrón que
+            side-menu.tsx); si la org no cargó ninguna red, no renderiza
+            nada. */}
+        <SocialLinks
+          facebookUrl={facebookUrl}
+          instagramUrl={instagramUrl}
+          twitterUrl={twitterUrl}
+          youtubeUrl={youtubeUrl}
+          className="absolute inset-x-0 bottom-[3svh] flex items-center justify-center gap-3 px-4"
+          iconClassName="text-white bg-black/35 backdrop-blur-[2px] rounded-full p-[0.6svh] transition-transform hover:scale-110 active:scale-95"
+        />
       </section>
 
       {/* Mismo LoginModal/LoginForm de siempre — tema claro (sin

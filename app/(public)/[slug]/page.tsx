@@ -58,6 +58,10 @@ export default async function TenantPage({
         videos={VET_HOME_VIDEOS[params.slug] ?? []}
         primaryColor={org.primary_color ?? "#b98a72"}
         whatsappNumber={org.whatsapp_number}
+        facebookUrl={org.facebook_url}
+        instagramUrl={org.instagram_url}
+        twitterUrl={org.twitter_url}
+        youtubeUrl={org.youtube_url}
       />
     );
   }
