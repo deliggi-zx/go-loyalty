@@ -2,9 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Playfair_Display } from "next/font/google";
 
-const playfair = Playfair_Display({ subsets: ["latin"], weight: ["600", "700"] });
+// Logo con wordmark ("Huellitas" + "Veterinaria | Petshop"), fondo
+// transparente — reemplaza el título en texto (antes en Playfair Display).
+// Vive en el bucket "loyalty-content", carpeta branding/ (sin subcarpeta de
+// org_id: así quedó subido el archivo real, a diferencia de hero-videos/
+// que sí usa esa subcarpeta).
+const LOGO_URL =
+  "https://inlmzasbkhngqamduugq.supabase.co/storage/v1/object/public/loyalty-content/branding/logo.png";
 
 // Forma de huella real (SVG), no un ícono genérico de librería — un pad
 // principal + 4 dedos en arco, reutilizada tanto para los botones de
@@ -68,13 +73,16 @@ const NAV_BUTTONS: { label: string; hrefSuffix: string; color: string }[] = [
 
 interface HuellitasHomeProps {
   slug: string;
+  // Ya no se usa para el título (reemplazado por LOGO_URL, que trae su
+  // propio wordmark) — se mantiene en la interfaz porque page.tsx la sigue
+  // pasando y puede volver a hacer falta (ej. <title> de la pestaña).
   orgName: string;
   // 7 URLs, índice = Date.getDay() (0 domingo .. 6 sábado). Puede traer
   // huecos si algún upload falló — se resuelve con un fallback simple.
   videos: (string | null)[];
 }
 
-export function HuellitasHome({ slug, orgName, videos }: HuellitasHomeProps) {
+export function HuellitasHome({ slug, videos }: HuellitasHomeProps) {
   // Día de la semana: se resuelve en el cliente después del montaje para no
   // arriesgar un mismatch de hidratación entre el día del server y el del
   // navegador del usuario (distintas zonas horarias). El primer render
@@ -126,12 +134,21 @@ export function HuellitasHome({ slug, orgName, videos }: HuellitasHomeProps) {
         />
 
         <div className="absolute inset-x-0 top-10 sm:top-14 flex justify-center px-4">
-          <h1
-            className={`${playfair.className} text-4xl sm:text-6xl text-white tracking-wide text-center`}
-            style={{ textShadow: "0 2px 18px rgba(0,0,0,0.55)" }}
-          >
-            {orgName}
-          </h1>
+          <div className="relative w-[65vw] max-w-[340px]">
+            {/* Halo/blur detrás del logo — mismo criterio que la sombra de
+                texto de los botones, para que no se pierda contra las
+                partes claras del video. */}
+            <div
+              className="pointer-events-none absolute inset-0 scale-90 rounded-full bg-white/30 blur-2xl"
+              aria-hidden="true"
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={LOGO_URL}
+              alt="Huellitas Veterinaria"
+              className="relative w-full h-auto drop-shadow-[0_4px_16px_rgba(0,0,0,0.5)]"
+            />
+          </div>
         </div>
 
         {/* Navegación: 2 filas x 3 botones huella, superpuestos al video
