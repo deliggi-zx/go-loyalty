@@ -15,11 +15,24 @@ import { useCornerReserve } from "./corner-reserve-context";
 //     real (genérico, no específico de Corner) — mejor eso que un
 //     placeholder vacío.
 // Inicio y Perfil sí son rutas reales.
-export function CornerBottomNav({ slug }: { slug: string }) {
+export function CornerBottomNav({
+  slug,
+  isLoggedIn,
+}: {
+  slug: string;
+  isLoggedIn: boolean;
+}) {
   const pathname = usePathname();
   const isHome = pathname === `/${slug}`;
   const isProfile = pathname === `/${slug}/perfil`;
   const { openReserve } = useCornerReserve();
+
+  // Atajo urgente (ver /[slug]/entrar): sin sesión, /perfil rebota a home
+  // sin mostrar login (perfil/page.tsx redirige si !user) — causa raíz ya
+  // diagnosticada en el PASO 2 pendiente. Hasta que ese fix completo llegue
+  // (login visible en la home misma), "Perfil" lleva directo al atajo de
+  // login en vez de a una ruta que rebota. Con sesión activa, sin cambios.
+  const profileHref = isLoggedIn ? `/${slug}/perfil` : `/${slug}/entrar`;
 
   const itemClass = (active: boolean) =>
     `flex flex-col items-center justify-center gap-0.5 flex-1 h-full text-[10px] font-medium transition-colors ${
@@ -63,7 +76,7 @@ export function CornerBottomNav({ slug }: { slug: string }) {
         Actividad
       </Link>
 
-      <Link href={`/${slug}/perfil`} className={itemClass(isProfile)}>
+      <Link href={profileHref} className={itemClass(isProfile)}>
         <User className="w-5 h-5" />
         Perfil
       </Link>

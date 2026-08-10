@@ -286,7 +286,7 @@ export default async function TenantLayout({
             {/* Fuera del gate a propósito: el bottom nav de Corner vive en
                 todas sus rutas (home incluida), no solo en las
                 subpáginas. */}
-            <CornerBottomNav slug={params.slug} />
+            <CornerBottomNav slug={params.slug} isLoggedIn={!!user} />
           </CornerReserveProvider>
         ) : (
           <>
