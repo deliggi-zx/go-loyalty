@@ -28,6 +28,18 @@ export function isVetOrgSlug(slug: string): boolean {
   return VET_ORG_SLUGS.has(slug);
 }
 
+// Showroom de fútbol 5/7/11 con home bespoke propio (Corner) — mismo
+// criterio que VET_ORG_SLUGS: config-driven por slug, único origen de
+// verdad para layout.tsx y page.tsx. A diferencia de Huellitas (que
+// reemplaza TODA la chrome siempre), Corner solo reemplaza header/banner/
+// hero-video en la home (ver CornerChromeGate) — el bottom nav nuevo vive
+// en todas sus rutas, no solo ahí.
+const CORNER_ORG_SLUGS = new Set(["corner"]);
+
+export function isCornerOrgSlug(slug: string): boolean {
+  return CORNER_ORG_SLUGS.has(slug);
+}
+
 export const getTenantUser = cache(async () => {
   const supabase = createClient();
   const {

@@ -20,11 +20,12 @@ export default async function DashboardLayout({
   const orgId = await getOrgId();
   let catalogType: string | null = null;
   let hasGymFeatures = false;
+  let isCornerOrg = false;
   if (orgId) {
     const [{ data: org }, { count: gymLocationsCount }] = await Promise.all([
       supabase
         .from("loyalty_organizations")
-        .select("catalog_type")
+        .select("catalog_type, slug")
         .eq("id", orgId)
         .maybeSingle(),
       // Mismo criterio hasGymFeatures que el sitio público (org con filas
@@ -36,6 +37,11 @@ export default async function DashboardLayout({
     ]);
     catalogType = org?.catalog_type ?? null;
     hasGymFeatures = (gymLocationsCount ?? 0) > 0;
+    // Fase 3 de Corner: panel de canchas (gym_courts), gateado por slug —
+    // mismo criterio que isCornerOrgSlug en el sitio público, pero
+    // chequeado acá directo (un solo flag, un solo archivo, no amerita
+    // importar el helper del route group público).
+    isCornerOrg = org?.slug === "corner";
   }
 
   return (
@@ -44,6 +50,7 @@ export default async function DashboardLayout({
         userEmail={user.email ?? ""}
         showCatalog={catalogType === "products"}
         showGym={hasGymFeatures}
+        showCourts={isCornerOrg}
       />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {children}

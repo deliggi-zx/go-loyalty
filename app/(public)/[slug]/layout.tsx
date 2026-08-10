@@ -1,7 +1,11 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getTenantOrg, getTenantUser, getUserPointsBalance, getProductCategories, isVetOrgSlug } from "./data";
+import { getTenantOrg, getTenantUser, getUserPointsBalance, getProductCategories, isVetOrgSlug, isCornerOrgSlug } from "./data";
 import { VetChromeGate } from "./vet-chrome-gate";
+import { CornerChromeGate } from "./corner-chrome-gate";
+import { CornerBottomNav } from "./corner-bottom-nav";
+import { CornerReserveProvider } from "./corner-reserve-context";
+import { getCornerCourts } from "./corner-data";
 import { ClientHeader } from "./client-header";
 import { PointsBadge } from "./points-badge";
 import { CartProvider } from "./cart-context";
@@ -138,6 +142,20 @@ export default async function TenantLayout({
   // siempre — ver VetChromeGate.
   const hasVetFeatures = isVetOrgSlug(params.slug);
 
+  // Fútbol 5/7/11 (Corner): home bespoke propia también (ver
+  // page.tsx/corner-home.tsx), mismo mecanismo de exclusión en la home
+  // (CornerChromeGate) que Huellitas. Se diferencia en que además monta
+  // un bottom nav propio en TODAS sus rutas (no solo la home) — ver más
+  // abajo, fuera del gate.
+  const hasCornerFeatures = isCornerOrgSlug(params.slug);
+
+  // Fase 4: canchas reales para el paso 1 del modal de reserva — una sola
+  // consulta acá, repartida a CornerReserveProvider (que envuelve tanto
+  // {children} como el bottom nav, así el modal es una única instancia
+  // compartida por los 3 disparadores). Vacío para cualquier org que no
+  // sea Corner.
+  const cornerCourts = hasCornerFeatures ? await getCornerCourts(org.id) : [];
+
   const bodyStyle: React.CSSProperties = org.background_url
     ? {
         backgroundImage: `url(${org.background_url})`,
@@ -248,13 +266,35 @@ export default async function TenantLayout({
       <div className="min-h-screen" style={bodyStyle}>
         {hasVetFeatures ? (
           <VetChromeGate slug={params.slug}>{standardChrome}</VetChromeGate>
+        ) : hasCornerFeatures ? (
+          <CornerChromeGate slug={params.slug}>{standardChrome}</CornerChromeGate>
         ) : (
           standardChrome
         )}
 
-        {children}
+        {/* Fase 4: CornerReserveProvider envuelve tanto {children} (donde
+            vive el disparador "Reservar" de la home, ver corner-home.tsx)
+            como el bottom nav de acá abajo, para que el modal sea una
+            única instancia compartida por los 3 disparadores. Ninguna
+            otra org monta este provider. */}
+        {hasCornerFeatures ? (
+          <CornerReserveProvider courts={cornerCourts}>
+            {children}
 
-        <WhatsAppButton whatsappNumber={org.whatsapp_number} />
+            <WhatsAppButton whatsappNumber={org.whatsapp_number} />
+
+            {/* Fuera del gate a propósito: el bottom nav de Corner vive en
+                todas sus rutas (home incluida), no solo en las
+                subpáginas. */}
+            <CornerBottomNav slug={params.slug} />
+          </CornerReserveProvider>
+        ) : (
+          <>
+            {children}
+
+            <WhatsAppButton whatsappNumber={org.whatsapp_number} />
+          </>
+        )}
       </div>
     </CartProvider>
   );
