@@ -13,7 +13,7 @@ import { FeaturedProductsGrid } from "./featured-products-grid";
 import { BikePromoImage } from "./bike-promo-image";
 import { HuellitasHome } from "./huellitas-home";
 import { CornerHome } from "./corner-home";
-import { getCornerLevelCard, type LevelCard } from "./corner-data";
+import { getCornerLevelCard, getCornerNextReservationCourt, type LevelCard } from "./corner-data";
 
 // Videos del hero de la home vet, por org (keyed por slug, mismo patrón que
 // TICKER_PHRASES/VERTICAL_TABS en layout.tsx). 7 URLs, índice = Date.getDay()
@@ -72,25 +72,29 @@ export default async function TenantPage({
     const supabase = createClient();
     const cornerUser = await getTenantUser();
 
-    const [{ data: profile }, balance, { data: content }, cornerLevelCard] = await Promise.all([
-      cornerUser
-        ? supabase.from("profiles").select("full_name").eq("id", cornerUser.id).maybeSingle()
-        : Promise.resolve({ data: null }),
-      cornerUser ? getUserPointsBalance(org.id, cornerUser.id) : Promise.resolve(null),
-      supabase
-        .from("loyalty_content")
-        .select("id, image_url, title, sort_order")
-        .eq("org_id", org.id)
-        .eq("is_active", true)
-        .eq("type", "carousel")
-        .order("sort_order", { ascending: true }),
-      // AJUSTE 1: categoría (profesor/admin o socio ya en una clase) vs.
-      // escalera (socio que solo alquila cancha) — sin sesión no aplica
-      // ninguno de los dos, ver "default" abajo.
-      cornerUser
-        ? getCornerLevelCard(org.id, cornerUser.id)
-        : Promise.resolve<LevelCard | null>(null),
-    ]);
+    const [{ data: profile }, balance, { data: content }, cornerLevelCard, nextReservationCourt] =
+      await Promise.all([
+        cornerUser
+          ? supabase.from("profiles").select("full_name").eq("id", cornerUser.id).maybeSingle()
+          : Promise.resolve({ data: null }),
+        cornerUser ? getUserPointsBalance(org.id, cornerUser.id) : Promise.resolve(null),
+        supabase
+          .from("loyalty_content")
+          .select("id, image_url, title, sort_order")
+          .eq("org_id", org.id)
+          .eq("is_active", true)
+          .eq("type", "carousel")
+          .order("sort_order", { ascending: true }),
+        // AJUSTE 1: categoría (profesor/admin o socio ya en una clase) vs.
+        // escalera (socio que solo alquila cancha) — sin sesión no aplica
+        // ninguno de los dos, ver "default" abajo.
+        cornerUser
+          ? getCornerLevelCard(org.id, cornerUser.id)
+          : Promise.resolve<LevelCard | null>(null),
+        // Fase 3: cancha real para "Tu próxima reserva" si ya hay alguna
+        // cargada (gym_courts) — null hasta entonces, cae al mock.
+        getCornerNextReservationCourt(org.id),
+      ]);
 
     const userName = profile?.full_name || cornerUser?.email?.split("@")[0] || "Socio";
     const hour = new Date().getHours();
@@ -104,6 +108,7 @@ export default async function TenantPage({
         pointsBalance={cornerUser ? balance : null}
         carouselItems={content ?? []}
         levelCard={cornerLevelCard ?? { mode: "default" }}
+        nextReservationCourt={nextReservationCourt}
       />
     );
   }

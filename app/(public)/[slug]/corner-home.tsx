@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Menu, Bell, CalendarClock, Trophy, Dumbbell, Star, ImageOff } from "lucide-react";
 import { Carousel } from "./carousel";
 import { getReserveHref } from "./corner-actions";
-import type { LevelCard } from "./corner-data";
+import type { LevelCard, NextReservationCourt } from "./corner-data";
 
 // Foto de cancha nocturna para el hero — Pexels, re-hosteada en el mismo
 // bucket/patrón que el resto (loyalty-content/branding/corner/). Es una
@@ -82,6 +82,11 @@ interface CornerHomeProps {
   pointsBalance: number | null;
   carouselItems: CarouselItem[];
   levelCard: CornerLevelCard;
+  // Fase 3: cancha real (nombre/tipo/foto) si ya hay al menos una cargada
+  // en gym_courts — null hasta entonces, cae al mock completo de siempre.
+  // La fecha/hora de "Tu próxima reserva" sigue siendo mock en los dos
+  // casos: la reserva en sí no es real todavía (eso es Fase 4).
+  nextReservationCourt: NextReservationCourt | null;
 }
 
 // Clases por edades — 4 categorías con color propio (Fase 2, todavía sin
@@ -100,7 +105,15 @@ const AGE_CATEGORIES: { label: string; sub: string; color: string; photoUrl: str
 
 const MOCK_POINTS = 850;
 
-export function CornerHome({ slug, greeting, userName, pointsBalance, carouselItems, levelCard }: CornerHomeProps) {
+export function CornerHome({
+  slug,
+  greeting,
+  userName,
+  pointsBalance,
+  carouselItems,
+  levelCard,
+  nextReservationCourt,
+}: CornerHomeProps) {
   const points = pointsBalance ?? MOCK_POINTS;
   const reserveHref = getReserveHref(slug);
 
@@ -203,19 +216,25 @@ export function CornerHome({ slug, greeting, userName, pointsBalance, carouselIt
         {carouselItems.length > 0 && <Carousel items={carouselItems} />}
 
         {/* Tu próxima reserva (zona de imagen 3/5: miniatura de cancha) —
-            dato mock, "Ver reserva" sin acción real (Fase 4 trae el modal
-            de reserva de verdad). courtPhotoUrl null hasta Fase 3 (todavía
-            no hay canchas cargadas con foto real). */}
+            la fecha/hora sigue siendo mock siempre (la reserva en sí no es
+            real todavía, eso es Fase 4), pero desde Fase 3 el nombre/tipo/
+            foto de la cancha son reales en cuanto haya al menos una
+            cargada (gym_courts, ver getCornerNextReservationCourt) — si
+            no, cae al mock completo de antes. */}
         <div id="reserva" className="bg-[#141416] rounded-2xl border border-[#26262a] p-4 space-y-3 scroll-mt-20">
           <p className="text-xs text-[#9b9995] uppercase tracking-wide">Tu próxima reserva</p>
           <div className="flex items-center gap-3">
             <ImagePlaceholder
-              src={null}
-              alt="Cancha 3"
+              src={nextReservationCourt?.photoUrl ?? null}
+              alt={nextReservationCourt?.name ?? "Cancha"}
               className="w-14 h-14 rounded-xl shrink-0 object-cover"
             />
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-white truncate">Cancha 3 · Fútbol 5</p>
+              <p className="font-semibold text-white truncate">
+                {nextReservationCourt
+                  ? `${nextReservationCourt.name} · ${nextReservationCourt.courtTypeLabel}`
+                  : "Cancha 3 · Fútbol 5"}
+              </p>
               <p className="text-sm text-[#9b9995]">Viernes 14/8 — 21:00 hs</p>
             </div>
             <button

@@ -10,6 +10,7 @@ import {
   Package,
   Ticket,
   GraduationCap,
+  MapPin,
   ScanLine,
   Settings,
   LogOut,
@@ -33,6 +34,11 @@ const gymNavItems = [
   { href: "/dashboard/profesores", label: "Profesores", icon: GraduationCap },
 ];
 
+// Solo Corner (Fase 3) — ver showCourts en dashboard/layout.tsx, gateado
+// por slug de la org (mismo criterio simple que isBike en page.tsx: un
+// único flag en un único archivo, no amerita un mapa slug-keyed todavía).
+const courtsNavItem = { href: "/dashboard/canchas", label: "Canchas", icon: MapPin };
+
 const trailingNavItems = [
   { href: "/pos", label: "POS", icon: ScanLine },
   { href: "/dashboard/configuracion", label: "Configuración", icon: Settings },
@@ -42,14 +48,16 @@ interface SidebarProps {
   userEmail: string;
   showCatalog?: boolean;
   showGym?: boolean;
+  showCourts?: boolean;
 }
 
-export function Sidebar({ userEmail, showCatalog = false, showGym = false }: SidebarProps) {
+export function Sidebar({ userEmail, showCatalog = false, showGym = false, showCourts = false }: SidebarProps) {
   const pathname = usePathname();
   const navItems = [
     ...baseNavItems,
     ...(showCatalog ? [catalogNavItem] : []),
     ...(showGym ? gymNavItems : []),
+    ...(showCourts ? [courtsNavItem] : []),
     ...trailingNavItems,
   ];
 

@@ -78,3 +78,40 @@ export async function getCornerLevelCard(orgId: string, profileId: string): Prom
 
   return { mode: "ladder", rung: LADDER_BY_PROFILE_ID[profileId] ?? DEFAULT_LADDER_RUNG };
 }
+
+const COURT_TYPE_LABELS: Record<string, string> = {
+  f5: "Fútbol 5",
+  f7: "Fútbol 7",
+  f11: "Fútbol 11",
+};
+
+export interface NextReservationCourt {
+  name: string;
+  courtTypeLabel: string;
+  photoUrl: string | null;
+}
+
+// Fase 3: "Tu próxima reserva" muestra una cancha real (nombre/tipo/foto)
+// en cuanto exista al menos una cargada en gym_courts — la fecha/hora
+// siguen siendo mock (la reserva en sí sigue sin ser real, eso es Fase 4).
+// null si todavía no se cargó ninguna cancha, y corner-home.tsx cae al
+// mock completo de siempre.
+export async function getCornerNextReservationCourt(orgId: string): Promise<NextReservationCourt | null> {
+  const supabase = createClient();
+
+  const { data: court } = await supabase
+    .from("gym_courts")
+    .select("name, court_type, photo_url")
+    .eq("org_id", orgId)
+    .order("name", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (!court) return null;
+
+  return {
+    name: court.name,
+    courtTypeLabel: COURT_TYPE_LABELS[court.court_type] ?? court.court_type,
+    photoUrl: court.photo_url,
+  };
+}
