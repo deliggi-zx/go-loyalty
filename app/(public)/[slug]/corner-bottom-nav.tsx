@@ -3,16 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, CalendarClock, CircleDot, Activity, User } from "lucide-react";
-import { getReserveHref } from "./corner-actions";
+import { useCornerReserve } from "./corner-reserve-context";
 
 // Bottom nav propio de Corner — componente aparte, NO pisa/toca SideMenu
 // (el menú lateral ☰ que usan Cafetería/Bike/Gym2/Huellitas sigue
-// intacto para esas orgs). Fase 2: todavía cosmético en 3 de los 5 items
-// — Reservas/Actividad no tienen ruta propia todavía (Fase 3/4), así que
-// apuntan a anclas/rutas ya existentes en vez de a un 404:
-//   - Reservas y el ícono de cancha (central) bajan a la card "Tu
-//     próxima reserva" de la home (id="reserva") — el flujo real de
-//     reservar llega en Fase 4 (modal).
+// intacto para esas orgs). Fase 2: todavía cosmético en algunos items —
+// Actividad no tiene ruta propia todavía:
+//   - Reservas y el ícono de cancha (central) abren el modal de Fase 4
+//     (useCornerReserve) — mismo disparador que "Reservar" en la home.
 //   - Actividad usa /[slug]/perfil, que YA muestra historial de puntos
 //     real (genérico, no específico de Corner) — mejor eso que un
 //     placeholder vacío.
@@ -21,16 +19,12 @@ export function CornerBottomNav({ slug }: { slug: string }) {
   const pathname = usePathname();
   const isHome = pathname === `/${slug}`;
   const isProfile = pathname === `/${slug}/perfil`;
+  const { openReserve } = useCornerReserve();
 
   const itemClass = (active: boolean) =>
     `flex flex-col items-center justify-center gap-0.5 flex-1 h-full text-[10px] font-medium transition-colors ${
       active ? "text-[#1e8f4e]" : "text-[#6b6965] hover:text-white"
     }`;
-
-  // Un solo helper (getReserveHref) para los dos botones de reservar de
-  // acá + el de la home — ver corner-actions.ts, ajuste pedido para no
-  // duplicar la decisión de a dónde lleva "reservar" en tres lugares.
-  const reserveHref = getReserveHref(slug);
 
   return (
     <nav
@@ -42,22 +36,23 @@ export function CornerBottomNav({ slug }: { slug: string }) {
         Inicio
       </Link>
 
-      <a href={reserveHref} className={itemClass(false)}>
+      <button type="button" onClick={openReserve} className={itemClass(false)}>
         <CalendarClock className="w-5 h-5" />
         Reservas
-      </a>
+      </button>
 
       {/* Ícono central de cancha — más grande, destacado en verde, mismo
           destino que "Reservas" (acción primaria: reservar). */}
-      <a
-        href={reserveHref}
+      <button
+        type="button"
+        onClick={openReserve}
         aria-label="Reservar cancha"
         className="flex flex-col items-center justify-center flex-1"
       >
         <span className="w-11 h-11 rounded-full bg-[#1e8f4e] flex items-center justify-center -mt-5 shadow-[0_0_14px_rgba(30,143,78,0.55)] border-4 border-[#0a0a0b]">
           <CircleDot className="w-5 h-5 text-white" />
         </span>
-      </a>
+      </button>
 
       {/* Actividad no resalta activo a propósito: comparte destino con
           Perfil (ambos /perfil, ver comentario de arriba) y remarcar los

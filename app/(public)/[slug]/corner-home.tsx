@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Menu, Bell, CalendarClock, Trophy, Dumbbell, Star, ImageOff } from "lucide-react";
 import { Carousel } from "./carousel";
-import { getReserveHref } from "./corner-actions";
+import { useCornerReserve } from "./corner-reserve-context";
 import type { LevelCard, NextReservationCourt } from "./corner-data";
 
 // Foto de cancha nocturna para el hero — Pexels, re-hosteada en el mismo
@@ -120,7 +120,7 @@ export function CornerHome({
   heroPhotoUrl,
 }: CornerHomeProps) {
   const points = pointsBalance ?? MOCK_POINTS;
-  const reserveHref = getReserveHref(slug);
+  const { openReserve } = useCornerReserve();
 
   return (
     <div className="min-h-screen bg-[#0a0a0b] text-white pb-24">
@@ -189,29 +189,40 @@ export function CornerHome({
           </div>
         </div>
 
-        {/* Accesos rápidos: los 3 primeros bajan a su sección en esta
+        {/* Accesos rápidos: "Torneos"/"Clases" bajan a su sección en esta
             misma página; "Mis puntos" ya está arriba, así que apunta a la
             card de puntos (id="puntos") en vez de duplicar contenido.
-            "Reservar" usa getReserveHref — mismo destino que el ícono
-            central del bottom nav, ver corner-actions.ts. */}
+            "Reservar" abre el modal de Fase 4 (useCornerReserve) — mismo
+            disparador que el ítem "Reservas" y el ícono central del
+            bottom nav, ver corner-reserve-context.tsx. Por eso es el único
+            de los 4 que renderiza <button> en vez de <a>. */}
         <div className="grid grid-cols-4 gap-2">
           {[
-            { label: "Reservar", icon: CalendarClock, href: reserveHref },
+            { label: "Reservar", icon: CalendarClock, onClick: openReserve },
             { label: "Torneos", icon: Trophy, href: "#torneos" },
             { label: "Clases", icon: Dumbbell, href: "#clases" },
             { label: "Mis puntos", icon: Star, href: "#puntos" },
-          ].map(({ label, icon: Icon, href }) => (
-            <a
-              key={label}
-              href={href}
-              className="flex flex-col items-center gap-1.5 py-3 rounded-xl bg-[#141416] border border-[#26262a] hover:border-[#1e8f4e] transition-colors"
-            >
-              <Icon className="w-5 h-5 text-[#1e8f4e]" />
-              <span className="text-[10px] font-medium text-[#d8d6d2] text-center leading-tight">
-                {label}
-              </span>
-            </a>
-          ))}
+          ].map(({ label, icon: Icon, href, onClick }) => {
+            const className =
+              "flex flex-col items-center gap-1.5 py-3 rounded-xl bg-[#141416] border border-[#26262a] hover:border-[#1e8f4e] transition-colors";
+            const content = (
+              <>
+                <Icon className="w-5 h-5 text-[#1e8f4e]" />
+                <span className="text-[10px] font-medium text-[#d8d6d2] text-center leading-tight">
+                  {label}
+                </span>
+              </>
+            );
+            return onClick ? (
+              <button key={label} type="button" onClick={onClick} className={className}>
+                {content}
+              </button>
+            ) : (
+              <a key={label} href={href} className={className}>
+                {content}
+              </a>
+            );
+          })}
         </div>
 
         {/* Carrusel de promos (zona de imagen 2/5) — mismo componente

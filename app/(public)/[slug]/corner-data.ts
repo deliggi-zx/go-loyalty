@@ -115,3 +115,30 @@ export async function getCornerNextReservationCourt(orgId: string): Promise<Next
     photoUrl: court.photo_url,
   };
 }
+
+export interface CornerCourt {
+  id: string;
+  name: string;
+  courtTypeLabel: string;
+}
+
+// Fase 4: listado completo de canchas reales (gym_courts, ya cargado en
+// Fase 3) para el paso 1 del modal de reserva — a diferencia de
+// getCornerNextReservationCourt (que trae solo 1, para la card mock de la
+// home), acá van todas para que el socio elija. Se pide una sola vez en
+// layout.tsx y se pasa a CornerReserveProvider, que la reparte al modal.
+export async function getCornerCourts(orgId: string): Promise<CornerCourt[]> {
+  const supabase = createClient();
+
+  const { data } = await supabase
+    .from("gym_courts")
+    .select("id, name, court_type")
+    .eq("org_id", orgId)
+    .order("name", { ascending: true });
+
+  return (data ?? []).map((c) => ({
+    id: c.id,
+    name: c.name,
+    courtTypeLabel: COURT_TYPE_LABELS[c.court_type] ?? c.court_type,
+  }));
+}
