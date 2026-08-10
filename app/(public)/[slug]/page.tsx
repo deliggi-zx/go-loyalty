@@ -109,6 +109,7 @@ export default async function TenantPage({
         carouselItems={content ?? []}
         levelCard={cornerLevelCard ?? { mode: "default" }}
         nextReservationCourt={nextReservationCourt}
+        heroPhotoUrl={org.banner_url}
       />
     );
   }

@@ -7,11 +7,10 @@ import { getReserveHref } from "./corner-actions";
 import type { LevelCard, NextReservationCourt } from "./corner-data";
 
 // Foto de cancha nocturna para el hero — Pexels, re-hosteada en el mismo
-// bucket/patrón que el resto (loyalty-content/branding/corner/). Es una
-// constante fija (siempre presente hoy), pero igual pasa por
-// ImagePlaceholder más abajo para quedar consistente con el resto de las
-// zonas de imagen si en algún momento pasa a ser configurable.
-const HERO_PHOTO_URL =
+// bucket/patrón que el resto (loyalty-content/branding/corner/). Fallback
+// cuando todavía no hay banner real cargado desde Configuración (ver
+// heroPhotoUrl más abajo) — nunca deja la zona vacía.
+const HERO_PHOTO_FALLBACK_URL =
   "https://inlmzasbkhngqamduugq.supabase.co/storage/v1/object/public/loyalty-content/branding/corner/hero-cancha-nocturna.jpg";
 
 // Fallback prolijo (verde oscuro + ícono) para cualquier zona de imagen
@@ -87,6 +86,11 @@ interface CornerHomeProps {
   // La fecha/hora de "Tu próxima reserva" sigue siendo mock en los dos
   // casos: la reserva en sí no es real todavía (eso es Fase 4).
   nextReservationCourt: NextReservationCourt | null;
+  // org.banner_url (misma columna que escribe Configuración > Banner en el
+  // dashboard) — foto real del hero en cuanto Die la sube. null hasta
+  // entonces, cae a HERO_PHOTO_FALLBACK_URL (Pexels) para no dejar la zona
+  // vacía.
+  heroPhotoUrl: string | null;
 }
 
 // Clases por edades — 4 categorías con color propio (Fase 2, todavía sin
@@ -113,6 +117,7 @@ export function CornerHome({
   carouselItems,
   levelCard,
   nextReservationCourt,
+  heroPhotoUrl,
 }: CornerHomeProps) {
   const points = pointsBalance ?? MOCK_POINTS;
   const reserveHref = getReserveHref(slug);
@@ -138,7 +143,7 @@ export function CornerHome({
         {/* Hero: saludo + foto de cancha nocturna (zona de imagen 1/5) */}
         <div className="relative rounded-2xl overflow-hidden h-44">
           <ImagePlaceholder
-            src={HERO_PHOTO_URL}
+            src={heroPhotoUrl ?? HERO_PHOTO_FALLBACK_URL}
             alt="Cancha de Corner de noche"
             className="absolute inset-0 w-full h-full object-cover"
           />
