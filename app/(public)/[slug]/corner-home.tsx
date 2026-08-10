@@ -140,7 +140,15 @@ export function CornerHome({
       </header>
 
       <div className="max-w-lg mx-auto px-4 pt-4 space-y-6">
-        {/* Hero: saludo + foto de cancha nocturna (zona de imagen 1/5) */}
+        {/* Hero: saludo + foto de cancha nocturna (zona de imagen 1/5).
+            Logo desacoplado de la foto (a propósito, ver commit "fix: hero
+            de Corner separa logo de la foto de fondo"): antes el logo venía
+            horneado dentro de org.banner_url, y esa misma foto se usa acá
+            recortada a h-44 y también como banner panorámico genérico en
+            layout.tsx — dos proporciones distintas, el logo horneado se
+            cortaba en mobile. Ahora es un <img> propio con su propio bbox
+            (max-w/max-h + object-contain), nunca se recorta pase lo que
+            pase con el object-cover de la foto de fondo. */}
         <div className="relative rounded-2xl overflow-hidden h-44">
           <ImagePlaceholder
             src={heroPhotoUrl ?? HERO_PHOTO_FALLBACK_URL}
@@ -148,6 +156,12 @@ export function CornerHome({
             className="absolute inset-0 w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/10" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/corner/logo.png"
+            alt="Corner — Fútbol, Torneos, Clases"
+            className="absolute top-2 left-1/2 -translate-x-1/2 max-h-16 sm:max-h-20 w-auto object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] pointer-events-none select-none"
+          />
           <div className="absolute inset-x-0 bottom-0 p-4">
             <p className="text-xs text-[#9b9995]">{greeting}</p>
             <p className="text-lg font-semibold text-white">{userName} 👋</p>
