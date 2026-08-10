@@ -13,6 +13,7 @@ import { FeaturedProductsGrid } from "./featured-products-grid";
 import { BikePromoImage } from "./bike-promo-image";
 import { HuellitasHome } from "./huellitas-home";
 import { CornerHome } from "./corner-home";
+import { getCornerLevelCard, type LevelCard } from "./corner-data";
 
 // Videos del hero de la home vet, por org (keyed por slug, mismo patrón que
 // TICKER_PHRASES/VERTICAL_TABS en layout.tsx). 7 URLs, índice = Date.getDay()
@@ -71,7 +72,7 @@ export default async function TenantPage({
     const supabase = createClient();
     const cornerUser = await getTenantUser();
 
-    const [{ data: profile }, balance, { data: content }] = await Promise.all([
+    const [{ data: profile }, balance, { data: content }, cornerLevelCard] = await Promise.all([
       cornerUser
         ? supabase.from("profiles").select("full_name").eq("id", cornerUser.id).maybeSingle()
         : Promise.resolve({ data: null }),
@@ -83,6 +84,12 @@ export default async function TenantPage({
         .eq("is_active", true)
         .eq("type", "carousel")
         .order("sort_order", { ascending: true }),
+      // AJUSTE 1: categoría (profesor/admin o socio ya en una clase) vs.
+      // escalera (socio que solo alquila cancha) — sin sesión no aplica
+      // ninguno de los dos, ver "default" abajo.
+      cornerUser
+        ? getCornerLevelCard(org.id, cornerUser.id)
+        : Promise.resolve<LevelCard | null>(null),
     ]);
 
     const userName = profile?.full_name || cornerUser?.email?.split("@")[0] || "Socio";
@@ -96,6 +103,7 @@ export default async function TenantPage({
         userName={userName}
         pointsBalance={cornerUser ? balance : null}
         carouselItems={content ?? []}
+        levelCard={cornerLevelCard ?? { mode: "default" }}
       />
     );
   }

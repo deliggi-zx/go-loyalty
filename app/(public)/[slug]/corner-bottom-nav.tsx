@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, CalendarClock, CircleDot, Activity, User } from "lucide-react";
+import { getReserveHref } from "./corner-actions";
 
 // Bottom nav propio de Corner — componente aparte, NO pisa/toca SideMenu
 // (el menú lateral ☰ que usan Cafetería/Bike/Gym2/Huellitas sigue
@@ -26,6 +27,11 @@ export function CornerBottomNav({ slug }: { slug: string }) {
       active ? "text-[#1e8f4e]" : "text-[#6b6965] hover:text-white"
     }`;
 
+  // Un solo helper (getReserveHref) para los dos botones de reservar de
+  // acá + el de la home — ver corner-actions.ts, ajuste pedido para no
+  // duplicar la decisión de a dónde lleva "reservar" en tres lugares.
+  const reserveHref = getReserveHref(slug);
+
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-40 h-16 bg-[#0a0a0b] border-t border-[#1c1c1e] flex items-stretch px-2"
@@ -36,7 +42,7 @@ export function CornerBottomNav({ slug }: { slug: string }) {
         Inicio
       </Link>
 
-      <a href={`/${slug}#reserva`} className={itemClass(false)}>
+      <a href={reserveHref} className={itemClass(false)}>
         <CalendarClock className="w-5 h-5" />
         Reservas
       </a>
@@ -44,7 +50,7 @@ export function CornerBottomNav({ slug }: { slug: string }) {
       {/* Ícono central de cancha — más grande, destacado en verde, mismo
           destino que "Reservas" (acción primaria: reservar). */}
       <a
-        href={`/${slug}#reserva`}
+        href={reserveHref}
         aria-label="Reservar cancha"
         className="flex flex-col items-center justify-center flex-1"
       >
