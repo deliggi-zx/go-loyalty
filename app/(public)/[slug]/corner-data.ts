@@ -14,7 +14,7 @@ export type LevelCard =
 // el ejemplo de demo dado; cualquier otro customer sin clase asignada
 // cae al default "Amateur".
 const LADDER_BY_PROFILE_ID: Record<string, string> = {
-  "55ef37c7-c0ff-4a05-9cef-34e25801aa0a": "Semi-Pro", // Lautaro
+  "55ef37c7-c0ff-4a05-9cef-34e25801aa0a": "Crack", // Lautaro
 };
 const DEFAULT_LADDER_RUNG = "Amateur";
 
