@@ -258,6 +258,14 @@ export default async function TenantLayout({
       />
 
       <SectionNavTabs items={SECTION_NAV_TABS[params.slug]?.(params.slug) ?? []} />
+
+      {/* Vive adentro de standardChrome (no como hermano suelto) para que
+          VetChromeGate lo oculte en la home de orgs vet igual que el resto
+          de la chrome estándar — si no, el día que Huellitas cargue un
+          whatsapp_number quedaría duplicado con el botón-huella de
+          WhatsApp propio de HuellitasHome. En subpáginas (Pet Shop, etc.)
+          sigue apareciendo como siempre. */}
+      <WhatsAppButton whatsappNumber={org.whatsapp_number} />
     </>
   );
 
@@ -276,12 +284,13 @@ export default async function TenantLayout({
             vive el disparador "Reservar" de la home, ver corner-home.tsx)
             como el bottom nav de acá abajo, para que el modal sea una
             única instancia compartida por los 3 disparadores. Ninguna
-            otra org monta este provider. */}
+            otra org monta este provider. WhatsAppButton NO va acá — ya
+            vive una sola vez dentro de standardChrome (ver fix de
+            Huellitas más arriba, PR #2); repetirlo acá lo duplicaría de
+            nuevo para cualquier org con whatsapp_number cargado. */}
         {hasCornerFeatures ? (
           <CornerReserveProvider courts={cornerCourts}>
             {children}
-
-            <WhatsAppButton whatsappNumber={org.whatsapp_number} />
 
             {/* Fuera del gate a propósito: el bottom nav de Corner vive en
                 todas sus rutas (home incluida), no solo en las
@@ -289,11 +298,7 @@ export default async function TenantLayout({
             <CornerBottomNav slug={params.slug} isLoggedIn={!!user} />
           </CornerReserveProvider>
         ) : (
-          <>
-            {children}
-
-            <WhatsAppButton whatsappNumber={org.whatsapp_number} />
-          </>
+          children
         )}
       </div>
     </CartProvider>

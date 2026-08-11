@@ -34,10 +34,15 @@ interface LoginFormProps {
   // arriba en la cadena (layout.tsx → ClientHeader → LoginModal), pero
   // expuesto como prop propia — hoy coincide con neonTheme, pero no
   // significan lo mismo (uno es estilo visual, el otro un requisito
-  // funcional) y no deberían acoplarse. orgId es requerido junto con esto
-  // porque reserve_gym_invite_code() necesita saber para qué organización
-  // vale el código.
+  // funcional) y no deberían acoplarse.
   requireInviteCode?: boolean;
+  // Antes solo lo usaba reserve_gym_invite_code() (por eso era opcional).
+  // Fase 1 de Huellitas: ahora también lo necesita el alta genérica de
+  // loyalty_members en el registro sin invite code (ver handleSubmit) —
+  // en la práctica ya es requerido para que el registro deje al usuario
+  // afiliado a la org; se mantiene opcional en el tipo por compatibilidad
+  // con algún caller que hoy no lo pase, pero todos los que importan
+  // (page.tsx, ClientHeader, HuellitasHome) ya lo pasan.
   orgId?: string;
 }
 
@@ -120,6 +125,37 @@ export function LoginForm({
           p_user_id: signUpData.user.id,
         });
       }
+
+      // Fix genérico (Fase 1 de Huellitas): ni el signUp() de arriba ni el
+      // trigger handle_new_user() (que solo toca public.profiles) crean la
+      // fila en loyalty_members — confirmado con barrido completo de la
+      // base, 2 cuentas reales quedaron con profiles pero sin membership
+      // en ninguna org. Acá se crea explícitamente para el registro
+      // abierto (sin invite code) de cualquier org, con role='customer'
+      // (la columna no acepta null). El camino CON invite code (hoy solo
+      // Gym2) queda afuera a propósito: es un flujo aparte con su propio
+      // bug ya documentado (ver memoria), no tocado en esta fase.
+      if (!requireInviteCode && orgId && signUpData.user) {
+        const { error: memberError } = await supabase.from("loyalty_members").insert({
+          org_id: orgId,
+          profile_id: signUpData.user.id,
+          role: "customer",
+        });
+        // A diferencia de finalize_gym_invite_code de arriba, este SÍ
+        // bloquea la pantalla de éxito: la cuenta de auth ya existe (no
+        // hay rollback de eso, sigue siendo best-effort en ese sentido),
+        // pero si loyalty_members no se pudo crear no le mostramos "¡Cuenta
+        // creada!" al usuario — quedaría creyendo que está afiliado a la
+        // org cuando no lo está. Sin reintento automático, solo error
+        // simple (pedido explícito): ver memberError abajo.
+        if (memberError) {
+          console.error("No se pudo crear loyalty_members al registrarse:", memberError.message);
+          setError("No pudimos completar el registro, intentá de nuevo.");
+          setLoading(false);
+          return;
+        }
+      }
+
       setRegistered(true);
     }
 

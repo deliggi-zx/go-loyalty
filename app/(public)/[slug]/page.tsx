@@ -58,6 +58,13 @@ export default async function TenantPage({
         slug={params.slug}
         orgName={org.name}
         videos={VET_HOME_VIDEOS[params.slug] ?? []}
+        primaryColor={org.primary_color ?? "#b98a72"}
+        orgId={org.id}
+        whatsappNumber={org.whatsapp_number}
+        facebookUrl={org.facebook_url}
+        instagramUrl={org.instagram_url}
+        twitterUrl={org.twitter_url}
+        youtubeUrl={org.youtube_url}
       />
     );
   }
@@ -159,7 +166,7 @@ export default async function TenantPage({
           usuario del header (ver hasGymFeatures + showLoginIcon en layout.tsx). */}
       {!user && !hasGymFeatures && (
         <div className="max-w-lg mx-auto px-4 pt-4">
-          <LoginForm primaryColor={primary} bikeTheme={isBike} />
+          <LoginForm primaryColor={primary} bikeTheme={isBike} orgId={org.id} />
         </div>
       )}
 
