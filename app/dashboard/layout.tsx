@@ -21,8 +21,9 @@ export default async function DashboardLayout({
   let catalogType: string | null = null;
   let hasGymFeatures = false;
   let isCornerOrg = false;
+  let showMascotas = false;
   if (orgId) {
-    const [{ data: org }, { count: gymLocationsCount }] = await Promise.all([
+    const [{ data: org }, { count: gymLocationsCount }, { data: membership }] = await Promise.all([
       supabase
         .from("loyalty_organizations")
         .select("catalog_type, slug")
@@ -34,6 +35,15 @@ export default async function DashboardLayout({
         .from("gym_locations")
         .select("id", { count: "exact", head: true })
         .eq("org_id", orgId),
+      // Role del usuario actual en esta org — hace falta acá (y no solo en
+      // mascotas/page.tsx) porque el ítem del sidebar no debería ofrecerse
+      // ni a un customer de Huellitas ni a nadie de otra org.
+      supabase
+        .from("loyalty_members")
+        .select("role")
+        .eq("org_id", orgId)
+        .eq("profile_id", user.id)
+        .maybeSingle(),
     ]);
     catalogType = org?.catalog_type ?? null;
     hasGymFeatures = (gymLocationsCount ?? 0) > 0;
@@ -42,6 +52,12 @@ export default async function DashboardLayout({
     // chequeado acá directo (un solo flag, un solo archivo, no amerita
     // importar el helper del route group público).
     isCornerOrg = org?.slug === "corner";
+    // Fase 1 de Huellitas: panel de mascotas, mismo criterio de flag local
+    // que isCornerOrg de arriba — pero acá además requiere role admin/vet
+    // (el control de acceso real vive en mascotas/page.tsx, esto es solo
+    // para no ofrecer el link en el nav a quien no puede usarlo).
+    const isVetOrg = org?.slug === "huellitas";
+    showMascotas = isVetOrg && (membership?.role === "admin" || membership?.role === "vet");
   }
 
   return (
@@ -51,6 +67,7 @@ export default async function DashboardLayout({
         showCatalog={catalogType === "products"}
         showGym={hasGymFeatures}
         showCourts={isCornerOrg}
+        showMascotas={showMascotas}
       />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {children}
