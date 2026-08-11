@@ -2,8 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/server";
-import { getTenantOrg, getTenantUser, getUserPointsBalance } from "../data";
+import { getTenantOrg, getTenantUser, getUserPointsBalance, isVetOrgSlug } from "../data";
 import { getGymLocations, getGymClasses } from "../gym-data";
+import { getOwnerPets } from "../vet-pets-data";
 import { PointsPanel } from "../points-panel";
 import { GymProfileHeader } from "../gym-profile-header";
 import { GymQrAccess } from "../gym-qr-access";
@@ -11,6 +12,7 @@ import { GymWorkoutPlan } from "../gym-workout-plan";
 import { GymGoalPicker } from "../gym-goal-picker";
 import { GymFeaturedBanner } from "../gym-featured-banner";
 import { GymRecommendedPopup } from "../gym-recommended-popup";
+import { VetMyPets } from "../vet-my-pets";
 
 export default async function PerfilPage({
   params,
@@ -53,6 +55,14 @@ export default async function PerfilPage({
   // resto de las organizaciones.
   const hasGymFeatures = gymLocations.length > 0;
   const gymClasses = hasGymFeatures ? await getGymClasses(org.id) : [];
+
+  // Mis Mascotas (Fase 1 Huellitas, punto 3): solo para orgs vet — mismo
+  // helper isVetOrgSlug que gatea la home bespoke en layout.tsx/page.tsx,
+  // acá no hay chrome propia que ocultar, solo un bloque más dentro del
+  // perfil genérico (igual criterio que hasGymFeatures arriba).
+  const hasVetFeatures = isVetOrgSlug(params.slug);
+  const myPets = hasVetFeatures ? await getOwnerPets(org.id, user.id) : [];
+
   const userName = profile?.full_name || user.email?.split("@")[0] || "Socio";
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Buen día" : hour < 19 ? "Buenas tardes" : "Buenas noches";
@@ -111,6 +121,14 @@ export default async function PerfilPage({
       {hasGymFeatures && <GymWorkoutPlan userName={userName} />}
 
       {hasGymFeatures && <GymGoalPicker />}
+
+      {/* Mis Mascotas (punto 3, Fase 1 Huellitas) — bloque propio, separado
+          del de puntos/historial de más abajo (pedido explícito). Vive acá
+          arriba, junto con el resto de los bloques específicos de esta
+          org, y no adentro del contenedor de PointsPanel. */}
+      {hasVetFeatures && (
+        <VetMyPets slug={params.slug} orgId={org.id} pets={myPets} primaryColor={primary} />
+      )}
 
       <div className="flex justify-center">
         <div className="w-full max-w-sm space-y-4">

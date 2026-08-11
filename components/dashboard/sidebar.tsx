@@ -11,6 +11,7 @@ import {
   Ticket,
   GraduationCap,
   MapPin,
+  PawPrint,
   ScanLine,
   Settings,
   LogOut,
@@ -39,6 +40,11 @@ const gymNavItems = [
 // único flag en un único archivo, no amerita un mapa slug-keyed todavía).
 const courtsNavItem = { href: "/dashboard/canchas", label: "Canchas", icon: MapPin };
 
+// Solo Huellitas (Fase 1), y solo role admin/vet — ver showMascotas en
+// dashboard/layout.tsx. Esto es únicamente el ítem de navegación; el
+// control de acceso real (por role) vive en mascotas/page.tsx.
+const mascotasNavItem = { href: "/dashboard/mascotas", label: "Mascotas", icon: PawPrint };
+
 const trailingNavItems = [
   { href: "/pos", label: "POS", icon: ScanLine },
   { href: "/dashboard/configuracion", label: "Configuración", icon: Settings },
@@ -49,15 +55,23 @@ interface SidebarProps {
   showCatalog?: boolean;
   showGym?: boolean;
   showCourts?: boolean;
+  showMascotas?: boolean;
 }
 
-export function Sidebar({ userEmail, showCatalog = false, showGym = false, showCourts = false }: SidebarProps) {
+export function Sidebar({
+  userEmail,
+  showCatalog = false,
+  showGym = false,
+  showCourts = false,
+  showMascotas = false,
+}: SidebarProps) {
   const pathname = usePathname();
   const navItems = [
     ...baseNavItems,
     ...(showCatalog ? [catalogNavItem] : []),
     ...(showGym ? gymNavItems : []),
     ...(showCourts ? [courtsNavItem] : []),
+    ...(showMascotas ? [mascotasNavItem] : []),
     ...trailingNavItems,
   ];
 
