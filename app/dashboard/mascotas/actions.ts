@@ -109,3 +109,76 @@ export async function updatePet(petId: string, payload: PetPayload) {
 
   revalidatePath("/dashboard/mascotas");
 }
+
+export interface MedicalRecordPayload {
+  type: "vacuna" | "tratamiento";
+  description: string;
+  date: string;
+  notes: string | null;
+  visible_to_owner: boolean;
+}
+
+// Fase 2: historial clínico, integrado a este mismo panel (no es pantalla
+// nueva, ver mascotas-manager.tsx). vet_medical_records tampoco tiene
+// RLS y además no tiene su propio "requireOrgId" implícito como vet_pets
+// (org_id sale del server acá también) — pero el petId SÍ viaja desde el
+// cliente, así que antes de insertar se verifica que esa mascota
+// pertenezca a esta org (si no, cualquiera con el panel abierto podría
+// escribir historial clínico de mascotas de otra organización).
+export async function createMedicalRecord(petId: string, payload: MedicalRecordPayload) {
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("No autorizado");
+
+  const { data: pet } = await supabase
+    .from("vet_pets")
+    .select("id")
+    .eq("id", petId)
+    .eq("org_id", orgId)
+    .maybeSingle();
+  if (!pet) throw new Error("Mascota no encontrada.");
+
+  const { error } = await supabase.from("vet_medical_records").insert({
+    pet_id: petId,
+    org_id: orgId,
+    type: payload.type,
+    description: payload.description,
+    date: payload.date,
+    notes: payload.notes,
+    visible_to_owner: payload.visible_to_owner,
+    created_by: user.id,
+  });
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/dashboard/mascotas");
+}
+
+// Edición pedida explícitamente "para corregir fecha/texto mal tipeado" —
+// SIN borrado (no hay deleteMedicalRecord en este archivo a propósito, el
+// historial no desaparece). El .eq("org_id", orgId) alcanza para el
+// ownership check acá: org_id vive en la propia fila, no hace falta
+// resolver el pet_id de nuevo.
+export async function updateMedicalRecord(recordId: string, payload: MedicalRecordPayload) {
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+
+  const { error } = await supabase
+    .from("vet_medical_records")
+    .update({
+      type: payload.type,
+      description: payload.description,
+      date: payload.date,
+      notes: payload.notes,
+      visible_to_owner: payload.visible_to_owner,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", recordId)
+    .eq("org_id", orgId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/dashboard/mascotas");
+}
