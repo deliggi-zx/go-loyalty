@@ -141,13 +141,18 @@ export function LoginForm({
           profile_id: signUpData.user.id,
           role: "customer",
         });
-        // No bloqueamos el alta por esto (la cuenta de auth ya existe y el
-        // registro visualmente "salió bien" para el usuario) — mismo
-        // criterio de best-effort que ya usa este mismo bloque con
-        // finalize_gym_invite_code de arriba. Se loguea para que no quede
-        // en silencio total si vuelve a pasar.
+        // A diferencia de finalize_gym_invite_code de arriba, este SÍ
+        // bloquea la pantalla de éxito: la cuenta de auth ya existe (no
+        // hay rollback de eso, sigue siendo best-effort en ese sentido),
+        // pero si loyalty_members no se pudo crear no le mostramos "¡Cuenta
+        // creada!" al usuario — quedaría creyendo que está afiliado a la
+        // org cuando no lo está. Sin reintento automático, solo error
+        // simple (pedido explícito): ver memberError abajo.
         if (memberError) {
           console.error("No se pudo crear loyalty_members al registrarse:", memberError.message);
+          setError("No pudimos completar el registro, intentá de nuevo.");
+          setLoading(false);
+          return;
         }
       }
 
