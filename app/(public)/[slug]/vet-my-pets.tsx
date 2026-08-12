@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { PawPrint, Camera, Plus, X } from "lucide-react";
+import { PawPrint, Camera, Plus, X, ChevronDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { linkPetByCode, updateMyPetPhoto } from "./vet-pets-actions";
 import type { MyPet } from "./vet-pets-data";
@@ -20,6 +20,13 @@ interface VetMyPetsProps {
 // ficha (eso es el panel /dashboard/mascotas, admin/vet) — acá solo puede
 // (a) vincular una mascota existente con un código, (b) cambiarle la
 // foto a una ya vinculada. Nada más es editable desde acá a propósito.
+//
+// Fase 2, punto 3: cada tarjeta suma un acordeón de historial clínico,
+// también de solo lectura — ni alta ni edición ni botón de nada acá, la
+// única interacción es expandir/colapsar. Las entradas que llegan en
+// pet.records ya vienen pre-filtradas a visible_to_owner=true desde el
+// server (ver getOwnerPets en vet-pets-data.ts) — este componente ni
+// siquiera tiene forma de saber si existen entradas ocultas.
 export function VetMyPets({ slug, orgId, pets, primaryColor }: VetMyPetsProps) {
   const router = useRouter();
   const supabase = createClient();
@@ -32,6 +39,21 @@ export function VetMyPets({ slug, orgId, pets, primaryColor }: VetMyPetsProps) {
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const pendingPetIdRef = useRef<string | null>(null);
+
+  // Acordeón simple (punto 3, Fase 2): cada tarjeta abre/cierra su propio
+  // historial de forma independiente — no es "solo una a la vez", cada
+  // pet.id que esté en el Set está expandido. Nada de esto es editable
+  // acá, es lectura pura (ver comentario de VetMyPets más abajo).
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  function toggleExpanded(petId: string) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(petId)) next.delete(petId);
+      else next.add(petId);
+      return next;
+    });
+  }
 
   function handleLinkSubmit() {
     if (!code.trim() || isPending) return;
@@ -197,13 +219,66 @@ export function VetMyPets({ slug, orgId, pets, primaryColor }: VetMyPetsProps) {
                   )}
                 </div>
               </button>
-              <div className="p-3 space-y-0.5">
-                <p className="text-sm font-semibold text-stone-900 truncate">{pet.name}</p>
-                <p className="text-xs text-stone-500 truncate">
-                  {pet.species}
-                  {pet.breed ? ` · ${pet.breed}` : ""}
-                </p>
-                {pet.ageLabel && <p className="text-xs text-stone-400">{pet.ageLabel}</p>}
+              <div className="p-3">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-semibold text-stone-900 truncate">{pet.name}</p>
+                  <p className="text-xs text-stone-500 truncate">
+                    {pet.species}
+                    {pet.breed ? ` · ${pet.breed}` : ""}
+                  </p>
+                  {pet.ageLabel && <p className="text-xs text-stone-400">{pet.ageLabel}</p>}
+                </div>
+
+                {/* Historial clínico — solo lectura, ver comentario de
+                    VetMyPets. Siempre se muestra el toggle (incluso sin
+                    entradas) para no dar a entender que la mascota no
+                    tiene historial en absoluto, cuando puede ser que
+                    tenga entradas ocultas por el vet. */}
+                <button
+                  onClick={() => toggleExpanded(pet.id)}
+                  className="w-full flex items-center justify-between text-xs font-medium text-stone-500 hover:text-stone-700 mt-2 pt-2 border-t border-stone-100 transition-colors"
+                >
+                  <span>
+                    Historial clínico
+                    {pet.records.length > 0 ? ` (${pet.records.length})` : ""}
+                  </span>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 shrink-0 transition-transform ${
+                      expandedIds.has(pet.id) ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {expandedIds.has(pet.id) && (
+                  <div className="mt-2 space-y-2">
+                    {pet.records.length === 0 ? (
+                      <p className="text-xs text-stone-400">Sin historial cargado todavía.</p>
+                    ) : (
+                      pet.records.map((r) => (
+                        <div key={r.id} className="flex items-start gap-2">
+                          <span
+                            className={`shrink-0 mt-0.5 text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full ${
+                              r.type === "vacuna"
+                                ? "bg-sky-50 text-sky-700"
+                                : "bg-violet-50 text-violet-700"
+                            }`}
+                          >
+                            {r.type === "vacuna" ? "Vacuna" : "Trat."}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-stone-700">{r.description}</p>
+                            <p className="text-[11px] text-stone-400">
+                              {new Date(`${r.date}T00:00:00`).toLocaleDateString("es-AR")}
+                            </p>
+                            {r.notes && (
+                              <p className="text-[11px] text-stone-500 mt-0.5">{r.notes}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           ))}
