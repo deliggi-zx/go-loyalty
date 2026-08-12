@@ -53,6 +53,12 @@ export default async function TenantPage({
   // hero-video estándar acá (ver VetChromeGate) — subpáginas como Pet Shop
   // siguen usando esta misma TenantPage sin este branch.
   if (isVetOrgSlug(params.slug)) {
+    // getTenantUser() está cacheado con React cache() (data.ts) — pedirlo
+    // acá no es un fetch extra, dedupea con cualquier otra llamada dentro
+    // del mismo request tree. Se usa para que el ícono de cuenta sepa si
+    // ya hay sesión (ver isLoggedIn en HuellitasHome) en vez de ofrecer
+    // loguearse de nuevo a alguien que ya está logueado.
+    const vetUser = await getTenantUser();
     return (
       <HuellitasHome
         slug={params.slug}
@@ -65,6 +71,7 @@ export default async function TenantPage({
         instagramUrl={org.instagram_url}
         twitterUrl={org.twitter_url}
         youtubeUrl={org.youtube_url}
+        isLoggedIn={!!vetUser}
       />
     );
   }

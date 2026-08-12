@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { MessageCircle, User } from "lucide-react";
 import { LoginModal } from "./login-modal";
@@ -45,7 +46,19 @@ interface PawButtonProps {
 
 function PawButton({ href, label, color }: PawButtonProps) {
   return (
-    <Link href={href} className="group flex flex-col items-center gap-[0.6svh]">
+    // prefetch={false}: los 7 botones-huella viven arriba del pliegue y
+    // Next los prefetchea automáticamente TODOS en simultáneo apenas carga
+    // el video (a diferencia de bike/corner, donde los links a otras
+    // páginas quedan fuera del viewport inicial o adentro de un menú
+    // cerrado, y por eso nunca disparan esa ráfaga). Sospechamos que esa
+    // ráfaga de 7 fetches RSC simultáneos es lo que dispara los 503
+    // intermitentes vistos en producción en /huellitas (confirmado
+    // reproducible con navegación real; no reproducido con fetch scripteado
+    // ni en bike/corner con el mismo volumen — ver investigación del bug de
+    // login). No hace falta precargar las 7 páginas de destino para un
+    // botón que el usuario toca a lo sumo una vez — costo cero si la
+    // hipótesis es incorrecta, alivia la ráfaga si es correcta.
+    <Link href={href} prefetch={false} className="group flex flex-col items-center gap-[0.6svh]">
       {/* Tamaño en svh (con piso/techo en px vía clamp), NO en breakpoints
           de ancho — el bug que arreglamos era de ALTO disponible, no de
           ancho: un viewport ancho pero bajo rompía igual que uno angosto.
@@ -174,6 +187,13 @@ interface HuellitasHomeProps {
   instagramUrl: string | null;
   twitterUrl: string | null;
   youtubeUrl: string | null;
+  // Si ya hay sesión activa, el ícono de cuenta no tiene sentido que ofrezca
+  // loguearse de nuevo (bug confirmado: con sesión iniciada, seguía abriendo
+  // el LoginModal) — en ese caso lleva directo a /perfil. Lo resuelve el
+  // server (page.tsx vía getTenantUser()) porque este componente no tiene
+  // forma propia de saber si hay sesión sin pedirla de nuevo del lado
+  // cliente.
+  isLoggedIn: boolean;
 }
 
 export function HuellitasHome({
@@ -186,7 +206,9 @@ export function HuellitasHome({
   instagramUrl,
   twitterUrl,
   youtubeUrl,
+  isLoggedIn,
 }: HuellitasHomeProps) {
+  const router = useRouter();
   const [loginOpen, setLoginOpen] = useState(false);
 
   // Día de la semana: se resuelve en el cliente después del montaje para no
@@ -252,11 +274,14 @@ export function HuellitasHome({
             tiene header (ver VetChromeGate). Mismo LoginModal/LoginForm
             de siempre, tema claro. drop-shadow en vez de chip de fondo —
             ClientHeader tampoco le pone chip, ahí vive sobre una barra
-            sólida; acá alcanza con la sombra porque es un ícono chico. */}
+            sólida; acá alcanza con la sombra porque es un ícono chico.
+            Con sesión activa (isLoggedIn) no tiene sentido ofrecer
+            loguearse de nuevo — va directo a /perfil en vez de abrir el
+            modal (bug confirmado: antes lo abría igual, sesión o no). */}
         <button
           type="button"
-          onClick={() => setLoginOpen(true)}
-          aria-label="Iniciar sesión"
+          onClick={() => (isLoggedIn ? router.push(`/${slug}/perfil`) : setLoginOpen(true))}
+          aria-label={isLoggedIn ? "Mi perfil" : "Iniciar sesión"}
           className="absolute top-[2svh] right-4 z-10 p-2 text-white drop-shadow-md transition-transform duration-200 hover:scale-110 active:scale-95"
         >
           <User className="w-6 h-6" />

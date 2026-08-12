@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -65,6 +65,17 @@ export function LoginForm({
   const [error, setError] = useState<string | null>(null);
   const [registered, setRegistered] = useState(false);
 
+  // Solo para el fallback de router.refresh() post-login (ver handleSubmit
+  // más abajo): si este componente se desmontó antes de que dispare el
+  // timeout, no forzamos la recarga — no tiene sentido navegar una pantalla
+  // que el usuario ya abandonó.
+  const unmountedRef = useRef(false);
+  useEffect(() => {
+    return () => {
+      unmountedRef.current = true;
+    };
+  }, []);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -75,7 +86,35 @@ export function LoginForm({
       if (error) {
         setError("Credenciales incorrectas. Verificá tu email y contraseña.");
       } else {
-        router.refresh();
+        // La sesión ya quedó creada en Supabase acá arriba (200 confirmado
+        // por auth.signInWithPassword) — router.refresh() solo le pide al
+        // server el HTML/RSC actualizado para reflejarla. Si ESE fetch falla
+        // (visto en prod: 503 intermitente en /huellitas, ver ticket), antes
+        // no había ningún catch: el modal se quedaba mudo, sin error, sin
+        // loading, dando a entender que el login estaba roto cuando en
+        // realidad ya había funcionado.
+        //
+        // El try/catch de acá abajo cubre el caso sincrónico (llamar
+        // router.refresh() en un contexto roto), pero router.refresh() es
+        // fire-and-forget: si el fetch RSC que dispara falla del lado del
+        // server, no hay excepción que atrapar acá, la promesa interna nunca
+        // llega a este scope. Por eso el timeout de abajo: es la única red
+        // de seguridad real contra ESE caso. Si a los 2.5s seguimos vivos
+        // (nadie navegó a otro lado ni desmontó este formulario), forzamos
+        // una recarga completa — funcionó o no, el usuario ve que algo pasó,
+        // nunca se queda mirando el modal para siempre.
+        try {
+          router.refresh();
+        } catch {
+          window.location.href = window.location.pathname;
+          setLoading(false);
+          return;
+        }
+        window.setTimeout(() => {
+          if (!unmountedRef.current) {
+            window.location.href = window.location.pathname;
+          }
+        }, 2500);
       }
       setLoading(false);
       return;
@@ -247,7 +286,12 @@ export function LoginForm({
           {mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
         </p>
         <h2 className={`text-base font-semibold mt-0.5 ${titleClass}`}>
-          {mode === "login" ? "Accedé a tu tarjeta de sellos" : "Registrate para acumular sellos"}
+          {/* Los dos textos (login y registro) quedaron del modelo viejo de
+              sellos, ya descartado — genéricos en su lugar. String
+              compartido por TODAS las orgs (gym, bike, corner, huellitas),
+              no algo que se pueda variar por org sin sumar una prop nueva;
+              se corrige acá para todas por igual. */}
+          {mode === "login" ? "Accedé a tu cuenta" : "Registrate para empezar"}
         </h2>
       </div>
 

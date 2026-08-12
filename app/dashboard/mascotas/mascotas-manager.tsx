@@ -2,8 +2,15 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Copy, Check, PawPrint } from "lucide-react";
-import { createPet, updatePet, type PetPayload } from "./actions";
+import { Copy, Check, PawPrint, Pencil } from "lucide-react";
+import {
+  createPet,
+  updatePet,
+  createMedicalRecord,
+  updateMedicalRecord,
+  type PetPayload,
+  type MedicalRecordPayload,
+} from "./actions";
 
 export interface PetRow {
   id: string;
@@ -24,9 +31,23 @@ export interface MemberOption {
   name: string | null;
 }
 
+// Fase 2: historial clínico — todas las entradas de todas las mascotas de
+// la org llegan de una (ver mascotas/page.tsx), este componente filtra
+// por petId al vuelo cuando hay una mascota en edición.
+export interface MedicalRecordRow {
+  id: string;
+  petId: string;
+  type: "vacuna" | "tratamiento";
+  description: string;
+  date: string;
+  notes: string | null;
+  visibleToOwner: boolean;
+}
+
 interface MascotasManagerProps {
   pets: PetRow[];
   members: MemberOption[];
+  medicalRecords: MedicalRecordRow[];
 }
 
 // Solo por nombre — public.profiles no tiene columna email, ver nota en
@@ -59,7 +80,15 @@ const emptyForm = {
 // que la mascota recién creada no aparecía en el listado hasta un reload
 // completo de la página. Sin mutación optimista propia acá (no hay borrado
 // en este panel), no hace falta estado local para la lista.
-export function MascotasManager({ pets, members }: MascotasManagerProps) {
+const emptyRecordForm = {
+  type: "vacuna" as "vacuna" | "tratamiento",
+  description: "",
+  date: "",
+  notes: "",
+  visibleToOwner: true,
+};
+
+export function MascotasManager({ pets, members, medicalRecords }: MascotasManagerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -69,6 +98,19 @@ export function MascotasManager({ pets, members }: MascotasManagerProps) {
   const [error, setError] = useState<string | null>(null);
   const [justCreatedCode, setJustCreatedCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Historial clínico de la mascota en edición — sin editingId no hay
+  // sección de historial (una mascota recién creada todavía no existe
+  // hasta guardarla, no tiene sentido cargarle vacunas antes de eso).
+  const [showRecordForm, setShowRecordForm] = useState(false);
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
+  const [recordForm, setRecordForm] = useState(emptyRecordForm);
+  const [recordError, setRecordError] = useState<string | null>(null);
+
+  const petRecords = useMemo(
+    () => (editingId ? medicalRecords.filter((r) => r.petId === editingId) : []),
+    [editingId, medicalRecords]
+  );
 
   const filteredMembers = useMemo(() => {
     const q = ownerFilter.trim().toLowerCase();
@@ -81,6 +123,7 @@ export function MascotasManager({ pets, members }: MascotasManagerProps) {
     setForm(emptyForm);
     setOwnerFilter("");
     setError(null);
+    resetRecordForm();
   }
 
   function startEdit(pet: PetRow) {
@@ -97,6 +140,65 @@ export function MascotasManager({ pets, members }: MascotasManagerProps) {
     setOwnerFilter("");
     setError(null);
     setJustCreatedCode(null);
+    resetRecordForm();
+  }
+
+  function resetRecordForm() {
+    setShowRecordForm(false);
+    setEditingRecordId(null);
+    setRecordForm(emptyRecordForm);
+    setRecordError(null);
+  }
+
+  function startNewRecord() {
+    setEditingRecordId(null);
+    setRecordForm(emptyRecordForm);
+    setRecordError(null);
+    setShowRecordForm(true);
+  }
+
+  function startEditRecord(record: MedicalRecordRow) {
+    setEditingRecordId(record.id);
+    setRecordForm({
+      type: record.type,
+      description: record.description,
+      date: record.date,
+      notes: record.notes ?? "",
+      visibleToOwner: record.visibleToOwner,
+    });
+    setRecordError(null);
+    setShowRecordForm(true);
+  }
+
+  function handleSaveRecord() {
+    if (!editingId) return;
+    if (!recordForm.description.trim() || !recordForm.date) {
+      setRecordError("Descripción y fecha son obligatorias.");
+      return;
+    }
+    setRecordError(null);
+
+    const payload: MedicalRecordPayload = {
+      type: recordForm.type,
+      description: recordForm.description.trim(),
+      date: recordForm.date,
+      notes: recordForm.notes.trim() || null,
+      visible_to_owner: recordForm.visibleToOwner,
+    };
+
+    startTransition(async () => {
+      try {
+        if (editingRecordId) {
+          await updateMedicalRecord(editingRecordId, payload);
+        } else {
+          await createMedicalRecord(editingId, payload);
+        }
+        resetRecordForm();
+        router.refresh();
+      } catch (e) {
+        setRecordError(e instanceof Error ? e.message : "No se pudo guardar.");
+      }
+    });
   }
 
   function handleSave() {
@@ -348,6 +450,144 @@ export function MascotasManager({ pets, members }: MascotasManagerProps) {
           )}
         </div>
       </div>
+
+      {/* Historial clínico (Fase 2) — solo dentro de la edición de una
+          mascota ya creada, integrado a este mismo panel (no es pantalla
+          aparte, pedido explícito). Sin borrado a propósito: el historial
+          no desaparece, solo se puede corregir una entrada mal tipeada. */}
+      {editingId && (
+        <div className="bg-white rounded-xl border border-stone-200 p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">
+              Historial clínico
+            </h2>
+            {!showRecordForm && (
+              <button
+                onClick={startNewRecord}
+                className="text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                + Nueva entrada
+              </button>
+            )}
+          </div>
+
+          {petRecords.length > 0 ? (
+            <div className="divide-y divide-stone-100 border border-stone-100 rounded-lg overflow-hidden">
+              {petRecords.map((r) => (
+                <div key={r.id} className="flex items-start gap-3 px-4 py-3">
+                  <span
+                    className={`shrink-0 text-[10px] font-semibold uppercase tracking-wide px-2 py-1 rounded-full ${
+                      r.type === "vacuna" ? "bg-sky-50 text-sky-700" : "bg-violet-50 text-violet-700"
+                    }`}
+                  >
+                    {r.type === "vacuna" ? "Vacuna" : "Tratamiento"}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-stone-900">{r.description}</p>
+                    <p className="text-xs text-stone-400">
+                      {new Date(`${r.date}T00:00:00`).toLocaleDateString("es-AR")}
+                      {!r.visibleToOwner && " · Oculto para el dueño"}
+                    </p>
+                    {r.notes && <p className="text-xs text-stone-500 mt-0.5">{r.notes}</p>}
+                  </div>
+                  <button
+                    onClick={() => startEditRecord(r)}
+                    disabled={isPending}
+                    className="shrink-0 p-1.5 text-stone-400 hover:text-stone-700 disabled:opacity-50 transition-colors rounded-md hover:bg-stone-100"
+                    aria-label="Editar entrada"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            !showRecordForm && <p className="text-xs text-stone-400">Sin entradas todavía.</p>
+          )}
+
+          {showRecordForm && (
+            <div className="bg-stone-50 border border-stone-200 rounded-lg p-4 space-y-3">
+              {recordError && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                  {recordError}
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-stone-600">Tipo</label>
+                  <select
+                    value={recordForm.type}
+                    onChange={(e) =>
+                      setRecordForm((f) => ({
+                        ...f,
+                        type: e.target.value as "vacuna" | "tratamiento",
+                      }))
+                    }
+                    className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 bg-white focus:outline-none focus:border-amber-400 transition-colors"
+                  >
+                    <option value="vacuna">Vacuna</option>
+                    <option value="tratamiento">Tratamiento</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-stone-600">Fecha *</label>
+                  <input
+                    type="date"
+                    value={recordForm.date}
+                    onChange={(e) => setRecordForm((f) => ({ ...f, date: e.target.value }))}
+                    className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-stone-600">Descripción *</label>
+                <input
+                  value={recordForm.description}
+                  onChange={(e) => setRecordForm((f) => ({ ...f, description: e.target.value }))}
+                  placeholder="Antirrábica"
+                  className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-stone-600">Notas</label>
+                <textarea
+                  value={recordForm.notes}
+                  onChange={(e) => setRecordForm((f) => ({ ...f, notes: e.target.value }))}
+                  rows={2}
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors resize-none"
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-stone-600">
+                <input
+                  type="checkbox"
+                  checked={recordForm.visibleToOwner}
+                  onChange={(e) =>
+                    setRecordForm((f) => ({ ...f, visibleToOwner: e.target.checked }))
+                  }
+                  className="rounded border-stone-300"
+                />
+                Visible para el dueño
+              </label>
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  onClick={handleSaveRecord}
+                  disabled={isPending}
+                  className="text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 disabled:opacity-50 px-4 py-2 rounded-lg transition-colors"
+                >
+                  {isPending ? "Guardando..." : editingRecordId ? "Guardar cambios" : "Agregar entrada"}
+                </button>
+                <button
+                  onClick={resetRecordForm}
+                  disabled={isPending}
+                  className="text-sm font-medium text-stone-500 hover:text-stone-700 disabled:opacity-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

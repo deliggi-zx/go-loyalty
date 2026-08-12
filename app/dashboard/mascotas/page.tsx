@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
-import { MascotasManager, type PetRow, type MemberOption } from "./mascotas-manager";
+import { MascotasManager, type PetRow, type MemberOption, type MedicalRecordRow } from "./mascotas-manager";
 
 // Visible solo para role admin o vet dentro de la org (Huellitas) — el
 // ítem del sidebar ya lo oculta para cualquier otra org (ver showMascotas
@@ -33,7 +33,7 @@ export default async function MascotasPage() {
     redirect("/dashboard");
   }
 
-  const [{ data: petsData }, { data: membersData }] = await Promise.all([
+  const [{ data: petsData }, { data: membersData }, { data: recordsData }] = await Promise.all([
     supabase
       .from("vet_pets")
       .select("id, owner_profile_id, link_code, name, species, breed, color, weight, birth_date, photo_url")
@@ -43,6 +43,15 @@ export default async function MascotasPage() {
     // también podría querer vincularse una mascota propia, no hay motivo
     // para excluirlos del buscador.
     supabase.from("loyalty_members").select("profile_id").eq("org_id", orgId),
+    // Fase 2: todo el historial clínico de la org de una — se pide acá
+    // arriba junto con las mascotas (no on-demand al abrir cada edición)
+    // para que cambiar de mascota en el panel sea instantáneo, sin loading
+    // states nuevos. Escala bien para el volumen de un panel admin/vet.
+    supabase
+      .from("vet_medical_records")
+      .select("id, pet_id, type, description, date, notes, visible_to_owner")
+      .eq("org_id", orgId)
+      .order("date", { ascending: false }),
   ]);
 
   // NOTA: public.profiles no tiene columna email (solo id, full_name,
@@ -86,6 +95,16 @@ export default async function MascotasPage() {
     };
   });
 
+  const medicalRecords: MedicalRecordRow[] = (recordsData ?? []).map((r) => ({
+    id: r.id,
+    petId: r.pet_id,
+    type: r.type as "vacuna" | "tratamiento",
+    description: r.description,
+    date: r.date,
+    notes: r.notes,
+    visibleToOwner: r.visible_to_owner,
+  }));
+
   return (
     <div className="flex-1 overflow-y-auto">
       <header className="bg-white border-b border-stone-200 px-8 h-16 flex items-center justify-between shrink-0">
@@ -98,7 +117,7 @@ export default async function MascotasPage() {
       </header>
 
       <div className="p-8">
-        <MascotasManager pets={pets} members={members} />
+        <MascotasManager pets={pets} members={members} medicalRecords={medicalRecords} />
       </div>
     </div>
   );
