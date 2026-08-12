@@ -45,7 +45,19 @@ interface PawButtonProps {
 
 function PawButton({ href, label, color }: PawButtonProps) {
   return (
-    <Link href={href} className="group flex flex-col items-center gap-[0.6svh]">
+    // prefetch={false}: los 7 botones-huella viven arriba del pliegue y
+    // Next los prefetchea automáticamente TODOS en simultáneo apenas carga
+    // el video (a diferencia de bike/corner, donde los links a otras
+    // páginas quedan fuera del viewport inicial o adentro de un menú
+    // cerrado, y por eso nunca disparan esa ráfaga). Sospechamos que esa
+    // ráfaga de 7 fetches RSC simultáneos es lo que dispara los 503
+    // intermitentes vistos en producción en /huellitas (confirmado
+    // reproducible con navegación real; no reproducido con fetch scripteado
+    // ni en bike/corner con el mismo volumen — ver investigación del bug de
+    // login). No hace falta precargar las 7 páginas de destino para un
+    // botón que el usuario toca a lo sumo una vez — costo cero si la
+    // hipótesis es incorrecta, alivia la ráfaga si es correcta.
+    <Link href={href} prefetch={false} className="group flex flex-col items-center gap-[0.6svh]">
       {/* Tamaño en svh (con piso/techo en px vía clamp), NO en breakpoints
           de ancho — el bug que arreglamos era de ALTO disponible, no de
           ancho: un viewport ancho pero bajo rompía igual que uno angosto.
