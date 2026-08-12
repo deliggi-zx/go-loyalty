@@ -286,7 +286,12 @@ export function LoginForm({
           {mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
         </p>
         <h2 className={`text-base font-semibold mt-0.5 ${titleClass}`}>
-          {mode === "login" ? "Accedé a tu tarjeta de sellos" : "Registrate para acumular sellos"}
+          {/* "Accedé a tu tarjeta de sellos" quedó del modelo viejo de
+              sellos, ya descartado — texto genérico en su lugar. Es un
+              string compartido por TODAS las orgs (gym, bike, corner,
+              huellitas), no algo que se pueda variar por org sin sumar
+              una prop nueva; se corrige acá para todas por igual. */}
+          {mode === "login" ? "Accedé a tu cuenta" : "Registrate para acumular sellos"}
         </h2>
       </div>
 

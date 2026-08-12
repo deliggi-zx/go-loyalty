@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { MessageCircle, User } from "lucide-react";
 import { LoginModal } from "./login-modal";
@@ -186,6 +187,13 @@ interface HuellitasHomeProps {
   instagramUrl: string | null;
   twitterUrl: string | null;
   youtubeUrl: string | null;
+  // Si ya hay sesión activa, el ícono de cuenta no tiene sentido que ofrezca
+  // loguearse de nuevo (bug confirmado: con sesión iniciada, seguía abriendo
+  // el LoginModal) — en ese caso lleva directo a /perfil. Lo resuelve el
+  // server (page.tsx vía getTenantUser()) porque este componente no tiene
+  // forma propia de saber si hay sesión sin pedirla de nuevo del lado
+  // cliente.
+  isLoggedIn: boolean;
 }
 
 export function HuellitasHome({
@@ -198,7 +206,9 @@ export function HuellitasHome({
   instagramUrl,
   twitterUrl,
   youtubeUrl,
+  isLoggedIn,
 }: HuellitasHomeProps) {
+  const router = useRouter();
   const [loginOpen, setLoginOpen] = useState(false);
 
   // Día de la semana: se resuelve en el cliente después del montaje para no
@@ -264,11 +274,14 @@ export function HuellitasHome({
             tiene header (ver VetChromeGate). Mismo LoginModal/LoginForm
             de siempre, tema claro. drop-shadow en vez de chip de fondo —
             ClientHeader tampoco le pone chip, ahí vive sobre una barra
-            sólida; acá alcanza con la sombra porque es un ícono chico. */}
+            sólida; acá alcanza con la sombra porque es un ícono chico.
+            Con sesión activa (isLoggedIn) no tiene sentido ofrecer
+            loguearse de nuevo — va directo a /perfil en vez de abrir el
+            modal (bug confirmado: antes lo abría igual, sesión o no). */}
         <button
           type="button"
-          onClick={() => setLoginOpen(true)}
-          aria-label="Iniciar sesión"
+          onClick={() => (isLoggedIn ? router.push(`/${slug}/perfil`) : setLoginOpen(true))}
+          aria-label={isLoggedIn ? "Mi perfil" : "Iniciar sesión"}
           className="absolute top-[2svh] right-4 z-10 p-2 text-white drop-shadow-md transition-transform duration-200 hover:scale-110 active:scale-95"
         >
           <User className="w-6 h-6" />
