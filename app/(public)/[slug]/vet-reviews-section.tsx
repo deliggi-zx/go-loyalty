@@ -3,37 +3,35 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { MessageSquarePlus, Star, Trash2, X } from "lucide-react";
-import { LoginModal } from "./login-modal";
 import { createVetReview, deleteVetReview } from "./vet-reviews-actions";
 import type { VetReviewEntry } from "./vet-reviews-data";
 
-interface VetReviewCarouselProps {
+interface VetReviewsSectionProps {
   slug: string;
   orgId: string;
   primaryColor: string;
   reviews: VetReviewEntry[];
-  isLoggedIn: boolean;
 }
 
-// Cuántas tarjetas como mínimo queremos ver antes de que el loop
-// "vuelva a empezar" — con pocos comentarios reales, se repite el set
-// las veces que hagan falta para llegar a este piso, así el carrusel
-// nunca se siente cortado/vacío (pedido explícito). El track se arma
-// duplicando ESE set ya "rellenado" una vez más (ver trackReviews) —
-// mismo mecanismo que .promo-bar-track: con translateX(-50%) el salto es
-// invisible sin importar cuántas copias haya, siempre que las dos mitades
-// sean idénticas.
-const MIN_CARDS_FOR_DENSITY = 8;
+// Cuántas tarjetas como mínimo queremos ver antes de que el loop "vuelva
+// a empezar" — con pocos comentarios reales, se repite el set las veces
+// que hagan falta para llegar a este piso, así el carrusel nunca se
+// siente cortado/vacío (pedido explícito). El track se arma duplicando
+// ESE set ya "rellenado" una vez más (ver trackReviews) — mismo
+// mecanismo que .promo-bar-track: con translateX(-50%) el salto es
+// invisible sin importar cuántas copias haya, siempre que las dos
+// mitades sean idénticas.
+const MIN_CARDS_FOR_DENSITY = 6;
 
 function StarRow({ rating }: { rating: number }) {
   return (
-    <div className="flex items-center gap-[1px]" aria-hidden="true">
+    <div className="flex items-center gap-0.5" aria-hidden="true">
       {[1, 2, 3, 4, 5].map((i) => (
         <Star
           key={i}
-          className="w-2 h-2"
+          className="w-4 h-4"
           fill={i <= rating ? "#f59e0b" : "none"}
-          stroke={i <= rating ? "#f59e0b" : "rgba(255,255,255,0.45)"}
+          stroke={i <= rating ? "#f59e0b" : "rgba(255,255,255,0.5)"}
         />
       ))}
     </div>
@@ -50,46 +48,49 @@ function ReviewCard({
   deleting: boolean;
 }) {
   return (
-    <div className="shrink-0 w-[8.5rem] sm:w-40 bg-white/15 backdrop-blur-md border border-white/25 rounded-xl px-2.5 py-1.5 relative">
+    <div className="shrink-0 w-64 sm:w-72 bg-white/15 backdrop-blur-md border border-white/25 rounded-2xl p-4 space-y-2 relative">
       <StarRow rating={review.rating} />
-      <p className="text-[10px] leading-snug text-white line-clamp-1 mt-0.5">{review.comment}</p>
+      <p className="text-sm text-white leading-snug line-clamp-4">{review.comment}</p>
       {review.canDelete && (
         <button
           type="button"
           disabled={deleting}
           onClick={() => onDelete(review)}
           aria-label="Borrar comentario"
-          className="absolute top-0.5 right-0.5 p-0.5 text-white/70 hover:text-red-300 disabled:opacity-50 transition-colors"
+          className="absolute top-2 right-2 p-1 text-white/70 hover:text-red-300 disabled:opacity-50 transition-colors"
         >
-          <Trash2 className="w-2.5 h-2.5" />
+          <Trash2 className="w-3.5 h-3.5" />
         </button>
       )}
     </div>
   );
 }
 
-// Fase 5 Huellitas, punto 4: vive DENTRO de la sección de video (100svh)
-// de huellitas-home.tsx, en la franja que quedó libre al subir el rastro
-// de huellas. Botón "Dejar comentario" fijo (no scrollea) + carrusel
-// horizontal en loop automático al lado, en la misma fila para no sumar
-// una fila entera nueva al presupuesto de svh ya ajustado.
-export function VetReviewCarousel({ slug, orgId, primaryColor, reviews, isLoggedIn }: VetReviewCarouselProps) {
+// Fase 5 Huellitas, punto 4 (rev. 3 — reemplaza la versión anterior que
+// vivía en el video del Home): bloque más dentro de /huellitas/perfil,
+// mismo lugar que VetMyPets — ya no compite con el 100svh del video, así
+// que las tarjetas van al doble de tamaño (w-64/72 vs los w-36/40 de la
+// versión anterior) y no hace falta la verificación de contención
+// estricta que sí hacía falta en el Home.
+//
+// Fondo con degradé del color de marca detrás del carrusel: sin esto,
+// el efecto "vidrio esmerilado" (bg-white/15 + backdrop-blur) casi no se
+// nota sobre el fondo claro liso de /perfil — necesita algo con color/
+// contraste detrás para leerse como vidrio (mismo problema que resolvía
+// el video en el Home, o el banner/overlay oscuro en
+// gym-testimonials-section.tsx).
+export function VetReviewsSection({ slug, orgId, primaryColor, reviews }: VetReviewsSectionProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const [formOpen, setFormOpen] = useState(false);
-  const [loginOpen, setLoginOpen] = useState(false);
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  function openComment() {
-    if (!isLoggedIn) {
-      setLoginOpen(true);
-      return;
-    }
+  function openForm() {
     setRating(0);
     setComment("");
     setFormError(null);
@@ -137,33 +138,38 @@ export function VetReviewCarousel({ slug, orgId, primaryColor, reviews, isLogged
   const trackReviews = [...paddedReviews, ...paddedReviews];
 
   return (
-    <>
-      <div className="flex items-center gap-2">
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">Comentarios</h2>
         <button
           type="button"
-          onClick={openComment}
-          className="shrink-0 flex items-center gap-1 text-[clamp(8px,1.6svh,11px)] font-medium text-white tracking-wide bg-black/35 backdrop-blur-[2px] px-2 py-1.5 rounded-full transition-transform hover:scale-105 active:scale-95"
+          onClick={openForm}
+          className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors"
+          style={{ borderColor: primaryColor, color: primaryColor }}
         >
-          <MessageSquarePlus className="w-3 h-3" aria-hidden="true" />
+          <MessageSquarePlus className="w-3.5 h-3.5" />
           Dejar comentario
         </button>
+      </div>
 
-        <div className="flex-1 overflow-hidden">
-          {reviews.length > 0 ? (
+      {reviews.length > 0 ? (
+        <div
+          className="rounded-2xl overflow-hidden py-4"
+          style={{ background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}bb)` }}
+        >
+          <div className="overflow-hidden px-4">
             <div className="vet-reviews-track">
               {trackReviews.map((r, idx) => (
                 <ReviewCard key={`${r.id}-${idx}`} review={r} onDelete={handleDelete} deleting={isPending} />
               ))}
             </div>
-          ) : (
-            <p className="inline-block text-[11px] text-white/85 bg-black/30 backdrop-blur-[2px] px-3 py-1.5 rounded-full whitespace-nowrap">
-              Sé el primero en comentar
-            </p>
-          )}
+          </div>
         </div>
-      </div>
-
-      <LoginModal isOpen={loginOpen} onClose={() => setLoginOpen(false)} primaryColor={primaryColor} orgId={orgId} />
+      ) : (
+        <div className="bg-white border border-dashed border-stone-200 rounded-xl py-8 px-4 text-center text-sm text-stone-400">
+          Todavía no hay comentarios. ¡Sé el primero en dejar el tuyo!
+        </div>
+      )}
 
       {formOpen && (
         <>
@@ -227,6 +233,6 @@ export function VetReviewCarousel({ slug, orgId, primaryColor, reviews, isLogged
           </div>
         </>
       )}
-    </>
+    </div>
   );
 }
