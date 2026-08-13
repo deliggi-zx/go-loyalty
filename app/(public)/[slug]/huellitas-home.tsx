@@ -245,15 +245,22 @@ export function HuellitasHome({
           sin importar si la pantalla es angosta y alta (mobile portrait) o
           ancha y baja (ventana chica de escritorio) — las dos formas en
           que esto se salía antes. Presupuesto en svh, de arriba a abajo:
-          2 (offset) + 19 (logo) + ~52 (4 filas de botones) + 21 (offset
-          del rastro, antes 14 — subió de nuevo para liberarle una franja
-          a la vidriera de comentarios de solo lectura, ver
-          VetReviewsDisplay) ≈ 94svh usados. Quedan ~6svh entre el logo y
-          el rastro, y la franja libre de abajo (21svh) aloja el
-          carrusel (fila de ~5svh, sin botón — "escribir" vive en
-          /perfil) y, debajo, las redes sociales (chip chico + 3svh de
-          offset) en el hueco que quedó — medido real en mobile, mismos
-          números ya probados en la versión anterior de este bloque. */}
+          2 (offset) + ~19.5 (logo, subió de 19 al reemplazarse el
+          archivo por uno con delineado blanco en el texto — mismo
+          criterio de siempre: crecer hasta el máximo que entra sin
+          tocar la primera fila de huellas, medido real en mobile) +
+          ~52 (4 filas de botones) + 21 (offset del rastro, antes 14 —
+          subió de nuevo para liberarle una franja a la vidriera de
+          comentarios de solo lectura, ver VetReviewsDisplay) ≈ 94.5svh
+          usados. El logo termina al ~21.5% de la altura de la pantalla
+          en cualquier viewport (antes 21%) — quedan 5px de margen hasta
+          la primera huella en el celular más chico probado (320×568),
+          hasta 35px en los más altos. Franja libre de abajo (21svh):
+          aloja el carrusel (fila de ~5svh, sin botón — "escribir" vive
+          en /perfil) y, debajo, las redes sociales (chip chico + 3svh
+          de offset) en el hueco que quedó — medido real en mobile,
+          mismos números ya probados en la versión anterior de este
+          bloque. */}
       <section className="relative w-full h-[100svh] overflow-hidden">
         {activeVideo && (
           <video
@@ -334,7 +341,7 @@ export function HuellitasHome({
             <img
               src={LOGO_URL}
               alt="Huellitas Veterinaria"
-              className="relative h-[clamp(5.5rem,19svh,15rem)] w-auto drop-shadow-[0_4px_20px_rgba(0,0,0,0.65)]"
+              className="relative h-[clamp(5.6rem,19.5svh,15.1rem)] w-auto drop-shadow-[0_4px_20px_rgba(0,0,0,0.65)]"
             />
           </div>
         </div>
