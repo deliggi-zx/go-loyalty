@@ -6,6 +6,8 @@ import Link from "next/link";
 import { MessageCircle, User } from "lucide-react";
 import { LoginModal } from "./login-modal";
 import { SocialLinks } from "./social-links";
+import { VetReviewCarousel } from "./vet-review-carousel";
+import type { VetReviewEntry } from "./vet-reviews-data";
 
 // Logo con wordmark ("Huellitas" + "Veterinaria | Petshop"), fondo
 // transparente — reemplaza el título en texto (antes en Playfair Display).
@@ -194,6 +196,10 @@ interface HuellitasHomeProps {
   // forma propia de saber si hay sesión sin pedirla de nuevo del lado
   // cliente.
   isLoggedIn: boolean;
+  // Fase 5 Huellitas, punto 4 (Comentarios): reseñas ya resueltas en el
+  // server (getVetReviews, canDelete por fila incluido) — este componente
+  // solo las pasa al carrusel, no decide permisos.
+  reviews: VetReviewEntry[];
 }
 
 export function HuellitasHome({
@@ -207,6 +213,7 @@ export function HuellitasHome({
   twitterUrl,
   youtubeUrl,
   isLoggedIn,
+  reviews,
 }: HuellitasHomeProps) {
   const router = useRouter();
   const [loginOpen, setLoginOpen] = useState(false);
@@ -238,11 +245,16 @@ export function HuellitasHome({
           sin importar si la pantalla es angosta y alta (mobile portrait) o
           ancha y baja (ventana chica de escritorio) — las dos formas en
           que esto se salía antes. Presupuesto en svh, de arriba a abajo:
-          2 (offset) + 19 (logo) + ~52 (4 filas de botones) + 14 (offset,
-          antes 6 — el rastro subió para dejarle lugar a las redes) ≈
-          87svh usados. Quedan ~13svh entre el logo y el rastro, y las
-          redes (chip chico + 3svh de offset) entran cómodas en el hueco
-          que dejó el rastro al subir. */}
+          2 (offset) + 19 (logo) + ~52 (4 filas de botones) + 21 (offset
+          del rastro, antes 14 — subió de nuevo, Fase 5 punto 4, para
+          liberarle una franja al carrusel de comentarios) ≈ 94svh
+          usados. Quedan ~6svh entre el logo y el rastro (antes 13 — se
+          sacrificó ese margen, no el tamaño de huellas/logo, para no
+          tocar lo que ya estaba probado en mobile), y la franja libre de
+          abajo (21svh) aloja el carrusel de reseñas + botón "Dejar
+          comentario" (fila de ~9svh) y, debajo, las redes sociales (chip
+          chico + 3svh de offset) en el hueco que quedó — medido real en
+          mobile, ver commits de Fase 5 punto 4. */}
       <section className="relative w-full h-[100svh] overflow-hidden">
         {activeVideo && (
           <video
@@ -335,7 +347,7 @@ export function HuellitasHome({
             offset chico a propósito para no arriesgar que se salga del
             contenedor. Si en algún viewport se ve mal, sacar el translate
             y queda la grilla ordenada de siempre — fallback ya pedido. */}
-        <div className="absolute inset-x-0 bottom-[14svh] px-4">
+        <div className="absolute inset-x-0 bottom-[21svh] px-4">
           <div className="max-w-[260px] sm:max-w-[360px] mx-auto grid grid-cols-2 gap-x-5 sm:gap-x-8 gap-y-[1.8svh]">
             {NAV_BUTTONS.map((btn, i) => {
               const isLast = i === NAV_BUTTONS.length - 1;
@@ -358,6 +370,21 @@ export function HuellitasHome({
               );
             })}
           </div>
+        </div>
+
+        {/* Fase 5 Huellitas, punto 4 (Comentarios): carrusel de reseñas +
+            botón "Dejar comentario", en la franja que liberó el rastro al
+            subir. Vive arriba de las redes sociales, con su propio
+            offset — ver componente para el detalle del layout interno
+            (botón fijo + carrusel en loop al lado, misma fila). */}
+        <div className="absolute inset-x-0 bottom-[12.5svh] px-4">
+          <VetReviewCarousel
+            slug={slug}
+            orgId={orgId}
+            primaryColor={primaryColor}
+            reviews={reviews}
+            isLoggedIn={isLoggedIn}
+          />
         </div>
 
         {/* Redes sociales, al pie del video, debajo del rastro. Íconos
