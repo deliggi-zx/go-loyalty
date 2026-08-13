@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getTenantOrg, getTenantUser, getFeaturedProducts, getUserPointsBalance, getOrgRole, isVetOrgSlug, isCornerOrgSlug } from "./data";
-import { getVetReviews } from "./vet-reviews-data";
+import { getTenantOrg, getTenantUser, getFeaturedProducts, getUserPointsBalance, isVetOrgSlug, isCornerOrgSlug } from "./data";
 import { getGymLocations, getGymClasses, getGymTestimonials } from "./gym-data";
 import { LoginForm } from "./login-form";
 import { Carousel } from "./carousel";
@@ -60,11 +59,6 @@ export default async function TenantPage({
     // ya hay sesión (ver isLoggedIn en HuellitasHome) en vez de ofrecer
     // loguearse de nuevo a alguien que ya está logueado.
     const vetUser = await getTenantUser();
-    // Fase 5, punto 4 (Comentarios): canDelete por reseña se resuelve acá
-    // (getVetReviews), no en el cliente — mismo criterio que
-    // getCommunityPets en Refugio/Perdidos.
-    const vetRole = vetUser ? await getOrgRole(org.id, vetUser.id) : null;
-    const reviews = await getVetReviews(org.id, vetUser?.id ?? null, vetRole);
     return (
       <HuellitasHome
         slug={params.slug}
@@ -78,7 +72,6 @@ export default async function TenantPage({
         twitterUrl={org.twitter_url}
         youtubeUrl={org.youtube_url}
         isLoggedIn={!!vetUser}
-        reviews={reviews}
       />
     );
   }

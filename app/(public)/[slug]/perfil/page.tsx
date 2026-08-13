@@ -2,9 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/server";
-import { getTenantOrg, getTenantUser, getUserPointsBalance, isVetOrgSlug } from "../data";
+import { getTenantOrg, getTenantUser, getUserPointsBalance, getOrgRole, isVetOrgSlug } from "../data";
 import { getGymLocations, getGymClasses } from "../gym-data";
 import { getOwnerPets } from "../vet-pets-data";
+import { getVetReviews } from "../vet-reviews-data";
 import { PointsPanel } from "../points-panel";
 import { GymProfileHeader } from "../gym-profile-header";
 import { GymQrAccess } from "../gym-qr-access";
@@ -13,6 +14,7 @@ import { GymGoalPicker } from "../gym-goal-picker";
 import { GymFeaturedBanner } from "../gym-featured-banner";
 import { GymRecommendedPopup } from "../gym-recommended-popup";
 import { VetMyPets } from "../vet-my-pets";
+import { VetReviewsSection } from "../vet-reviews-section";
 
 export default async function PerfilPage({
   params,
@@ -62,6 +64,14 @@ export default async function PerfilPage({
   // perfil genérico (igual criterio que hasGymFeatures arriba).
   const hasVetFeatures = isVetOrgSlug(params.slug);
   const myPets = hasVetFeatures ? await getOwnerPets(org.id, user.id) : [];
+
+  // Comentarios (Fase 5 Huellitas, punto 4, rev. 3): mismo gate
+  // hasVetFeatures — canDelete por reseña se resuelve acá (getVetReviews),
+  // no en el cliente, mismo criterio que getCommunityPets en Refugio/
+  // Perdidos. user ya está garantizado no-null en esta página (redirect
+  // arriba si no hay sesión), así que el role siempre se puede pedir.
+  const vetRole = hasVetFeatures ? await getOrgRole(org.id, user.id) : null;
+  const vetReviews = hasVetFeatures ? await getVetReviews(org.id, user.id, vetRole) : [];
 
   const userName = profile?.full_name || user.email?.split("@")[0] || "Socio";
   const hour = new Date().getHours();
@@ -128,6 +138,13 @@ export default async function PerfilPage({
           org, y no adentro del contenedor de PointsPanel. */}
       {hasVetFeatures && (
         <VetMyPets slug={params.slug} orgId={org.id} pets={myPets} primaryColor={primary} />
+      )}
+
+      {/* Comentarios (punto 4, Fase 5 Huellitas, rev. 3) — bloque propio,
+          separado de Mis Mascotas y del de puntos/historial de más abajo,
+          mismo criterio de "un bloque más" que el resto de esta página. */}
+      {hasVetFeatures && (
+        <VetReviewsSection slug={params.slug} orgId={org.id} primaryColor={primary} reviews={vetReviews} />
       )}
 
       <div className="flex justify-center">
