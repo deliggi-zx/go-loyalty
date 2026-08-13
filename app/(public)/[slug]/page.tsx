@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getTenantOrg, getTenantUser, getFeaturedProducts, getUserPointsBalance, isVetOrgSlug, isCornerOrgSlug } from "./data";
+import { getVetReviews } from "./vet-reviews-data";
 import { getGymLocations, getGymClasses, getGymTestimonials } from "./gym-data";
 import { LoginForm } from "./login-form";
 import { Carousel } from "./carousel";
@@ -59,6 +60,10 @@ export default async function TenantPage({
     // ya hay sesión (ver isLoggedIn en HuellitasHome) en vez de ofrecer
     // loguearse de nuevo a alguien que ya está logueado.
     const vetUser = await getTenantUser();
+    // Vidriera de comentarios (solo lectura, ver VetReviewsDisplay): acá
+    // no hace falta canDelete real (no hay botón de borrar en esta
+    // pantalla) — null/null alcanza, sin pedir el role de más.
+    const reviews = await getVetReviews(org.id, null, null);
     return (
       <HuellitasHome
         slug={params.slug}
@@ -72,6 +77,7 @@ export default async function TenantPage({
         twitterUrl={org.twitter_url}
         youtubeUrl={org.youtube_url}
         isLoggedIn={!!vetUser}
+        reviews={reviews}
       />
     );
   }
