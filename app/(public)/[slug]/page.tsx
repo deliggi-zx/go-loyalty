@@ -59,6 +59,22 @@ export default async function TenantPage({
     // ya hay sesión (ver isLoggedIn en HuellitasHome) en vez de ofrecer
     // loguearse de nuevo a alguien que ya está logueado.
     const vetUser = await getTenantUser();
+    // Pendiente de la fase anterior: admin/vet (Matías, Doc) veían "Mis
+    // Mascotas" y saldo de puntos como si fueran clientes al tocar el
+    // ícono de cuenta, en vez de llegar a su propio panel. Mismo patrón
+    // que showMascotas en dashboard/layout.tsx (rol dentro de esta org
+    // puntual, no un flag global) — sin membresía o con role='customer',
+    // isStaff queda false y el comportamiento no cambia.
+    const supabase = createClient();
+    const { data: vetMembership } = vetUser
+      ? await supabase
+          .from("loyalty_members")
+          .select("role")
+          .eq("org_id", org.id)
+          .eq("profile_id", vetUser.id)
+          .maybeSingle()
+      : { data: null };
+    const isVetStaff = vetMembership?.role === "admin" || vetMembership?.role === "vet";
     return (
       <HuellitasHome
         slug={params.slug}
@@ -72,6 +88,7 @@ export default async function TenantPage({
         twitterUrl={org.twitter_url}
         youtubeUrl={org.youtube_url}
         isLoggedIn={!!vetUser}
+        isStaff={isVetStaff}
       />
     );
   }

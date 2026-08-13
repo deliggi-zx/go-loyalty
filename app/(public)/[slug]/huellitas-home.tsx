@@ -194,6 +194,15 @@ interface HuellitasHomeProps {
   // forma propia de saber si hay sesión sin pedirla de nuevo del lado
   // cliente.
   isLoggedIn: boolean;
+  // Admin/vet de esta org (Matías, Doc) — antes el ícono los mandaba a
+  // /perfil igual que a cualquier cliente, viendo "Mis Mascotas" y saldo
+  // de puntos en vez de su propio panel. Con isStaff en true va a
+  // /dashboard en su lugar. Resuelto en el server (page.tsx, mismo
+  // criterio que showMascotas en dashboard/layout.tsx: role dentro de
+  // ESTA org, no un flag global) — igual que isLoggedIn, este componente
+  // no tiene forma propia de saber el role sin pedirlo de nuevo del lado
+  // cliente. Sin isLoggedIn, isStaff no importa (nunca llega a evaluarse).
+  isStaff: boolean;
 }
 
 export function HuellitasHome({
@@ -207,6 +216,7 @@ export function HuellitasHome({
   twitterUrl,
   youtubeUrl,
   isLoggedIn,
+  isStaff,
 }: HuellitasHomeProps) {
   const router = useRouter();
   const [loginOpen, setLoginOpen] = useState(false);
@@ -277,11 +287,21 @@ export function HuellitasHome({
             sólida; acá alcanza con la sombra porque es un ícono chico.
             Con sesión activa (isLoggedIn) no tiene sentido ofrecer
             loguearse de nuevo — va directo a /perfil en vez de abrir el
-            modal (bug confirmado: antes lo abría igual, sesión o no). */}
+            modal (bug confirmado: antes lo abría igual, sesión o no).
+            Con isStaff (admin/vet de esta org) va a /dashboard en vez de
+            /perfil — otro bug confirmado: Matías y Doc terminaban viendo
+            "Mis Mascotas" y saldo de puntos como cualquier cliente en vez
+            de llegar a su propio panel. */}
         <button
           type="button"
-          onClick={() => (isLoggedIn ? router.push(`/${slug}/perfil`) : setLoginOpen(true))}
-          aria-label={isLoggedIn ? "Mi perfil" : "Iniciar sesión"}
+          onClick={() => {
+            if (!isLoggedIn) {
+              setLoginOpen(true);
+              return;
+            }
+            router.push(isStaff ? "/dashboard" : `/${slug}/perfil`);
+          }}
+          aria-label={isLoggedIn ? (isStaff ? "Panel" : "Mi perfil") : "Iniciar sesión"}
           className="absolute top-[2svh] right-4 z-10 p-2 text-white drop-shadow-md transition-transform duration-200 hover:scale-110 active:scale-95"
         >
           <User className="w-6 h-6" />
