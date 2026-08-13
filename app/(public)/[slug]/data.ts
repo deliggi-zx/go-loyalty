@@ -49,6 +49,24 @@ export const getTenantUser = cache(async () => {
   return user;
 });
 
+// Role del usuario actual DENTRO de esta org puntual (no un flag global) —
+// mismo criterio que showMascotas/showTurnos en dashboard/layout.tsx, pero
+// reusable desde cualquier página pública (Fase 4: Refugio/Perdidos lo
+// necesitan para decidir permisos de carga/edición, ver
+// vet-community-pets-permissions.ts). null si el usuario no es miembro de
+// esta org (o no hay sesión — ahí ni se llama, ver los callers).
+export const getOrgRole = cache(async (orgId: string, profileId: string): Promise<string | null> => {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("loyalty_members")
+    .select("role")
+    .eq("org_id", orgId)
+    .eq("profile_id", profileId)
+    .maybeSingle();
+
+  return data?.role ?? null;
+});
+
 export const getUserPointsBalance = cache(async (orgId: string, userId: string) => {
   const supabase = createClient();
   const { data } = await supabase
