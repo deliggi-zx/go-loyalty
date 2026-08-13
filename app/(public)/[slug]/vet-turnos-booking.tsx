@@ -20,6 +20,12 @@ interface VetTurnosBookingProps {
   orgId: string;
   primaryColor: string;
   pets: OwnerPetOption[];
+  // Fase 5, punto 2 (Peluquería): preselecciona el paso 2 cuando se llega
+  // acá vía "Pedí tu turno de peluquería" (?motivo=peluqueria en
+  // turnos/page.tsx, ya validado ahí contra VET_APPOINTMENTS_REASONS). El
+  // dueño sigue pudiendo cambiarlo en el paso 2 — esto solo evita un click
+  // de más, no salta el paso.
+  initialReason?: string;
 }
 
 // Sentinel para "no elegí una mascota propia, es una consulta nueva" — no
@@ -34,7 +40,13 @@ type Step = 1 | 2 | 3;
 // propio fetch de slots libres contra el server action cada vez que
 // cambia la fecha — es la única forma real de no mostrar un horario que
 // ya se ocupó (ver getAvailableSlots en vet-appointments-data.ts).
-export function VetTurnosBooking({ slug, orgId, primaryColor, pets }: VetTurnosBookingProps) {
+export function VetTurnosBooking({
+  slug,
+  orgId,
+  primaryColor,
+  pets,
+  initialReason,
+}: VetTurnosBookingProps) {
   const [step, setStep] = useState<Step>(1);
 
   // Paso 1
@@ -42,7 +54,7 @@ export function VetTurnosBooking({ slug, orgId, primaryColor, pets }: VetTurnosB
   const [petNameHint, setPetNameHint] = useState("");
 
   // Paso 2
-  const [reason, setReason] = useState<string>("");
+  const [reason, setReason] = useState<string>(initialReason ?? "");
 
   // Paso 3
   const [date, setDate] = useState("");

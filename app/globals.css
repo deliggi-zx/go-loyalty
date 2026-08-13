@@ -394,6 +394,28 @@
     animation-duration: 100s;
   }
 }
+
+/* Fase 5 Huellitas, punto 4 (Comentarios): carrusel horizontal de
+   reseñas en loop continuo, mismo patrón que .promo-bar-track (el
+   caller duplica la lista de tarjetas 2 veces para que el salto de
+   -50% sea invisible; con pocos comentarios, vet-review-carousel.tsx
+   repite el set las veces que hagan falta para no dejar hueco). */
+.vet-reviews-track {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  width: max-content;
+  animation: vet-reviews-scroll 22s linear infinite;
+}
+@keyframes vet-reviews-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vet-reviews-track {
+    animation-duration: 140s;
+  }
+}
 @media (min-width: 640px) {
   .promo-bar {
     height: 30px;
