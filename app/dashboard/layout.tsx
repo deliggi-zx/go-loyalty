@@ -22,6 +22,7 @@ export default async function DashboardLayout({
   let hasGymFeatures = false;
   let isCornerOrg = false;
   let showMascotas = false;
+  let showTurnos = false;
   if (orgId) {
     const [{ data: org }, { count: gymLocationsCount }, { data: membership }] = await Promise.all([
       supabase
@@ -57,7 +58,13 @@ export default async function DashboardLayout({
     // (el control de acceso real vive en mascotas/page.tsx, esto es solo
     // para no ofrecer el link en el nav a quien no puede usarlo).
     const isVetOrg = org?.slug === "huellitas";
-    showMascotas = isVetOrg && (membership?.role === "admin" || membership?.role === "vet");
+    const isAdminOrVetRole = membership?.role === "admin" || membership?.role === "vet";
+    showMascotas = isVetOrg && isAdminOrVetRole;
+    // Fase 3: panel de turnos, mismo gate exacto que Mascotas arriba (por
+    // ahora coinciden 1 a 1 — quedan como flags separados, no uno solo
+    // reusado para los dos, porque no tienen por qué seguir coincidiendo
+    // si el día de mañana alguno de los dos se habilita para otro role).
+    showTurnos = isVetOrg && isAdminOrVetRole;
   }
 
   return (
@@ -68,6 +75,7 @@ export default async function DashboardLayout({
         showGym={hasGymFeatures}
         showCourts={isCornerOrg}
         showMascotas={showMascotas}
+        showTurnos={showTurnos}
       />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {children}

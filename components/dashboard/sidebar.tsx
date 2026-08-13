@@ -12,6 +12,7 @@ import {
   GraduationCap,
   MapPin,
   PawPrint,
+  CalendarClock,
   ScanLine,
   Settings,
   LogOut,
@@ -45,6 +46,14 @@ const courtsNavItem = { href: "/dashboard/canchas", label: "Canchas", icon: MapP
 // control de acceso real (por role) vive en mascotas/page.tsx.
 const mascotasNavItem = { href: "/dashboard/mascotas", label: "Mascotas", icon: PawPrint };
 
+// Solo Huellitas (Fase 3), mismo gate que mascotasNavItem (admin/vet) —
+// ver showTurnos en dashboard/layout.tsx. Ruta propia (/dashboard/turnos)
+// en vez de una pestaña más dentro de Mascotas: son datos y acciones
+// separados (otra tabla, otro flujo de cancelar vs. editar ficha), más
+// simple mantenerlos en su propio archivo que seguir engordando
+// mascotas-manager.tsx.
+const turnosNavItem = { href: "/dashboard/turnos", label: "Turnos", icon: CalendarClock };
+
 const trailingNavItems = [
   { href: "/pos", label: "POS", icon: ScanLine },
   { href: "/dashboard/configuracion", label: "Configuración", icon: Settings },
@@ -56,6 +65,7 @@ interface SidebarProps {
   showGym?: boolean;
   showCourts?: boolean;
   showMascotas?: boolean;
+  showTurnos?: boolean;
 }
 
 export function Sidebar({
@@ -64,6 +74,7 @@ export function Sidebar({
   showGym = false,
   showCourts = false,
   showMascotas = false,
+  showTurnos = false,
 }: SidebarProps) {
   const pathname = usePathname();
   const navItems = [
@@ -72,6 +83,7 @@ export function Sidebar({
     ...(showGym ? gymNavItems : []),
     ...(showCourts ? [courtsNavItem] : []),
     ...(showMascotas ? [mascotasNavItem] : []),
+    ...(showTurnos ? [turnosNavItem] : []),
     ...trailingNavItems,
   ];
 
