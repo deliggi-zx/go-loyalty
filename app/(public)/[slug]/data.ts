@@ -91,6 +91,12 @@ export interface CatalogProduct {
   description: string | null;
   price: number;
   category_id: string | null;
+  // Fase 1a/1c SuperElectro: brand adelantado desde lo que era Fase 2
+  // (ahora requisito del filtro de "TV por marca"), screen_size_inches
+  // nuevo (requisito de "TV por pulgadas"). Ambos null para el resto de
+  // las orgs y para cualquier producto que no los tenga cargados.
+  brand: string | null;
+  screen_size_inches: number | null;
   images: CatalogImage[];
 }
 
@@ -98,13 +104,23 @@ export interface CatalogCategory {
   id: string;
   name: string;
   display_order: number;
+  // Fase 1a SuperElectro: jerarquía de 2 niveles (grupo → subcategoría).
+  // null para cualquier categoría de nivel superior — que es el 100% de
+  // las categorías de todas las orgs salvo las hijas de "TV y Audio".
+  parent_id: string | null;
+  // Fase 1c SuperElectro: si está seteada, esta categoría no tiene hijas
+  // reales — sus "hojas" se derivan en el cliente a partir del campo de
+  // producto indicado ('brand' | 'screen_size_inches'), escaneando los
+  // productos de su categoría padre. null para cualquier categoría con
+  // hijas reales en la base o sin hijas.
+  leaf_source: string | null;
 }
 
 export const getProductCategories = cache(async (orgId: string): Promise<CatalogCategory[]> => {
   const supabase = createClient();
   const { data } = await supabase
     .from("product_categories")
-    .select("id, name, display_order")
+    .select("id, name, display_order, parent_id, leaf_source")
     .eq("org_id", orgId)
     .order("display_order", { ascending: true });
 
@@ -115,7 +131,7 @@ export const getProductCatalog = cache(async (orgId: string): Promise<CatalogPro
   const supabase = createClient();
   const { data: productsData } = await supabase
     .from("products")
-    .select("id, name, description, price, category_id, display_order")
+    .select("id, name, description, price, category_id, brand, screen_size_inches, display_order")
     .eq("org_id", orgId)
     .eq("active", true)
     .order("display_order", { ascending: true });
@@ -145,6 +161,8 @@ export const getProductCatalog = cache(async (orgId: string): Promise<CatalogPro
     description: p.description,
     price: p.price,
     category_id: p.category_id,
+    brand: p.brand,
+    screen_size_inches: p.screen_size_inches,
     images: imagesByProduct.get(p.id) ?? [],
   }));
 });

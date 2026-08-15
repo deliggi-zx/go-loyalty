@@ -85,6 +85,16 @@ export async function deleteCategory(id: string) {
     .eq("category_id", id)
     .eq("org_id", orgId);
 
+  // Mismo criterio para parent_id (Fase 1a SuperElectro): si esta
+  // categoría tiene subcategorías (hoy solo pasa bajo "TV y Audio"),
+  // desasignarlas antes de borrar para no romper el borrado por la FK.
+  // No-op para el resto de las orgs, que no tienen categorías anidadas.
+  await supabase
+    .from("product_categories")
+    .update({ parent_id: null })
+    .eq("parent_id", id)
+    .eq("org_id", orgId);
+
   await supabase
     .from("product_categories")
     .delete()

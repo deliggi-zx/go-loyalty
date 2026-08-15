@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ImageOff } from "lucide-react";
 import { ProductModal } from "./product-modal";
+import { CategoryDrilldown, type CatalogSelection } from "./category-drilldown";
 import type { CatalogCategory, CatalogProduct } from "./data";
 
 interface ProductCatalogProps {
@@ -12,48 +13,134 @@ interface ProductCatalogProps {
   initialCategoryId: string | null;
 }
 
+// Breakpoint mobile para la cascada de categorías (Fase 1b SuperElectro) —
+// mismo umbral que el "sm" de Tailwind, así el gate en JS y el `sm:hidden`
+// del propio componente coinciden.
+const MOBILE_BREAKPOINT = 640;
+
 export function ProductCatalog({
   products,
   categories,
   primaryColor,
   initialCategoryId,
 }: ProductCatalogProps) {
-  const [activeCategory, setActiveCategory] = useState<string | null>(initialCategoryId);
+  // Fase 1c: el filtro activo ya no es solo un category_id — puede venir
+  // acotado además por marca o por rango de pulgadas (ver CatalogSelection
+  // en category-drilldown.tsx). Desde la URL (?categoria=) o el pill row
+  // solo puede llegar el caso "category"; brand/screenSize solo salen de
+  // la cascada mobile.
+  const [activeSelection, setActiveSelection] = useState<CatalogSelection | null>(
+    initialCategoryId ? { type: "category", categoryId: initialCategoryId } : null
+  );
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null);
+  // Categoría de nivel superior sobre la que se abrió la cascada mobile
+  // (Fase 1b) — null cuando está cerrada. Hoy la única con hijas es
+  // "TV y Audio"; cualquier otra categoría plana no la dispara nunca.
+  const [drilldownRoot, setDrilldownRoot] = useState<CatalogCategory | null>(null);
 
-  const filteredProducts = activeCategory
-    ? products.filter((p) => p.category_id === activeCategory)
-    : products;
+  // Categorías de nivel superior (parent_id null) — son las que se ven
+  // como pills. El resto de la jerarquía vive dentro de la cascada.
+  const rootCategories = useMemo(
+    () => categories.filter((c) => c.parent_id === null),
+    [categories]
+  );
+
+  const childrenByParent = useMemo(() => {
+    const map = new Map<string, CatalogCategory[]>();
+    for (const cat of categories) {
+      if (!cat.parent_id) continue;
+      const siblings = map.get(cat.parent_id) ?? [];
+      siblings.push(cat);
+      map.set(cat.parent_id, siblings);
+    }
+    return map;
+  }, [categories]);
+
+  // Todos los ids descendientes de una categoría (recursivo) — para que
+  // filtrar por "TV y Audio" también traiga los productos cargados en sus
+  // hijas (hoy category_id apunta siempre a una hoja, nunca al grupo).
+  const descendantIds = useCallback(
+    (categoryId: string): string[] => {
+      const children = childrenByParent.get(categoryId) ?? [];
+      return children.flatMap((c) => [c.id, ...descendantIds(c.id)]);
+    },
+    [childrenByParent]
+  );
+
+  const filteredProducts = useMemo(() => {
+    if (!activeSelection) return products;
+
+    const ids = new Set([activeSelection.categoryId, ...descendantIds(activeSelection.categoryId)]);
+    let list = products.filter((p) => p.category_id !== null && ids.has(p.category_id));
+
+    // Fase 1c: además del category_id, "TV por marca"/"TV por pulgadas"
+    // acotan por un campo de producto — ver leaf_source en data.ts.
+    if (activeSelection.type === "brand") {
+      list = list.filter((p) => p.brand === activeSelection.brand);
+    } else if (activeSelection.type === "screenSize") {
+      list = list.filter((p) => {
+        if (p.screen_size_inches === null) return false;
+        if (activeSelection.min !== null && p.screen_size_inches < activeSelection.min) return false;
+        if (activeSelection.max !== null && p.screen_size_inches > activeSelection.max) return false;
+        return true;
+      });
+    }
+
+    return list;
+  }, [activeSelection, products, descendantIds]);
+
+  function handlePillClick(cat: CatalogCategory) {
+    const hasChildren = childrenByParent.has(cat.id);
+    // Cascada solo en mobile (Fase 1b) — el mega menú de desktop queda
+    // pospuesto, así que en desktop una categoría con hijas por ahora
+    // filtra directo por sí misma + descendientes, igual que "Todos" pero
+    // acotado a esa rama.
+    if (hasChildren && typeof window !== "undefined" && window.innerWidth < MOBILE_BREAKPOINT) {
+      setDrilldownRoot(cat);
+      return;
+    }
+    setActiveSelection({ type: "category", categoryId: cat.id });
+  }
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6 space-y-5">
-      {categories.length > 0 && (
+      {rootCategories.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
           <button
-            onClick={() => setActiveCategory(null)}
+            onClick={() => setActiveSelection(null)}
             className="shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors"
             style={
-              activeCategory === null
+              activeSelection === null
                 ? { backgroundColor: primaryColor, borderColor: primaryColor, color: "#fff" }
                 : { borderColor: "#e7e5e4", color: "#57534e" }
             }
           >
             Todos
           </button>
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              className="shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors"
-              style={
-                activeCategory === cat.id
-                  ? { backgroundColor: primaryColor, borderColor: primaryColor, color: "#fff" }
-                  : { borderColor: "#e7e5e4", color: "#57534e" }
-              }
-            >
-              {cat.name}
-            </button>
-          ))}
+          {rootCategories.map((cat) => {
+            // Activo también cuando el filtro real es una subcategoría de
+            // esta (ej. se eligió "Soportes y accesorios", o una marca/
+            // rango de pulgadas bajo "TV y Audio", desde la cascada) — así
+            // el pill padre queda resaltado.
+            const isActive =
+              activeSelection !== null &&
+              (activeSelection.categoryId === cat.id ||
+                descendantIds(cat.id).includes(activeSelection.categoryId));
+            return (
+              <button
+                key={cat.id}
+                onClick={() => handlePillClick(cat)}
+                className="shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors"
+                style={
+                  isActive
+                    ? { backgroundColor: primaryColor, borderColor: primaryColor, color: "#fff" }
+                    : { borderColor: "#e7e5e4", color: "#57534e" }
+                }
+              >
+                {cat.name}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -104,6 +191,20 @@ export function ProductCatalog({
           product={selectedProduct}
           primaryColor={primaryColor}
           onClose={() => setSelectedProduct(null)}
+        />
+      )}
+
+      {drilldownRoot && (
+        <CategoryDrilldown
+          rootCategory={drilldownRoot}
+          categories={categories}
+          products={products}
+          primaryColor={primaryColor}
+          onSelect={(selection) => {
+            setActiveSelection(selection);
+            setDrilldownRoot(null);
+          }}
+          onClose={() => setDrilldownRoot(null)}
         />
       )}
     </div>
