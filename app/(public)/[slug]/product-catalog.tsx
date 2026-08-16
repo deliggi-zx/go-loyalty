@@ -1,12 +1,15 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import Link from "next/link";
 import { ImageOff } from "lucide-react";
 import { ProductModal } from "./product-modal";
 import { CategoryDrilldown, type CatalogSelection } from "./category-drilldown";
 import type { CatalogCategory, CatalogProduct } from "./data";
+import { hasProductDetail } from "./product-detail-utils";
 
 interface ProductCatalogProps {
+  slug: string;
   products: CatalogProduct[];
   categories: CatalogCategory[];
   primaryColor: string;
@@ -19,6 +22,7 @@ interface ProductCatalogProps {
 const MOBILE_BREAKPOINT = 640;
 
 export function ProductCatalog({
+  slug,
   products,
   categories,
   primaryColor,
@@ -154,12 +158,10 @@ export function ProductCatalog({
             const mainImage = [...product.images].sort(
               (a, b) => a.display_order - b.display_order
             )[0];
-            return (
-              <button
-                key={product.id}
-                onClick={() => setSelectedProduct(product)}
-                className="text-left rounded-2xl overflow-hidden bg-white shadow-sm border border-stone-200 hover:shadow-md transition-shadow"
-              >
+            const cardClassName =
+              "text-left rounded-2xl overflow-hidden bg-white shadow-sm border border-stone-200 hover:shadow-md transition-shadow";
+            const cardContent = (
+              <>
                 <div className="aspect-square bg-stone-100 flex items-center justify-center overflow-hidden">
                   {mainImage ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -180,6 +182,24 @@ export function ProductCatalog({
                     ${product.price.toLocaleString("es-AR")}
                   </p>
                 </div>
+              </>
+            );
+
+            // Fase 4: solo los productos con specs cargadas linkean a la
+            // ficha nueva (/[slug]/producto/[id]) — el resto sigue abriendo
+            // el modal rápido de siempre, mismo comportamiento que antes de
+            // esta fase. Ver hasProductDetail en data.ts.
+            return hasProductDetail(product.specs) ? (
+              <Link key={product.id} href={`/${slug}/producto/${product.id}`} className={cardClassName}>
+                {cardContent}
+              </Link>
+            ) : (
+              <button
+                key={product.id}
+                onClick={() => setSelectedProduct(product)}
+                className={cardClassName}
+              >
+                {cardContent}
               </button>
             );
           })}

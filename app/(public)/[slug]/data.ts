@@ -97,6 +97,11 @@ export interface CatalogProduct {
   // las orgs y para cualquier producto que no los tenga cargados.
   brand: string | null;
   screen_size_inches: number | null;
+  // Fase 4: solo para decidir si la card linkea a la ficha nueva
+  // (/[slug]/producto/[id]) o sigue abriendo el modal de siempre — ver
+  // hasProductDetail en product-detail-utils.ts. No se muestra en la
+  // grilla.
+  specs: Record<string, string> | null;
   images: CatalogImage[];
 }
 
@@ -131,7 +136,7 @@ export const getProductCatalog = cache(async (orgId: string): Promise<CatalogPro
   const supabase = createClient();
   const { data: productsData } = await supabase
     .from("products")
-    .select("id, name, description, price, category_id, brand, screen_size_inches, display_order")
+    .select("id, name, description, price, category_id, brand, screen_size_inches, specs, display_order")
     .eq("org_id", orgId)
     .eq("active", true)
     .order("display_order", { ascending: true });
@@ -163,6 +168,7 @@ export const getProductCatalog = cache(async (orgId: string): Promise<CatalogPro
     category_id: p.category_id,
     brand: p.brand,
     screen_size_inches: p.screen_size_inches,
+    specs: (p.specs as Record<string, string> | null) ?? null,
     images: imagesByProduct.get(p.id) ?? [],
   }));
 });
@@ -172,6 +178,9 @@ export interface FeaturedProduct {
   name: string;
   price: number;
   imageUrl: string | null;
+  // Fase 4: mismo criterio que CatalogProduct.specs — ver hasProductDetail
+  // en product-detail-utils.ts.
+  specs: Record<string, string> | null;
 }
 
 // Productos marcados como destacados desde el admin (products.is_featured,
@@ -183,7 +192,7 @@ export const getFeaturedProducts = cache(async (orgId: string): Promise<Featured
   const supabase = createClient();
   const { data: productsData } = await supabase
     .from("products")
-    .select("id, name, price, display_order")
+    .select("id, name, price, specs, display_order")
     .eq("org_id", orgId)
     .eq("active", true)
     .eq("is_featured", true)
@@ -213,6 +222,7 @@ export const getFeaturedProducts = cache(async (orgId: string): Promise<Featured
     name: p.name,
     price: p.price,
     imageUrl: mainImageByProduct.get(p.id) ?? null,
+    specs: (p.specs as Record<string, string> | null) ?? null,
   }));
 });
 
