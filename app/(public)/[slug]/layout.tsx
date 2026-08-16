@@ -86,6 +86,17 @@ const VERTICAL_TABS: Record<
 // Bicicletería de Prueba y Gym2 siguen con la barra sólida de siempre.
 const FLOATING_HEADER_SLUGS = new Set(["bike"]);
 
+// Lockup de logo (isotipo + wordmark) para el fallback del banner cuando
+// la org todavía no subió una foto propia (Fase logo, SuperElectro) —
+// mismo patrón slug-keyed que el resto de estos mapas. Si mañana Die sube
+// un banner_url para esta org, el <img> normal de banner_url gana y este
+// fallback deja de usarse solo; no hace falta sacarlo de acá. Cualquier
+// otra org sin banner_url que no esté en este mapa sigue con el fallback
+// de texto (h1 con org.name) de siempre.
+const ORG_LOGO_LOCKUP: Record<string, string> = {
+  superelectro: "/superelectro/superelectro-logo-completo.png",
+};
+
 export default async function TenantLayout({
   children,
   params,
@@ -209,10 +220,24 @@ export default async function TenantLayout({
     />
   );
 
+  const logoLockup = ORG_LOGO_LOCKUP[params.slug];
+
   const banner = org.banner_url ? (
     <div className="w-full h-48 sm:h-64 overflow-hidden">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={org.banner_url} alt={org.name} className="w-full h-full object-cover" />
+    </div>
+  ) : logoLockup ? (
+    // Fase logo (SuperElectro): el lockup (isotipo + wordmark) ya trae su
+    // propio texto — fondo blanco de la org en vez del bloque de color
+    // primario con <h1>, porque el logo está pensado para verse sobre
+    // fondo claro, no sobre el azul de acento.
+    <div
+      className="w-full h-48 sm:h-64 flex items-center justify-center px-10"
+      style={{ backgroundColor: org.background_color ?? "#ffffff" }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={logoLockup} alt={org.name} className="max-w-full max-h-full object-contain" />
     </div>
   ) : (
     <div
