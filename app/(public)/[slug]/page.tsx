@@ -265,6 +265,7 @@ export default async function TenantPage({
               )}
 
               <FeaturedProductsGrid
+                slug={params.slug}
                 products={featuredProducts}
                 primaryColor={primary}
                 catalogHref={`/${params.slug}/precios`}

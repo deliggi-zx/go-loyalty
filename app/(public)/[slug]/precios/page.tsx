@@ -32,6 +32,7 @@ export default async function PreciosPage({
         </div>
 
         <ProductCatalog
+          slug={params.slug}
           products={products}
           categories={categories}
           primaryColor={org.primary_color ?? "#f59e0b"}

@@ -91,6 +91,17 @@ export interface CatalogProduct {
   description: string | null;
   price: number;
   category_id: string | null;
+  // Fase 1a/1c SuperElectro: brand adelantado desde lo que era Fase 2
+  // (ahora requisito del filtro de "TV por marca"), screen_size_inches
+  // nuevo (requisito de "TV por pulgadas"). Ambos null para el resto de
+  // las orgs y para cualquier producto que no los tenga cargados.
+  brand: string | null;
+  screen_size_inches: number | null;
+  // Fase 4: solo para decidir si la card linkea a la ficha nueva
+  // (/[slug]/producto/[id]) o sigue abriendo el modal de siempre — ver
+  // hasProductDetail en product-detail-utils.ts. No se muestra en la
+  // grilla.
+  specs: Record<string, string> | null;
   images: CatalogImage[];
 }
 
@@ -98,13 +109,23 @@ export interface CatalogCategory {
   id: string;
   name: string;
   display_order: number;
+  // Fase 1a SuperElectro: jerarquía de 2 niveles (grupo → subcategoría).
+  // null para cualquier categoría de nivel superior — que es el 100% de
+  // las categorías de todas las orgs salvo las hijas de "TV y Audio".
+  parent_id: string | null;
+  // Fase 1c SuperElectro: si está seteada, esta categoría no tiene hijas
+  // reales — sus "hojas" se derivan en el cliente a partir del campo de
+  // producto indicado ('brand' | 'screen_size_inches'), escaneando los
+  // productos de su categoría padre. null para cualquier categoría con
+  // hijas reales en la base o sin hijas.
+  leaf_source: string | null;
 }
 
 export const getProductCategories = cache(async (orgId: string): Promise<CatalogCategory[]> => {
   const supabase = createClient();
   const { data } = await supabase
     .from("product_categories")
-    .select("id, name, display_order")
+    .select("id, name, display_order, parent_id, leaf_source")
     .eq("org_id", orgId)
     .order("display_order", { ascending: true });
 
@@ -115,7 +136,7 @@ export const getProductCatalog = cache(async (orgId: string): Promise<CatalogPro
   const supabase = createClient();
   const { data: productsData } = await supabase
     .from("products")
-    .select("id, name, description, price, category_id, display_order")
+    .select("id, name, description, price, category_id, brand, screen_size_inches, specs, display_order")
     .eq("org_id", orgId)
     .eq("active", true)
     .order("display_order", { ascending: true });
@@ -145,6 +166,9 @@ export const getProductCatalog = cache(async (orgId: string): Promise<CatalogPro
     description: p.description,
     price: p.price,
     category_id: p.category_id,
+    brand: p.brand,
+    screen_size_inches: p.screen_size_inches,
+    specs: (p.specs as Record<string, string> | null) ?? null,
     images: imagesByProduct.get(p.id) ?? [],
   }));
 });
@@ -154,6 +178,9 @@ export interface FeaturedProduct {
   name: string;
   price: number;
   imageUrl: string | null;
+  // Fase 4: mismo criterio que CatalogProduct.specs — ver hasProductDetail
+  // en product-detail-utils.ts.
+  specs: Record<string, string> | null;
 }
 
 // Productos marcados como destacados desde el admin (products.is_featured,
@@ -165,7 +192,7 @@ export const getFeaturedProducts = cache(async (orgId: string): Promise<Featured
   const supabase = createClient();
   const { data: productsData } = await supabase
     .from("products")
-    .select("id, name, price, display_order")
+    .select("id, name, price, specs, display_order")
     .eq("org_id", orgId)
     .eq("active", true)
     .eq("is_featured", true)
@@ -195,5 +222,60 @@ export const getFeaturedProducts = cache(async (orgId: string): Promise<Featured
     name: p.name,
     price: p.price,
     imageUrl: mainImageByProduct.get(p.id) ?? null,
+    specs: (p.specs as Record<string, string> | null) ?? null,
   }));
 });
+
+// Fase 3: ficha de producto individual (/[slug]/producto/[id]). Genérico
+// para cualquier org con catalog_type='products', no exclusivo de
+// SuperElectro — cualquier producto de cualquier org puede tener `specs`
+// y varias imágenes si se cargan. `specs` es un objeto clave-valor libre
+// (JSONB en la base), null si el producto todavía no tiene ninguna
+// cargada.
+export interface ProductDetail {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  brand: string | null;
+  screen_size_inches: number | null;
+  specs: Record<string, string> | null;
+  images: CatalogImage[];
+}
+
+// Mismo criterio que getGymLocations/sede/[locationId]: se filtra por
+// org_id (nunca solo por id) para que un link a un producto de otra org
+// no traiga datos ajenos, y por active=true para no exponer productos
+// dados de baja vía URL directa — ambos casos caen en notFound() en la
+// página, no acá.
+export const getProductDetail = cache(
+  async (orgId: string, productId: string): Promise<ProductDetail | null> => {
+    const supabase = createClient();
+    const { data: product } = await supabase
+      .from("products")
+      .select("id, name, description, price, brand, screen_size_inches, specs")
+      .eq("id", productId)
+      .eq("org_id", orgId)
+      .eq("active", true)
+      .maybeSingle();
+
+    if (!product) return null;
+
+    const { data: imagesData } = await supabase
+      .from("product_images")
+      .select("id, image_url, display_order")
+      .eq("product_id", productId)
+      .order("display_order", { ascending: true });
+
+    return {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      brand: product.brand,
+      screen_size_inches: product.screen_size_inches,
+      specs: (product.specs as Record<string, string> | null) ?? null,
+      images: imagesData ?? [],
+    };
+  }
+);

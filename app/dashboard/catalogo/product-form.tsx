@@ -16,6 +16,12 @@ interface ProductData {
   price: number;
   category_id: string | null;
   active: boolean;
+  // Fase 3 SuperElectro: columnas ya existentes desde la Fase 1a (brand
+  // se adelantó para el filtro de "TV por marca"), pero sin input en este
+  // form todavía — sin esto no había forma de cargarlas salvo por SQL.
+  // Genérico, cualquier org puede usarlas o dejarlas en null.
+  brand: string | null;
+  screen_size_inches: number | null;
 }
 
 interface ProductFormProps {
@@ -31,6 +37,10 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const [price, setPrice] = useState(product?.price?.toString() ?? "");
   const [categoryId, setCategoryId] = useState(product?.category_id ?? "");
   const [active, setActive] = useState(product?.active ?? true);
+  const [brand, setBrand] = useState(product?.brand ?? "");
+  const [screenSizeInches, setScreenSizeInches] = useState(
+    product?.screen_size_inches?.toString() ?? ""
+  );
   const [error, setError] = useState<string | null>(null);
 
   function handleSave() {
@@ -46,6 +56,8 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       price: parseFloat(price) || 0,
       category_id: categoryId || null,
       active,
+      brand: brand.trim() || null,
+      screen_size_inches: screenSizeInches.trim() ? parseFloat(screenSizeInches) : null,
     };
 
     startTransition(async () => {
@@ -122,6 +134,32 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                 </option>
               ))}
             </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-stone-600">Marca</label>
+            <input
+              value={brand}
+              onChange={(e) => setBrand(e.target.value)}
+              placeholder="Opcional"
+              className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-stone-600">
+              Tamaño de pantalla (pulgadas)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="any"
+              value={screenSizeInches}
+              onChange={(e) => setScreenSizeInches(e.target.value)}
+              placeholder="Solo para TVs/monitores"
+              className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
+            />
           </div>
         </div>
 

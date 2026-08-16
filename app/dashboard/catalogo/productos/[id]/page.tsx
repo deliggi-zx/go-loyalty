@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
 import { ProductForm } from "../../product-form";
 import { ProductImagesManager } from "../../product-images-manager";
+import { ProductSpecsManager } from "../../product-specs-manager";
 
 export default async function EditarProductoPage({
   params,
@@ -17,7 +18,7 @@ export default async function EditarProductoPage({
   const [{ data: product }, { data: categories }, { data: images }] = await Promise.all([
     supabase
       .from("products")
-      .select("id, name, description, price, category_id, active")
+      .select("id, name, description, price, category_id, active, brand, screen_size_inches, specs")
       .eq("id", params.id)
       .eq("org_id", orgId)
       .maybeSingle(),
@@ -50,6 +51,10 @@ export default async function EditarProductoPage({
       <div className="p-8 space-y-10">
         <ProductForm categories={categories ?? []} product={product} />
         <ProductImagesManager orgId={orgId} productId={product.id} images={images ?? []} />
+        <ProductSpecsManager
+          productId={product.id}
+          specs={(product.specs as Record<string, string> | null) ?? {}}
+        />
       </div>
     </div>
   );
