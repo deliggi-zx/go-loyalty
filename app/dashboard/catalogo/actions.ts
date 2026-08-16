@@ -112,6 +112,8 @@ export interface ProductInput {
   price: number;
   category_id: string | null;
   active: boolean;
+  brand: string | null;
+  screen_size_inches: number | null;
 }
 
 export async function createProduct(data: ProductInput): Promise<string> {
@@ -136,6 +138,8 @@ export async function createProduct(data: ProductInput): Promise<string> {
       price: data.price,
       category_id: data.category_id,
       active: data.active,
+      brand: data.brand,
+      screen_size_inches: data.screen_size_inches,
       display_order: nextOrder,
     })
     .select("id")
@@ -159,6 +163,8 @@ export async function updateProduct(id: string, data: ProductInput) {
       price: data.price,
       category_id: data.category_id,
       active: data.active,
+      brand: data.brand,
+      screen_size_inches: data.screen_size_inches,
     })
     .eq("id", id)
     .eq("org_id", orgId);
@@ -310,4 +316,25 @@ export async function deleteProductImage(imageId: string, productId: string) {
 
   revalidatePath(`/dashboard/catalogo/productos/${productId}`);
   revalidatePath("/dashboard/catalogo");
+}
+
+// ── Specs de producto ────────────────────────────────────────────────────
+
+// Fase 3: guarda el objeto completo de specs (clave-valor libre) de una.
+// Genérico — cualquier org con catalog_type='products' puede usarlo, no
+// solo SuperElectro. Se reemplaza entero en vez de hacer merge parcial
+// porque el editor del admin ya maneja el objeto completo en memoria
+// (agregar/borrar fila), mismo criterio que updateCategoryOrder.
+export async function updateProductSpecs(productId: string, specs: Record<string, string>) {
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+  await requireOwnedProduct(productId, orgId);
+
+  await supabase
+    .from("products")
+    .update({ specs: Object.keys(specs).length > 0 ? specs : null })
+    .eq("id", productId)
+    .eq("org_id", orgId);
+
+  revalidatePath(`/dashboard/catalogo/productos/${productId}`);
 }

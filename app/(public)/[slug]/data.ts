@@ -215,3 +215,57 @@ export const getFeaturedProducts = cache(async (orgId: string): Promise<Featured
     imageUrl: mainImageByProduct.get(p.id) ?? null,
   }));
 });
+
+// Fase 3: ficha de producto individual (/[slug]/producto/[id]). Genérico
+// para cualquier org con catalog_type='products', no exclusivo de
+// SuperElectro — cualquier producto de cualquier org puede tener `specs`
+// y varias imágenes si se cargan. `specs` es un objeto clave-valor libre
+// (JSONB en la base), null si el producto todavía no tiene ninguna
+// cargada.
+export interface ProductDetail {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  brand: string | null;
+  screen_size_inches: number | null;
+  specs: Record<string, string> | null;
+  images: CatalogImage[];
+}
+
+// Mismo criterio que getGymLocations/sede/[locationId]: se filtra por
+// org_id (nunca solo por id) para que un link a un producto de otra org
+// no traiga datos ajenos, y por active=true para no exponer productos
+// dados de baja vía URL directa — ambos casos caen en notFound() en la
+// página, no acá.
+export const getProductDetail = cache(
+  async (orgId: string, productId: string): Promise<ProductDetail | null> => {
+    const supabase = createClient();
+    const { data: product } = await supabase
+      .from("products")
+      .select("id, name, description, price, brand, screen_size_inches, specs")
+      .eq("id", productId)
+      .eq("org_id", orgId)
+      .eq("active", true)
+      .maybeSingle();
+
+    if (!product) return null;
+
+    const { data: imagesData } = await supabase
+      .from("product_images")
+      .select("id, image_url, display_order")
+      .eq("product_id", productId)
+      .order("display_order", { ascending: true });
+
+    return {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      brand: product.brand,
+      screen_size_inches: product.screen_size_inches,
+      specs: (product.specs as Record<string, string> | null) ?? null,
+      images: imagesData ?? [],
+    };
+  }
+);
