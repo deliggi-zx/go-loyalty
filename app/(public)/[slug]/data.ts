@@ -248,6 +248,106 @@ export interface ProductDetail {
 // no traiga datos ajenos, y por active=true para no exponer productos
 // dados de baja vía URL directa — ambos casos caen en notFound() en la
 // página, no acá.
+// Fase Home: carruseles de producto configurables desde el admin (ver
+// dashboard/catalogo/carruseles) — independiente de is_featured/
+// FeaturedProduct de arriba, que sigue siendo la fuente de "Imperdibles"
+// sin tocar. Genérico para cualquier org con catalog_type='products'.
+export interface CarouselProductItem {
+  id: string;
+  name: string;
+  price: number;
+  // Cosméticos (ver ProductInput en dashboard/catalogo/actions.ts): sin
+  // ningún cálculo real detrás, null si no se cargaron.
+  compareAtPrice: number | null;
+  installmentsText: string | null;
+  shippingBadgeText: string | null;
+  imageUrl: string | null;
+  specs: Record<string, string> | null;
+}
+
+export interface ProductCarousel {
+  id: string;
+  title: string;
+  products: CarouselProductItem[];
+}
+
+// Solo carruseles activos, con solo productos activos adentro (un
+// producto puede estar asignado a un carrusel activo pero seguir
+// active=false mientras Die termina de cargarle los datos — ver Fase
+// Home, seed del Philips 32"). Un carrusel que queda sin ningún producto
+// visible (todos inactivos, o ninguno asignado) no se devuelve — el
+// caller no tiene que preocuparse por estantes vacíos.
+export const getActiveCarousels = cache(async (orgId: string): Promise<ProductCarousel[]> => {
+  const supabase = createClient();
+  const { data: carouselsData } = await supabase
+    .from("catalog_carousels")
+    .select("id, title")
+    .eq("org_id", orgId)
+    .eq("active", true)
+    .order("display_order", { ascending: true });
+
+  const carousels = carouselsData ?? [];
+  if (carousels.length === 0) return [];
+
+  const carouselIds = carousels.map((c) => c.id);
+  const { data: linksData } = await supabase
+    .from("catalog_carousel_products")
+    .select("carousel_id, product_id, display_order")
+    .in("carousel_id", carouselIds)
+    .order("display_order", { ascending: true });
+
+  const links = linksData ?? [];
+  const productIds = Array.from(new Set(links.map((l) => l.product_id)));
+  if (productIds.length === 0) return [];
+
+  const { data: productsData } = await supabase
+    .from("products")
+    .select(
+      "id, name, price, compare_at_price, installments_text, shipping_badge_text, specs"
+    )
+    .in("id", productIds)
+    .eq("org_id", orgId)
+    .eq("active", true);
+
+  const { data: imagesData } =
+    productIds.length > 0
+      ? await supabase
+          .from("product_images")
+          .select("product_id, image_url, display_order")
+          .in("product_id", productIds)
+          .order("display_order", { ascending: true })
+      : { data: [] as { product_id: string; image_url: string; display_order: number }[] };
+
+  const mainImageByProduct = new Map<string, string>();
+  for (const img of imagesData ?? []) {
+    if (!mainImageByProduct.has(img.product_id)) {
+      mainImageByProduct.set(img.product_id, img.image_url);
+    }
+  }
+
+  const productById = new Map((productsData ?? []).map((p) => [p.id, p]));
+
+  return carousels
+    .map((c) => {
+      const products = links
+        .filter((l) => l.carousel_id === c.id)
+        .map((l) => productById.get(l.product_id))
+        .filter((p): p is NonNullable<typeof p> => !!p)
+        .map((p) => ({
+          id: p.id,
+          name: p.name,
+          price: p.price,
+          compareAtPrice: p.compare_at_price,
+          installmentsText: p.installments_text,
+          shippingBadgeText: p.shipping_badge_text,
+          imageUrl: mainImageByProduct.get(p.id) ?? null,
+          specs: (p.specs as Record<string, string> | null) ?? null,
+        }));
+      return { id: c.id, title: c.title, products };
+    })
+    .filter((c) => c.products.length > 0);
+});
+
 export const getProductDetail = cache(
   async (orgId: string, productId: string): Promise<ProductDetail | null> => {
     const supabase = createClient();

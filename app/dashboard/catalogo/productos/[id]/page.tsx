@@ -5,6 +5,7 @@ import { getOrgId } from "@/lib/supabase/get-org";
 import { ProductForm } from "../../product-form";
 import { ProductImagesManager } from "../../product-images-manager";
 import { ProductSpecsManager } from "../../product-specs-manager";
+import { ProductCarouselsManager } from "../../product-carousels-manager";
 
 export default async function EditarProductoPage({
   params,
@@ -15,24 +16,38 @@ export default async function EditarProductoPage({
   const orgId = await getOrgId();
   if (!orgId) redirect("/login");
 
-  const [{ data: product }, { data: categories }, { data: images }] = await Promise.all([
-    supabase
-      .from("products")
-      .select("id, name, description, price, category_id, active, brand, screen_size_inches, specs")
-      .eq("id", params.id)
-      .eq("org_id", orgId)
-      .maybeSingle(),
-    supabase
-      .from("product_categories")
-      .select("id, name")
-      .eq("org_id", orgId)
-      .order("display_order", { ascending: true }),
-    supabase
-      .from("product_images")
-      .select("id, image_url, display_order")
-      .eq("product_id", params.id)
-      .order("display_order", { ascending: true }),
-  ]);
+  const [{ data: product }, { data: categories }, { data: images }, { data: carousels }, { data: carouselLinks }] =
+    await Promise.all([
+      supabase
+        .from("products")
+        .select(
+          "id, name, description, price, category_id, active, brand, screen_size_inches, specs, compare_at_price, installments_text, shipping_badge_text"
+        )
+        .eq("id", params.id)
+        .eq("org_id", orgId)
+        .maybeSingle(),
+      supabase
+        .from("product_categories")
+        .select("id, name")
+        .eq("org_id", orgId)
+        .order("display_order", { ascending: true }),
+      supabase
+        .from("product_images")
+        .select("id, image_url, display_order")
+        .eq("product_id", params.id)
+        .order("display_order", { ascending: true }),
+      // Fase Home: todos los carruseles de la org (activos o no, ver
+      // ProductCarouselsManager) para armar la lista de checkboxes.
+      supabase
+        .from("catalog_carousels")
+        .select("id, title, active")
+        .eq("org_id", orgId)
+        .order("display_order", { ascending: true }),
+      supabase
+        .from("catalog_carousel_products")
+        .select("carousel_id")
+        .eq("product_id", params.id),
+    ]);
 
   if (!product) return notFound();
 
@@ -54,6 +69,11 @@ export default async function EditarProductoPage({
         <ProductSpecsManager
           productId={product.id}
           specs={(product.specs as Record<string, string> | null) ?? {}}
+        />
+        <ProductCarouselsManager
+          productId={product.id}
+          carousels={carousels ?? []}
+          initialSelectedIds={(carouselLinks ?? []).map((l) => l.carousel_id)}
         />
       </div>
     </div>

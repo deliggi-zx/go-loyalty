@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getTenantOrg, getTenantUser, getFeaturedProducts, getUserPointsBalance, isVetOrgSlug, isCornerOrgSlug } from "./data";
+import { getTenantOrg, getTenantUser, getFeaturedProducts, getActiveCarousels, getUserPointsBalance, isVetOrgSlug, isCornerOrgSlug } from "./data";
 import { getVetReviews } from "./vet-reviews-data";
 import { getGymLocations, getGymClasses, getGymTestimonials } from "./gym-data";
 import { LoginForm } from "./login-form";
@@ -11,6 +11,7 @@ import { GymClassesSection } from "./gym-classes-section";
 import { GymTestimonialsSection } from "./gym-testimonials-section";
 import { GymPlansSection } from "./gym-plans-section";
 import { FeaturedProductsGrid } from "./featured-products-grid";
+import { ProductRail } from "./product-rail";
 import { BikePromoImage } from "./bike-promo-image";
 import { HuellitasHome } from "./huellitas-home";
 import { CornerHome } from "./corner-home";
@@ -155,6 +156,14 @@ export default async function TenantPage({
     org.catalog_type === "products" ? await getFeaturedProducts(org.id) : [];
   const promosSectionTitle = PROMOS_SECTION_TITLE[params.slug];
 
+  // Fase Home: carruseles configurables desde el admin — independiente de
+  // featuredProducts/is_featured de arriba (esa sigue siendo "Imperdibles",
+  // sin tocar). [] para cualquier org que no sea catalog_type='products' o
+  // que todavía no haya creado ninguno (mismo criterio de guard que
+  // featuredProducts).
+  const productCarousels =
+    org.catalog_type === "products" ? await getActiveCarousels(org.id) : [];
+
   // Carrusel más grande + click para pausar/ampliar (Fase 3g) — hoy solo
   // "bike". Mismo criterio simple que ya usamos en perfil/page.tsx (slug
   // directo, no un mapa) porque es un único flag booleano en este archivo.
@@ -180,6 +189,27 @@ export default async function TenantPage({
       {!user && !hasGymFeatures && (
         <div className="max-w-lg mx-auto px-4 pt-4">
           <LoginForm primaryColor={primary} bikeTheme={isBike} orgId={org.id} />
+        </div>
+      )}
+
+      {/* Fase Home: carruseles configurables — debajo de la card de
+          puntos (login o badge, ambos viven arriba: LoginForm acá mismo,
+          PointsBadge en layout.tsx) y arriba del carrusel principal de
+          loyalty_content de más abajo. [] para cualquier org sin
+          carruseles activos, así que no agrega nada para Bike/Gym2/
+          Corner/Huellitas/Cafetería/Bicicletería hoy. */}
+      {productCarousels.length > 0 && (
+        <div className="max-w-lg mx-auto px-4 pt-4 space-y-8">
+          {productCarousels.map((carousel) => (
+            <ProductRail
+              key={carousel.id}
+              slug={params.slug}
+              title={carousel.title}
+              products={carousel.products}
+              primaryColor={primary}
+              catalogHref={`/${params.slug}/precios`}
+            />
+          ))}
         </div>
       )}
 

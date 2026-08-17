@@ -114,6 +114,13 @@ export interface ProductInput {
   active: boolean;
   brand: string | null;
   screen_size_inches: number | null;
+  // Fase Home (sistema de carruseles configurables): tres campos 100%
+  // cosméticos, sin ningún cálculo real detrás — solo se muestran en el
+  // product-rail público si están cargados. Genérico, cualquier org con
+  // catalog_type='products' puede usarlos.
+  compare_at_price: number | null;
+  installments_text: string | null;
+  shipping_badge_text: string | null;
 }
 
 export async function createProduct(data: ProductInput): Promise<string> {
@@ -140,6 +147,9 @@ export async function createProduct(data: ProductInput): Promise<string> {
       active: data.active,
       brand: data.brand,
       screen_size_inches: data.screen_size_inches,
+      compare_at_price: data.compare_at_price,
+      installments_text: data.installments_text,
+      shipping_badge_text: data.shipping_badge_text,
       display_order: nextOrder,
     })
     .select("id")
@@ -165,6 +175,9 @@ export async function updateProduct(id: string, data: ProductInput) {
       active: data.active,
       brand: data.brand,
       screen_size_inches: data.screen_size_inches,
+      compare_at_price: data.compare_at_price,
+      installments_text: data.installments_text,
+      shipping_badge_text: data.shipping_badge_text,
     })
     .eq("id", id)
     .eq("org_id", orgId);
@@ -337,4 +350,126 @@ export async function updateProductSpecs(productId: string, specs: Record<string
     .eq("org_id", orgId);
 
   revalidatePath(`/dashboard/catalogo/productos/${productId}`);
+}
+
+// ── Carruseles de producto (Fase Home) ──────────────────────────────────
+//
+// Infraestructura genérica para que cualquier org con catalog_type=
+// 'products' arme sus propios estantes de productos en la home (título
+// libre, orden, activo/inactivo) sin pedir código nuevo cada vez —
+// independiente de products.is_featured (esa sigue siendo la fuente de
+// "Imperdibles", sin tocar acá).
+
+export async function createCarousel(title: string): Promise<string> {
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+
+  const { data: last } = await supabase
+    .from("catalog_carousels")
+    .select("display_order")
+    .eq("org_id", orgId)
+    .order("display_order", { ascending: false })
+    .limit(1);
+
+  const nextOrder = last && last.length > 0 ? last[0].display_order + 1 : 0;
+
+  const { data: inserted, error } = await supabase
+    .from("catalog_carousels")
+    .insert({ org_id: orgId, title, display_order: nextOrder, active: true })
+    .select("id")
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/dashboard/catalogo/carruseles");
+  revalidatePath("/dashboard/catalogo");
+  return inserted.id;
+}
+
+export async function updateCarouselTitle(id: string, title: string) {
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+
+  await supabase
+    .from("catalog_carousels")
+    .update({ title })
+    .eq("id", id)
+    .eq("org_id", orgId);
+
+  revalidatePath("/dashboard/catalogo/carruseles");
+}
+
+export async function updateCarouselOrder(
+  items: { id: string; display_order: number }[]
+) {
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+
+  await Promise.all(
+    items.map((item) =>
+      supabase
+        .from("catalog_carousels")
+        .update({ display_order: item.display_order })
+        .eq("id", item.id)
+        .eq("org_id", orgId)
+    )
+  );
+
+  revalidatePath("/dashboard/catalogo/carruseles");
+}
+
+export async function toggleCarouselActive(id: string, active: boolean) {
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+
+  await supabase
+    .from("catalog_carousels")
+    .update({ active })
+    .eq("id", id)
+    .eq("org_id", orgId);
+
+  revalidatePath("/dashboard/catalogo/carruseles");
+  revalidatePath("/dashboard/catalogo");
+}
+
+export async function deleteCarousel(id: string) {
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+
+  // catalog_carousel_products se borra en cascada (FK on delete cascade)
+  // — no hace falta desasignar productos a mano antes, a diferencia de
+  // deleteCategory con product_categories (esa FK no tiene cascade).
+  await supabase.from("catalog_carousels").delete().eq("id", id).eq("org_id", orgId);
+
+  revalidatePath("/dashboard/catalogo/carruseles");
+  revalidatePath("/dashboard/catalogo");
+}
+
+// Reemplaza entera la lista de carruseles en los que aparece un producto
+// — mismo criterio que updateProductSpecs (el checklist del admin ya
+// maneja el estado completo en memoria). Se valida carouselIds contra los
+// carruseles reales de la org antes de insertar, para no poder asignar a
+// un carrusel ajeno si alguien manipula el payload desde el cliente.
+export async function updateProductCarousels(productId: string, carouselIds: string[]) {
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+  await requireOwnedProduct(productId, orgId);
+
+  const { data: orgCarousels } = await supabase
+    .from("catalog_carousels")
+    .select("id")
+    .eq("org_id", orgId);
+  const validIds = new Set((orgCarousels ?? []).map((c) => c.id));
+  const safeIds = carouselIds.filter((id) => validIds.has(id));
+
+  await supabase.from("catalog_carousel_products").delete().eq("product_id", productId);
+
+  if (safeIds.length > 0) {
+    await supabase.from("catalog_carousel_products").insert(
+      safeIds.map((carousel_id, i) => ({ carousel_id, product_id: productId, display_order: i }))
+    );
+  }
+
+  revalidatePath(`/dashboard/catalogo/productos/${productId}`);
+  revalidatePath("/dashboard/catalogo/carruseles");
 }
