@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
@@ -70,6 +71,12 @@ export default async function CatalogoPage() {
             Gestioná las categorías y productos de tu negocio
           </p>
         </div>
+        <Link
+          href="/dashboard/catalogo/carruseles"
+          className="text-sm font-medium text-stone-600 hover:text-stone-900 border border-stone-200 hover:bg-stone-50 px-4 py-2 rounded-lg transition-colors"
+        >
+          Carruseles de la home →
+        </Link>
       </header>
 
       <div className="p-8 space-y-10 max-w-5xl">

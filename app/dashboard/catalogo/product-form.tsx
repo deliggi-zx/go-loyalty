@@ -22,6 +22,13 @@ interface ProductData {
   // Genérico, cualquier org puede usarlas o dejarlas en null.
   brand: string | null;
   screen_size_inches: number | null;
+  // Fase Home (sistema de carruseles configurables): tres campos 100%
+  // cosméticos, sin ningún cálculo real detrás (sin motor de cuotas, sin
+  // lógica de envío) — se muestran en el product-rail público solo si
+  // están cargados. Genérico, cualquier org con catalog_type='products'.
+  compare_at_price: number | null;
+  installments_text: string | null;
+  shipping_badge_text: string | null;
 }
 
 interface ProductFormProps {
@@ -41,6 +48,11 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const [screenSizeInches, setScreenSizeInches] = useState(
     product?.screen_size_inches?.toString() ?? ""
   );
+  const [compareAtPrice, setCompareAtPrice] = useState(
+    product?.compare_at_price?.toString() ?? ""
+  );
+  const [installmentsText, setInstallmentsText] = useState(product?.installments_text ?? "");
+  const [shippingBadgeText, setShippingBadgeText] = useState(product?.shipping_badge_text ?? "");
   const [error, setError] = useState<string | null>(null);
 
   function handleSave() {
@@ -58,6 +70,9 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       active,
       brand: brand.trim() || null,
       screen_size_inches: screenSizeInches.trim() ? parseFloat(screenSizeInches) : null,
+      compare_at_price: compareAtPrice.trim() ? parseFloat(compareAtPrice) : null,
+      installments_text: installmentsText.trim() || null,
+      shipping_badge_text: shippingBadgeText.trim() || null,
     };
 
     startTransition(async () => {
@@ -161,6 +176,47 @@ export function ProductForm({ categories, product }: ProductFormProps) {
               className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
             />
           </div>
+        </div>
+
+        {/* Fase Home: tres campos cosméticos para las cards del
+            product-rail — sin lógica real detrás (ver comentario en
+            ProductData más arriba). Viven acá junto al resto de los
+            campos "core" del producto porque se guardan con el mismo
+            botón "Guardar cambios" (a diferencia de specs/imágenes/
+            carruseles, que tienen su propia sección con guardado
+            independiente más abajo en la página de edición). */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-stone-600">Precio de lista</label>
+            <input
+              type="number"
+              min="0"
+              step="any"
+              value={compareAtPrice}
+              onChange={(e) => setCompareAtPrice(e.target.value)}
+              placeholder="Opcional — se tacha si es mayor al precio"
+              className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-stone-600">Texto de cuotas</label>
+            <input
+              value={installmentsText}
+              onChange={(e) => setInstallmentsText(e.target.value)}
+              placeholder='Ej. "12 cuotas sin interés"'
+              className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-stone-600">Badge de envío</label>
+          <input
+            value={shippingBadgeText}
+            onChange={(e) => setShippingBadgeText(e.target.value)}
+            placeholder='Ej. "Envío gratis", "Retiralo ya"'
+            className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
+          />
         </div>
 
         <label className="flex items-center gap-2 text-sm text-stone-700 cursor-pointer w-fit">
