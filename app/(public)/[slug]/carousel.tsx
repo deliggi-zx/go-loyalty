@@ -31,28 +31,79 @@ export function Carousel({
   enableLightbox = false,
   lightboxHref,
 }: CarouselProps) {
-  const [current, setCurrent] = useState(0);
+  const length = items.length;
+
+  // Loop infinito por deslizamiento (translateX), técnica de clones a los
+  // costados (mismo mecanismo que Swiper/Slick): el track real es
+  // [clon del último, ...items, clon del primero], y `position` es el
+  // índice dentro de ESE array extendido (1..length = slides reales; 0 y
+  // length+1 son los clones). Al terminar la transición sobre un clon,
+  // saltamos sin animar a la posición real equivalente — como el clon es
+  // pixel-idéntico a la imagen real, el salto es invisible y el
+  // deslizamiento sigue de largo en la misma dirección en vez de rebotar.
+  const [position, setPosition] = useState(1);
+  const [withTransition, setWithTransition] = useState(true);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Clamp en vez de dejar crecer position sin límite: si al usuario le da
+  // por clickear la flecha varias veces seguidas antes de que el
+  // useEffect de abajo corrija el salto sobre un clon, esto evita pedir un
+  // índice que no existe en el array extendido (se vería un hueco en
+  // blanco). En uso normal (autoplay cada 4500ms, swipe/click puntual)
+  // nunca se llega a este límite.
   const next = useCallback(() => {
-    setCurrent((c) => (c + 1) % items.length);
-  }, [items.length]);
+    setPosition((p) => Math.min(p + 1, length + 1));
+  }, [length]);
+
+  const prev = useCallback(() => {
+    setPosition((p) => Math.max(p - 1, 0));
+  }, []);
 
   // El autoplay se pausa mientras el lightbox está abierto (ver
   // lightboxOpen en las deps) — al cerrarlo, este mismo effect vuelve a
   // armar el interval y retoma normal.
   const resetTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
-    if (items.length > 1 && !lightboxOpen) {
+    if (length > 1 && !lightboxOpen) {
       timerRef.current = setInterval(next, 4500);
     }
-  }, [items.length, next, lightboxOpen]);
+  }, [length, next, lightboxOpen]);
 
   useEffect(() => {
     resetTimer();
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [resetTimer]);
+
+  // Corrige el salto apenas termina de deslizar sobre uno de los clones:
+  // saca la transición (withTransition=false) y reubica `position` en la
+  // posición real equivalente en el mismo tick — React 18 batchea ambos
+  // setState, así que el DOM nunca pinta un frame intermedio sin
+  // transición pero en la posición vieja. El effect siguiente reactiva la
+  // transición en el próximo frame para el siguiente deslizamiento.
+  //
+  // Deliberadamente por setTimeout (duración de la transición + margen) y
+  // NO por el evento `transitionend`: con la pestaña en segundo plano el
+  // navegador puede saltear el pintado de la transición sin disparar ese
+  // evento — y como `next`/`prev` clampean en el borde del array
+  // extendido, si la corrección dependiera solo de `transitionend` el
+  // carrusel quedaba trabado ahí para siempre en cuanto se le sacaba el
+  // foco a la pestaña. El timeout no depende de que el navegador llegue a
+  // pintar nada, así que corrige igual.
+  useEffect(() => {
+    if (position !== 0 && position !== length + 1) return;
+    const timeout = setTimeout(() => {
+      setWithTransition(false);
+      setPosition(position === 0 ? length : 1);
+    }, 750);
+    return () => clearTimeout(timeout);
+  }, [position, length]);
+
+  useEffect(() => {
+    if (withTransition) return;
+    const raf = requestAnimationFrame(() => setWithTransition(true));
+    return () => cancelAnimationFrame(raf);
+  }, [withTransition]);
 
   const touchStartX = useRef<number | null>(null);
 
@@ -67,7 +118,7 @@ export function Carousel({
 
     const threshold = 40;
     if (deltaX > threshold) {
-      setCurrent((c) => (c - 1 + items.length) % items.length);
+      prev();
       resetTimer();
     } else if (deltaX < -threshold) {
       next();
@@ -75,9 +126,16 @@ export function Carousel({
     }
   }
 
-  if (items.length === 0) return null;
+  if (length === 0) return null;
 
+  // Índice real (0..length-1) derivado de `position` — sirve para los
+  // dots, el resaltado activo y el lightbox. En las posiciones-clon (0 y
+  // length+1) da el mismo índice que la imagen real que se está mostrando
+  // ahí (last/first), así que dots y lightbox nunca quedan desincronizados
+  // del clon visible mientras dura la corrección.
+  const current = ((position - 1) % length + length) % length;
   const currentItem = items[current];
+  const extendedItems = [items[length - 1], ...items, items[0]];
   // Edge-to-edge en mobile (cancela el px-4 del contenedor padre). Desde
   // sm crece por tramos hasta max-w-6xl (1152px) en xl — más ancho que el
   // max-w-5xl (1024px) que usa Gym2 para su propio carrusel, así que en
@@ -89,42 +147,53 @@ export function Carousel({
 
   return (
     <div className={`space-y-3 ${sizeWrapperClass}`}>
-      {/* Slides */}
+      {/* Slides — track flex ancho = extendedItems.length * 100%, cada
+          slide shrink-0 w-full; `position` corre sobre extendedItems (ver
+          comentario arriba de su declaración). Los clones en los extremos
+          quedan fuera del área visible (overflow-hidden) salvo durante la
+          transición hacia ellos, así que no hace falta pointer-events
+          manual como antes (con el stack de opacity, los slides inactivos
+          ocupaban el mismo rectángulo así que había que apagarles los
+          eventos a mano). */}
       <div
         className="relative overflow-hidden rounded-2xl bg-stone-100"
         style={{ aspectRatio: "16 / 7" }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {items.map((item, i) => (
-          <div
-            key={item.id}
-            className="absolute inset-0 transition-opacity duration-700"
-            style={{ opacity: i === current ? 1 : 0, pointerEvents: i === current ? "auto" : "none" }}
-          >
-            {item.image_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={item.image_url}
-                alt={item.title ?? ""}
-                className={`w-full h-full object-cover ${enableLightbox ? "cursor-pointer" : ""}`}
-                onClick={enableLightbox ? () => setLightboxOpen(true) : undefined}
-              />
-            )}
-            {item.title && (
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent px-4 py-3">
-                <p className="text-white text-sm font-medium drop-shadow">{item.title}</p>
-              </div>
-            )}
-          </div>
-        ))}
+        <div
+          className="flex h-full"
+          style={{
+            transform: `translateX(-${position * 100}%)`,
+            transition: withTransition ? "transform 700ms ease-in-out" : "none",
+          }}
+        >
+          {extendedItems.map((item, i) => (
+            <div key={i} className="relative w-full h-full shrink-0">
+              {item.image_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={item.image_url}
+                  alt={item.title ?? ""}
+                  className={`w-full h-full object-cover ${enableLightbox ? "cursor-pointer" : ""}`}
+                  onClick={enableLightbox ? () => setLightboxOpen(true) : undefined}
+                />
+              )}
+              {item.title && (
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent px-4 py-3">
+                  <p className="text-white text-sm font-medium drop-shadow">{item.title}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Dots + nav */}
-      {items.length > 1 && (
+      {length > 1 && (
         <div className="flex items-center justify-center gap-2">
           <button
-            onClick={() => { setCurrent((c) => (c - 1 + items.length) % items.length); resetTimer(); }}
+            onClick={() => { prev(); resetTimer(); }}
             className="w-6 h-6 flex items-center justify-center text-stone-400 hover:text-stone-700 transition-colors"
             aria-label="Anterior"
           >
@@ -133,7 +202,7 @@ export function Carousel({
           {items.map((_, i) => (
             <button
               key={i}
-              onClick={() => { setCurrent(i); resetTimer(); }}
+              onClick={() => { setPosition(i + 1); resetTimer(); }}
               className="transition-all rounded-full"
               style={{
                 width: i === current ? 20 : 6,
