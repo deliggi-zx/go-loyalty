@@ -1,12 +1,40 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createProduct, updateProduct, deleteProduct } from "./actions";
 
 interface CategoryOption {
   id: string;
   name: string;
+  // Fase árbol: antes el dropdown era plano (solo id/name). Con el
+  // tercer nivel bajo "Soportes y accesorios"/"Audio y Sonido" hacía
+  // falta reflejar la jerarquía para no mezclar todo sin indicación de
+  // qué es hijo de qué — ver buildCategoryOptions más abajo.
+  parent_id: string | null;
+}
+
+// Ordena las categorías como padre-seguido-de-sus-hijos (recursivo, cada
+// nivel por su propio orden de llegada) y devuelve la profundidad de
+// cada una para indentar el <option> — mismo criterio de "indent simple,
+// no árbol visual" que category-manager.tsx. Sin límite de profundidad.
+function buildCategoryOptions(categories: CategoryOption[]): { cat: CategoryOption; depth: number }[] {
+  const byParent = new Map<string | null, CategoryOption[]>();
+  for (const cat of categories) {
+    const siblings = byParent.get(cat.parent_id) ?? [];
+    siblings.push(cat);
+    byParent.set(cat.parent_id, siblings);
+  }
+
+  const result: { cat: CategoryOption; depth: number }[] = [];
+  function walk(parentId: string | null, depth: number) {
+    for (const cat of byParent.get(parentId) ?? []) {
+      result.push({ cat, depth });
+      walk(cat.id, depth + 1);
+    }
+  }
+  walk(null, 0);
+  return result;
 }
 
 interface ProductData {
@@ -54,6 +82,8 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const [installmentsText, setInstallmentsText] = useState(product?.installments_text ?? "");
   const [shippingBadgeText, setShippingBadgeText] = useState(product?.shipping_badge_text ?? "");
   const [error, setError] = useState<string | null>(null);
+
+  const categoryOptions = useMemo(() => buildCategoryOptions(categories), [categories]);
 
   function handleSave() {
     if (!name.trim()) {
@@ -143,9 +173,9 @@ export function ProductForm({ categories, product }: ProductFormProps) {
               className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors bg-white"
             >
               <option value="">Sin categoría</option>
-              {categories.map((cat) => (
+              {categoryOptions.map(({ cat, depth }) => (
                 <option key={cat.id} value={cat.id}>
-                  {cat.name}
+                  {"—".repeat(depth)} {cat.name}
                 </option>
               ))}
             </select>

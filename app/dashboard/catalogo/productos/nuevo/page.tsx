@@ -11,7 +11,7 @@ export default async function NuevoProductoPage() {
 
   const { data: categories } = await supabase
     .from("product_categories")
-    .select("id, name")
+    .select("id, name, parent_id")
     .eq("org_id", orgId)
     .order("display_order", { ascending: true });
 
