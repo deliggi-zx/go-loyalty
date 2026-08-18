@@ -1,3 +1,6 @@
+"use client";
+
+import { useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { ImageOff } from "lucide-react";
 import type { CarouselProductItem } from "./data";
@@ -12,6 +15,9 @@ interface ProductRailProps {
   // (sin specs cargadas) linkean al catálogo general en vez de a
   // /[slug]/producto/[id].
   catalogHref: string;
+  // Fase autoplay: default false (ver catalog_carousels.autoplay) — Die
+  // lo prende carrusel por carrusel desde /dashboard/catalogo/carruseles.
+  autoplay: boolean;
 }
 
 // Fase Home: estante horizontal de productos para los carruseles
@@ -25,13 +31,85 @@ interface ProductRailProps {
 // featured-products-grid.tsx/product-catalog.tsx en vez de inventar una
 // nueva. Genérico — cualquier org con catalog_type='products' puede
 // tener carruseles, no es exclusivo de SuperElectro.
-export function ProductRail({ slug, title, products, primaryColor, catalogHref }: ProductRailProps) {
+//
+// Fase autoplay: el timer/pausa/reanudación reusa el mismo criterio que
+// carousel.tsx (setInterval que se rearma con resetTimer, se limpia al
+// tocar y se rearma al soltar — así el próximo avance cae siempre X ms
+// después de la última interacción, nunca a mitad de un swipe en curso).
+// La mecánica de avance es distinta porque el contenedor acá es scroll
+// nativo (overflow-x-auto + snap), no slides con translateX: en vez de
+// mover un índice, se hace scrollTo por el ancho real de una card+gap
+// (medido en el DOM, no hardcodeado, para no depender del gap-3 actual).
+const AUTOPLAY_INTERVAL_MS = 3500;
+
+export function ProductRail({
+  slug,
+  title,
+  products,
+  primaryColor,
+  catalogHref,
+  autoplay,
+}: ProductRailProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const advance = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    // Paso = distancia real entre el inicio de la primera y la segunda
+    // card (incluye el gap), medido en el DOM en vez de asumir un valor
+    // fijo — si el gap o el ancho de card cambian, esto sigue andando.
+    const first = el.children[0] as HTMLElement | undefined;
+    const second = el.children[1] as HTMLElement | undefined;
+    const step = first && second ? second.offsetLeft - first.offsetLeft : el.clientWidth;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    // Ya está mostrando el final del estante (última card visible) → vuelve
+    // al primer producto. Si todavía no llegó, avanza un paso pero
+    // clampeado a maxScroll — con pocas cards el próximo paso "teórico"
+    // suele pasarse del final antes de que el usuario haya visto las
+    // últimas 1-2, así que sin este clamp el loop saltaba directo al
+    // principio salteándoselas.
+    const atEnd = el.scrollLeft >= maxScroll - 4;
+    const nextLeft = atEnd ? 0 : Math.min(el.scrollLeft + step, maxScroll);
+    el.scrollTo({ left: nextLeft, behavior: "smooth" });
+  }, []);
+
+  const resetTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (autoplay && products.length > 1) {
+      timerRef.current = setInterval(advance, AUTOPLAY_INTERVAL_MS);
+    }
+  }, [autoplay, products.length, advance]);
+
+  useEffect(() => {
+    resetTimer();
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [resetTimer]);
+
+  // Igual que carousel.tsx: se pausa apenas el usuario toca (evita pelear
+  // el scroll con el avance automático a mitad de un swipe) y retoma
+  // recién después de AUTOPLAY_INTERVAL_MS de inactividad tras soltar.
+  function handleTouchStart() {
+    if (timerRef.current) clearInterval(timerRef.current);
+  }
+
+  function handleTouchEnd() {
+    resetTimer();
+  }
+
   if (products.length === 0) return null;
 
   return (
     <div className="space-y-3">
       <h2 className="text-lg font-semibold text-stone-900 px-1">{title}</h2>
-      <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 snap-x snap-mandatory">
+      <div
+        ref={scrollRef}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 snap-x snap-mandatory"
+      >
         {products.map((product) => {
           const showCompareAt =
             product.compareAtPrice !== null && product.compareAtPrice > product.price;

@@ -443,6 +443,24 @@ export async function toggleCarouselActive(id: string, active: boolean) {
   revalidatePath("/dashboard/catalogo");
 }
 
+// Fase autoplay: default false a nivel columna (ver migración), así que
+// activarlo es una decisión explícita de Die carrusel por carrusel — no
+// cambia el comportamiento de los que ya existen (Destacados, Ofertas de
+// la semana) hasta que los prenda a mano acá.
+export async function toggleCarouselAutoplay(id: string, autoplay: boolean) {
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+
+  await supabase
+    .from("catalog_carousels")
+    .update({ autoplay })
+    .eq("id", id)
+    .eq("org_id", orgId);
+
+  revalidatePath("/dashboard/catalogo/carruseles");
+  revalidatePath("/dashboard/catalogo");
+}
+
 export async function deleteCarousel(id: string) {
   const supabase = createClient();
   const orgId = await requireOrgId();
