@@ -2,12 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, ChevronUp, ChevronDown, Pencil, Check, X, Plus, ToggleLeft, ToggleRight } from "lucide-react";
+import { Trash2, ChevronUp, ChevronDown, Pencil, Check, X, Plus, ToggleLeft, ToggleRight, Play } from "lucide-react";
 import {
   createCarousel,
   updateCarouselTitle,
   updateCarouselOrder,
   toggleCarouselActive,
+  toggleCarouselAutoplay,
   deleteCarousel,
 } from "../actions";
 
@@ -16,6 +17,7 @@ export interface CarouselRow {
   title: string;
   display_order: number;
   active: boolean;
+  autoplay: boolean;
 }
 
 // Mismo patrón visual/de interacción que category-manager.tsx (crear +
@@ -84,6 +86,16 @@ export function CarouselManager({ carousels: initialCarousels }: { carousels: Ca
     );
     startTransition(async () => {
       await toggleCarouselActive(id, !currentActive);
+      router.refresh();
+    });
+  }
+
+  function handleToggleAutoplay(id: string, currentAutoplay: boolean) {
+    setCarousels((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, autoplay: !c.autoplay } : c))
+    );
+    startTransition(async () => {
+      await toggleCarouselAutoplay(id, !currentAutoplay);
       router.refresh();
     });
   }
@@ -169,6 +181,18 @@ export function CarouselManager({ carousels: initialCarousels }: { carousels: Ca
                     ) : (
                       <ToggleLeft className="w-6 h-6" />
                     )}
+                  </button>
+                  <button
+                    onClick={() => handleToggleAutoplay(c.id, c.autoplay)}
+                    disabled={isPending}
+                    className={`p-1.5 rounded-md transition-colors disabled:opacity-50 ${
+                      c.autoplay
+                        ? "text-sky-600 bg-sky-50 hover:bg-sky-100"
+                        : "text-stone-300 hover:bg-stone-100 hover:text-stone-500"
+                    }`}
+                    title={c.autoplay ? "Autoplay activado (se desliza solo)" : "Autoplay desactivado (deslizamiento manual)"}
+                  >
+                    <Play className="w-3.5 h-3.5" fill={c.autoplay ? "currentColor" : "none"} />
                   </button>
                   <button
                     onClick={() => startEdit(c)}

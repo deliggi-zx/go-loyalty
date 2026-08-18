@@ -273,6 +273,10 @@ export interface ProductCarousel {
   id: string;
   title: string;
   products: CarouselProductItem[];
+  // Fase autoplay: default false en la columna (ver migración
+  // add_autoplay_to_catalog_carousels), así que sin cambios para los
+  // carruseles existentes hasta que Die lo prenda a mano en el admin.
+  autoplay: boolean;
 }
 
 // Solo carruseles activos, con solo productos activos adentro (un
@@ -285,7 +289,7 @@ export const getActiveCarousels = cache(async (orgId: string): Promise<ProductCa
   const supabase = createClient();
   const { data: carouselsData } = await supabase
     .from("catalog_carousels")
-    .select("id, title")
+    .select("id, title, autoplay")
     .eq("org_id", orgId)
     .eq("active", true)
     .order("display_order", { ascending: true });
@@ -347,7 +351,7 @@ export const getActiveCarousels = cache(async (orgId: string): Promise<ProductCa
           imageUrl: mainImageByProduct.get(p.id) ?? null,
           specs: (p.specs as Record<string, string> | null) ?? null,
         }));
-      return { id: c.id, title: c.title, products };
+      return { id: c.id, title: c.title, products, autoplay: c.autoplay };
     })
     .filter((c) => c.products.length > 0);
 });
