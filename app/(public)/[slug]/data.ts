@@ -109,9 +109,13 @@ export interface CatalogCategory {
   id: string;
   name: string;
   display_order: number;
-  // Fase 1a SuperElectro: jerarquía de 2 niveles (grupo → subcategoría).
-  // null para cualquier categoría de nivel superior — que es el 100% de
-  // las categorías de todas las orgs salvo las hijas de "TV y Audio".
+  // Fase 1a SuperElectro: jerarquía de categorías (grupo → subcategoría),
+  // sin límite de profundidad — category-drilldown.tsx arma la cascada
+  // con una pila (push/pop), no con 2 niveles hardcodeados; la Fase árbol
+  // sumó un tercer nivel real bajo "Soportes y accesorios"/"Audio y
+  // Sonido" sin tocar ese componente. null para cualquier categoría de
+  // nivel superior — que es el 100% de las categorías de todas las orgs
+  // salvo las hijas de "TV y Audio".
   parent_id: string | null;
   // Fase 1c SuperElectro: si está seteada, esta categoría no tiene hijas
   // reales — sus "hojas" se derivan en el cliente a partir del campo de

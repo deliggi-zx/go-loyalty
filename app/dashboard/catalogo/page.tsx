@@ -22,7 +22,7 @@ export default async function CatalogoPage() {
   const [categoriesRes, productsRes] = await Promise.all([
     supabase
       .from("product_categories")
-      .select("id, name, display_order")
+      .select("id, name, display_order, parent_id, leaf_source")
       .eq("org_id", orgId)
       .order("display_order", { ascending: true }),
     supabase

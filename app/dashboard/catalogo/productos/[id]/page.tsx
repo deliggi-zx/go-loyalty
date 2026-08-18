@@ -28,7 +28,7 @@ export default async function EditarProductoPage({
         .maybeSingle(),
       supabase
         .from("product_categories")
-        .select("id, name")
+        .select("id, name, parent_id")
         .eq("org_id", orgId)
         .order("display_order", { ascending: true }),
       supabase

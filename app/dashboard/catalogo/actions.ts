@@ -19,22 +19,33 @@ function extractStoragePath(publicUrl: string, bucket: string): string | null {
 
 // ── Categorías ────────────────────────────────────────────────────────────
 
-export async function createCategory(name: string) {
+// Fase árbol: parentId opcional para crear una subcategoría real (mismo
+// mecanismo que ya usan "Soportes y accesorios"/"Audio y Sonido" bajo
+// "TV y Audio", hoy cargadas por SQL directo porque esta acción no
+// aceptaba parent_id todavía). nextOrder queda scoped al padre (o a
+// "sin padre" cuando parentId es null) — no un contador global de la
+// org, mismo criterio que ya traían por SQL los hijos de "TV y Audio"
+// (0..n dentro de cada rama en vez de continuar la secuencia de la
+// raíz).
+export async function createCategory(name: string, parentId: string | null = null) {
   const supabase = createClient();
   const orgId = await requireOrgId();
 
-  const { data: last } = await supabase
+  let query = supabase
     .from("product_categories")
     .select("display_order")
     .eq("org_id", orgId)
     .order("display_order", { ascending: false })
     .limit(1);
+  query = parentId ? query.eq("parent_id", parentId) : query.is("parent_id", null);
+  const { data: last } = await query;
 
   const nextOrder = last && last.length > 0 ? last[0].display_order + 1 : 0;
 
   await supabase.from("product_categories").insert({
     org_id: orgId,
     name,
+    parent_id: parentId,
     display_order: nextOrder,
   });
 
