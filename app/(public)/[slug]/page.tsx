@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getTenantOrg, getTenantUser, getFeaturedProducts, getActiveCarousels, getUserPointsBalance, isVetOrgSlug, isCornerOrgSlug } from "./data";
+import { getTenantOrg, getTenantUser, getFeaturedProducts, getActiveCarousels, getHomeSequence, getUserPointsBalance, isVetOrgSlug, isCornerOrgSlug } from "./data";
 import { getVetReviews } from "./vet-reviews-data";
 import { getGymLocations, getGymClasses, getGymTestimonials } from "./gym-data";
 import { LoginForm } from "./login-form";
@@ -156,13 +156,25 @@ export default async function TenantPage({
     org.catalog_type === "products" ? await getFeaturedProducts(org.id) : [];
   const promosSectionTitle = PROMOS_SECTION_TITLE[params.slug];
 
-  // Fase Home: carruseles configurables desde el admin — independiente de
-  // featuredProducts/is_featured de arriba (esa sigue siendo "Imperdibles",
-  // sin tocar). [] para cualquier org que no sea catalog_type='products' o
-  // que todavía no haya creado ninguno (mismo criterio de guard que
-  // featuredProducts).
+  // Fase intercalado: secuencia unificada de carruseles + promos (ver
+  // getHomeSequence en data.ts). null si la org todavía no adoptó el
+  // mecanismo — hoy, todas salvo SuperElectro — y ahí sí se arma
+  // productCarousels con el render de siempre (solo carruseles, arriba de
+  // todo) para no cambiarle nada a nadie. Cuando homeSequence no es null,
+  // productCarousels se deja vacío: la secuencia unificada reemplaza ese
+  // bloque entero.
+  const homeSequence =
+    org.catalog_type === "products" ? await getHomeSequence(org.id) : null;
+
   const productCarousels =
-    org.catalog_type === "products" ? await getActiveCarousels(org.id) : [];
+    org.catalog_type === "products" && homeSequence === null
+      ? await getActiveCarousels(org.id)
+      : [];
+
+  // Con la secuencia unificada adoptada, las promos ya se muestran ahí
+  // arriba (intercaladas con los carruseles) — no se repiten más abajo
+  // junto a "Imperdibles".
+  const promoItemsToShow = homeSequence !== null ? [] : promoItems;
 
   // Carrusel más grande + click para pausar/ampliar (Fase 3g) — hoy solo
   // "bike". Mismo criterio simple que ya usamos en perfil/page.tsx (slug
@@ -192,26 +204,70 @@ export default async function TenantPage({
         </div>
       )}
 
-      {/* Fase Home: carruseles configurables — debajo de la card de
-          puntos (login o badge, ambos viven arriba: LoginForm acá mismo,
-          PointsBadge en layout.tsx) y arriba del carrusel principal de
-          loyalty_content de más abajo. [] para cualquier org sin
-          carruseles activos, así que no agrega nada para Bike/Gym2/
-          Corner/Huellitas/Cafetería/Bicicletería hoy. */}
-      {productCarousels.length > 0 && (
-        <div className="max-w-lg mx-auto px-4 pt-4 space-y-8">
-          {productCarousels.map((carousel) => (
-            <ProductRail
-              key={carousel.id}
-              slug={params.slug}
-              title={carousel.title}
-              products={carousel.products}
-              primaryColor={primary}
-              catalogHref={`/${params.slug}/precios`}
-              autoplay={carousel.autoplay}
-            />
-          ))}
-        </div>
+      {/* Fase Home / Fase intercalado: estantes de producto y flyers de
+          promo — debajo de la card de puntos (login o badge, ambos viven
+          arriba: LoginForm acá mismo, PointsBadge en layout.tsx) y arriba
+          del carrusel principal de loyalty_content de más abajo. Si la org
+          adoptó la secuencia unificada (homeSequence !== null), carruseles
+          y promos se intercalan acá en el orden exacto que armó el admin;
+          si no, cae al render de siempre (solo carruseles vía
+          productCarousels) — [] en ambos casos para cualquier org sin
+          nada cargado, así que no agrega nada para Bike/Gym2/Corner/
+          Huellitas/Cafetería/Bicicletería hoy. */}
+      {homeSequence !== null ? (
+        homeSequence.length > 0 && (
+          <div className="max-w-lg mx-auto px-4 pt-4 space-y-8">
+            {homeSequence.map((block) => {
+              if (block.type === "carousel" && block.carousel) {
+                return (
+                  <ProductRail
+                    key={block.id}
+                    slug={params.slug}
+                    title={block.carousel.title}
+                    products={block.carousel.products}
+                    primaryColor={primary}
+                    catalogHref={`/${params.slug}/precios`}
+                    autoplay={block.carousel.autoplay}
+                  />
+                );
+              }
+              if (block.type === "promo" && block.promo) {
+                return isBike ? (
+                  <BikePromoImage
+                    key={block.id}
+                    imageUrl={block.promo.imageUrl}
+                    alt={block.promo.title ?? ""}
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={block.id}
+                    src={block.promo.imageUrl}
+                    alt={block.promo.title ?? ""}
+                    className="w-full h-auto rounded-2xl object-contain"
+                  />
+                );
+              }
+              return null;
+            })}
+          </div>
+        )
+      ) : (
+        productCarousels.length > 0 && (
+          <div className="max-w-lg mx-auto px-4 pt-4 space-y-8">
+            {productCarousels.map((carousel) => (
+              <ProductRail
+                key={carousel.id}
+                slug={params.slug}
+                title={carousel.title}
+                products={carousel.products}
+                primaryColor={primary}
+                catalogHref={`/${params.slug}/precios`}
+                autoplay={carousel.autoplay}
+              />
+            ))}
+          </div>
+        )
       )}
 
       {/* Quiénes Somos: para Gym2 sube por encima del carrusel principal
@@ -267,10 +323,13 @@ export default async function TenantPage({
             título+grilla. Ahora el ancla está en el wrapper de abajo,
             justo donde arranca ese bloque (siempre presente cuando esta
             sección se renderiza, así la pestaña nunca apunta a la nada
-            aunque en el momento no haya ningún destacado). */}
-        {(promoItems.length > 0 || featuredProducts.length > 0) && (
+            aunque en el momento no haya ningún destacado). Fase
+            intercalado: promoItemsToShow es [] si la org ya adoptó la
+            secuencia unificada de arriba (evita repetir las mismas promos
+            acá abajo). */}
+        {(promoItemsToShow.length > 0 || featuredProducts.length > 0) && (
           <div className="max-w-lg mx-auto space-y-4">
-            {promoItems.map((item) => {
+            {promoItemsToShow.map((item) => {
               if (!item.image_url) return null;
               return isBike ? (
                 <BikePromoImage key={item.id} imageUrl={item.image_url} alt={item.title ?? ""} />

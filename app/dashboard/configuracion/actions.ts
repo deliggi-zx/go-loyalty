@@ -117,20 +117,50 @@ export async function addPriceListFlyer(imageUrl: string, sortOrder: number) {
 
 // ── Promos ────────────────────────────────────────────────────────────────────
 
+// Fase intercalado: además de guardarse en loyalty_content como siempre,
+// si esta org ya adoptó la secuencia unificada de la home (tiene algún
+// bloque en catalog_home_blocks — ver createCarousel en
+// dashboard/catalogo/actions.ts, que es lo único que dispara la
+// adopción), la promo nueva se agrega también ahí, al final. Si la org
+// todavía no adoptó nada (el 100% de las orgs hoy salvo SuperElectro), no
+// se toca catalog_home_blocks y la promo sigue el comportamiento de
+// siempre (columna aparte, debajo del carrusel principal).
 export async function addPromoItem(imageUrl: string, sortOrder: number) {
   const supabase = createClient();
   const orgId = await requireOrgId();
 
-  await supabase.from("loyalty_content").insert({
-    org_id: orgId,
-    type: "promo",
-    image_url: imageUrl,
-    title: null,
-    category: null,
-    price: null,
-    sort_order: sortOrder,
-    is_active: true,
-  });
+  const { data: inserted } = await supabase
+    .from("loyalty_content")
+    .insert({
+      org_id: orgId,
+      type: "promo",
+      image_url: imageUrl,
+      title: null,
+      category: null,
+      price: null,
+      sort_order: sortOrder,
+      is_active: true,
+    })
+    .select("id")
+    .single();
+
+  if (inserted) {
+    const { data: lastBlock } = await supabase
+      .from("catalog_home_blocks")
+      .select("display_order")
+      .eq("org_id", orgId)
+      .order("display_order", { ascending: false })
+      .limit(1);
+
+    if (lastBlock && lastBlock.length > 0) {
+      await supabase.from("catalog_home_blocks").insert({
+        org_id: orgId,
+        block_type: "promo",
+        promo_content_id: inserted.id,
+        display_order: lastBlock[0].display_order + 1,
+      });
+    }
+  }
 
   revalidatePath("/dashboard/configuracion");
 }

@@ -392,9 +392,62 @@ export async function createCarousel(title: string): Promise<string> {
 
   if (error) throw new Error(error.message);
 
+  await addCarouselToHomeSequence(supabase, orgId, inserted.id);
+
   revalidatePath("/dashboard/catalogo/carruseles");
   revalidatePath("/dashboard/catalogo");
   return inserted.id;
+}
+
+// Fase intercalado: mete el carrusel recién creado en catalog_home_blocks,
+// al final de la secuencia de la org. Si esta era la primera adopción del
+// mecanismo (la org no tenía ningún bloque todavía), arrastra también las
+// promos que ya tuviera cargadas (loyalty_content type='promo'), en su
+// orden actual, para que no desaparezcan de la home al pasar del render
+// separado de siempre al render unificado — ver getHomeSequence en data.ts.
+async function addCarouselToHomeSequence(
+  supabase: ReturnType<typeof createClient>,
+  orgId: string,
+  carouselId: string
+) {
+  const { data: lastBlock } = await supabase
+    .from("catalog_home_blocks")
+    .select("display_order")
+    .eq("org_id", orgId)
+    .order("display_order", { ascending: false })
+    .limit(1);
+
+  const wasAdopted = (lastBlock?.length ?? 0) > 0;
+  let nextOrder = wasAdopted ? lastBlock![0].display_order + 1 : 0;
+
+  await supabase.from("catalog_home_blocks").insert({
+    org_id: orgId,
+    block_type: "carousel",
+    carousel_id: carouselId,
+    display_order: nextOrder,
+  });
+  nextOrder += 1;
+
+  if (!wasAdopted) {
+    const { data: existingPromos } = await supabase
+      .from("loyalty_content")
+      .select("id")
+      .eq("org_id", orgId)
+      .eq("type", "promo")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
+
+    if (existingPromos && existingPromos.length > 0) {
+      await supabase.from("catalog_home_blocks").insert(
+        existingPromos.map((p: { id: string }, i: number) => ({
+          org_id: orgId,
+          block_type: "promo",
+          promo_content_id: p.id,
+          display_order: nextOrder + i,
+        }))
+      );
+    }
+  }
 }
 
 export async function updateCarouselTitle(id: string, title: string) {
@@ -469,6 +522,36 @@ export async function deleteCarousel(id: string) {
   // — no hace falta desasignar productos a mano antes, a diferencia de
   // deleteCategory con product_categories (esa FK no tiene cascade).
   await supabase.from("catalog_carousels").delete().eq("id", id).eq("org_id", orgId);
+
+  revalidatePath("/dashboard/catalogo/carruseles");
+  revalidatePath("/dashboard/catalogo");
+}
+
+// ── Secuencia unificada de la Home (Fase intercalado) ────────────────────
+//
+// catalog_home_blocks es la única fuente de orden para lo que se ve en la
+// home cuando una org adoptó el mecanismo (ver getHomeSequence en data.ts):
+// una fila por bloque, sea carrusel o promo, con un solo display_order
+// compartido. Acá solo se reordena — crear/borrar carruseles sigue en las
+// acciones de arriba (addCarouselToHomeSequence mantiene el bloque en
+// sync), y las promos se agregan/borran desde dashboard/configuracion
+// (ver addPromoItem, que hace lo mismo del lado de las promos).
+
+export async function updateHomeBlockOrder(
+  items: { id: string; display_order: number }[]
+) {
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+
+  await Promise.all(
+    items.map((item) =>
+      supabase
+        .from("catalog_home_blocks")
+        .update({ display_order: item.display_order })
+        .eq("id", item.id)
+        .eq("org_id", orgId)
+    )
+  );
 
   revalidatePath("/dashboard/catalogo/carruseles");
   revalidatePath("/dashboard/catalogo");

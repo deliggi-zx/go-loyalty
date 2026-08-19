@@ -356,6 +356,68 @@ export const getActiveCarousels = cache(async (orgId: string): Promise<ProductCa
     .filter((c) => c.products.length > 0);
 });
 
+// Fase intercalado: secuencia unificada de carruseles + promos, en el
+// orden exacto que armó el admin en catalog_home_blocks.display_order
+// (ver /dashboard/catalogo/carruseles, sección "Orden de la Home").
+// Genérico para cualquier org con catalog_type='products'.
+//
+// null = la org todavía no adoptó el mecanismo (no tiene ningún bloque
+// cargado — hoy, todas salvo SuperElectro): el caller cae al render
+// separado de siempre (carruseles arriba vía getActiveCarousels, promos
+// más abajo junto a "Imperdibles"). [] es un caso distinto de null: la
+// org sí adoptó, pero por ahora ningún bloque tiene contenido visible
+// (carruseles sin productos activos, promos inactivas) — sigue sin caer
+// al legacy, solo no renderiza nada arriba.
+export interface HomeBlock {
+  id: string;
+  type: "carousel" | "promo";
+  carousel?: ProductCarousel;
+  promo?: { id: string; imageUrl: string; title: string | null };
+}
+
+export const getHomeSequence = cache(async (orgId: string): Promise<HomeBlock[] | null> => {
+  const supabase = createClient();
+  const { data: blocksData } = await supabase
+    .from("catalog_home_blocks")
+    .select("id, block_type, carousel_id, promo_content_id, display_order")
+    .eq("org_id", orgId)
+    .order("display_order", { ascending: true });
+
+  const blocks = blocksData ?? [];
+  if (blocks.length === 0) return null;
+
+  const [carousels, { data: promosData }] = await Promise.all([
+    getActiveCarousels(orgId),
+    supabase
+      .from("loyalty_content")
+      .select("id, image_url, title")
+      .eq("org_id", orgId)
+      .eq("type", "promo")
+      .eq("is_active", true),
+  ]);
+
+  const carouselById = new Map(carousels.map((c) => [c.id, c]));
+  const promoById = new Map((promosData ?? []).map((p) => [p.id, p]));
+
+  const result: HomeBlock[] = [];
+  for (const b of blocks) {
+    if (b.block_type === "carousel" && b.carousel_id) {
+      const carousel = carouselById.get(b.carousel_id);
+      if (carousel) result.push({ id: b.id, type: "carousel", carousel });
+    } else if (b.block_type === "promo" && b.promo_content_id) {
+      const promo = promoById.get(b.promo_content_id);
+      if (promo?.image_url) {
+        result.push({
+          id: b.id,
+          type: "promo",
+          promo: { id: promo.id, imageUrl: promo.image_url, title: promo.title },
+        });
+      }
+    }
+  }
+  return result;
+});
+
 export const getProductDetail = cache(
   async (orgId: string, productId: string): Promise<ProductDetail | null> => {
     const supabase = createClient();

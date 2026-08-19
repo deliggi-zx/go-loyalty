@@ -116,9 +116,10 @@ export function CarouselManager({ carousels: initialCarousels }: { carousels: Ca
           Carruseles de la home
         </h2>
         <p className="text-xs text-stone-400 mt-0.5">
-          Creá los estantes de producto que se muestran en la home, arriba del carrusel principal.
-          El título es libre y editable en cualquier momento. Asigná productos a cada uno desde la
-          ficha de cada producto.
+          Creá los estantes de producto que se muestran en la home. El título es libre y editable
+          en cualquier momento. Asigná productos a cada uno desde la ficha de cada producto. El
+          orden de esta lista solo se usa ahí (el checklist de productos) — para el orden real en
+          la home, usá &quot;Orden de la Home&quot; arriba.
         </p>
       </div>
 
