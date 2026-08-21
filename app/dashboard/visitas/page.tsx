@@ -41,24 +41,27 @@ export default async function VisitasPage() {
   // "su" agenda, ver punto 3 de la Fase 1. product/client se resuelven
   // aparte (mismo criterio de dos pasadas que dashboard/turnos/page.tsx
   // con pet/owner) en vez de un join, coherente con el resto del proyecto.
+  // Fase turnos-rango (CAMBIO 3): trae pendientes Y confirmadas en la
+  // misma query (nunca canceladas/rechazadas) — VisitasManager las separa
+  // en dos secciones del lado del cliente.
   const [{ data: visitsData }, { data: availabilityData }] = await Promise.all([
     supabase
       .from("domus_property_visits")
-      .select("id, product_id, client_profile_id, visit_date, visit_time, phone")
+      .select("id, product_id, client_profile_id, visit_date, visit_time, phone, status, visit_mode")
       .eq("org_id", orgId)
       .eq("agent_profile_id", user.id)
-      .eq("status", "confirmed")
+      .in("status", ["pending", "confirmed"])
       .gte("visit_date", today)
       .order("visit_date", { ascending: true })
       .order("visit_time", { ascending: true }),
     supabase
       .from("domus_agent_availability")
-      .select("id, available_date, available_time")
+      .select("id, available_date, start_time, end_time")
       .eq("org_id", orgId)
       .eq("agent_profile_id", user.id)
       .gte("available_date", today)
       .order("available_date", { ascending: true })
-      .order("available_time", { ascending: true }),
+      .order("start_time", { ascending: true }),
   ]);
 
   const visits = visitsData ?? [];
@@ -84,12 +87,15 @@ export default async function VisitasPage() {
     phone: v.phone,
     date: v.visit_date,
     time: v.visit_time.slice(0, 5),
+    status: v.status as "pending" | "confirmed",
+    visitMode: v.visit_mode as "con_agente" | "retira_llave",
   }));
 
   const availabilityRows: AvailabilityRow[] = (availabilityData ?? []).map((a) => ({
     id: a.id,
     date: a.available_date,
-    time: a.available_time.slice(0, 5),
+    startTime: a.start_time.slice(0, 5),
+    endTime: a.end_time.slice(0, 5),
   }));
 
   return (

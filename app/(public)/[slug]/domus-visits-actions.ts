@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { todayLocalYmd } from "./vet-appointments-config";
-import { getAvailableVisitSlots } from "./domus-visits-data";
+import { getAvailableVisitSlots, findAvailableAgentForSlot } from "./domus-visits-data";
 
 // Fase 1 Domus: turnos de visita a propiedad. Reusa todayLocalYmd() de
 // Huellitas (vet-appointments-config.ts) a propósito — es un helper 100%
@@ -24,6 +24,11 @@ export interface CreatePropertyVisitInput {
   date: string;
   time: string;
   phone: string;
+  // Fase turnos-rango (CAMBIO 4): elegido por el cliente ANTES del paso
+  // de fecha/hora — el resto del flujo (reservar un agente para ese
+  // horario) es idéntico para las dos modalidades, alguien tiene que
+  // entregar la llave en ambos casos.
+  visitMode: "con_agente" | "retira_llave";
 }
 
 export interface CreatePropertyVisitSummary {
@@ -59,6 +64,9 @@ export async function createPropertyVisit(
   if (Number.isNaN(parsedDate.getTime())) return { ok: false, error: "invalid" };
   if (input.date < todayLocalYmd()) return { ok: false, error: "invalid" };
   if (!/^\d{2}:\d{2}$/.test(input.time)) return { ok: false, error: "invalid" };
+  if (input.visitMode !== "con_agente" && input.visitMode !== "retira_llave") {
+    return { ok: false, error: "invalid" };
+  }
 
   // Dato suelto por formulario (columna nueva en domus_property_visits,
   // no en profiles — ver migración add_phone_to_domus_forms): requerido.
@@ -75,34 +83,17 @@ export async function createPropertyVisit(
     .maybeSingle();
   if (!product) return { ok: false, error: "invalid" };
 
-  // Candidatos: agentes que ofrecen ese día+hora, menos los que ya tienen
-  // una visita confirmada exactamente ahí (mismo cruce en dos pasadas que
-  // getAvailableVisitSlots, ver comentario ahí sobre por qué no es un
-  // NOT EXISTS de SQL). Se ordena por created_at para repartir de forma
-  // simple y determinística entre agentes que ofrecen el mismo horario.
-  const { data: availabilityData } = await supabase
-    .from("domus_agent_availability")
-    .select("agent_profile_id, created_at")
-    .eq("org_id", orgId)
-    .eq("available_date", input.date)
-    .eq("available_time", input.time)
-    .order("created_at", { ascending: true });
-
-  const candidates = availabilityData ?? [];
-  if (candidates.length === 0) return { ok: false, error: "slot_taken" };
-
-  const { data: takenData } = await supabase
-    .from("domus_property_visits")
-    .select("agent_profile_id")
-    .eq("org_id", orgId)
-    .eq("visit_date", input.date)
-    .eq("visit_time", input.time)
-    .eq("status", "confirmed");
-
-  const takenAgentIds = new Set((takenData ?? []).map((v) => v.agent_profile_id));
-  const agentId = candidates.find((c) => !takenAgentIds.has(c.agent_profile_id))?.agent_profile_id;
+  // Candidato: agente cuyo rango de disponibilidad cubre ese día+hora y
+  // que todavía no tiene una visita pendiente o confirmada exactamente
+  // ahí (ver findAvailableAgentForSlot en domus-visits-data.ts).
+  const agentId = await findAvailableAgentForSlot(orgId, input.date, input.time);
   if (!agentId) return { ok: false, error: "slot_taken" };
 
+  // Fase turnos-rango (CAMBIO 3): el turno nace 'pending' — recién queda
+  // en la agenda del agente como confirmado cuando este lo confirma desde
+  // /dashboard/visitas. El índice único parcial (WHERE status IN
+  // ('pending','confirmed')) ya bloquea el horario para otros clientes
+  // desde este mismo insert, no hace falta esperar a la confirmación.
   const { error } = await supabase.from("domus_property_visits").insert({
     org_id: orgId,
     product_id: input.productId,
@@ -111,7 +102,8 @@ export async function createPropertyVisit(
     visit_date: input.date,
     visit_time: input.time,
     phone: trimmedPhone,
-    status: "confirmed",
+    status: "pending",
+    visit_mode: input.visitMode,
   });
 
   if (error) {

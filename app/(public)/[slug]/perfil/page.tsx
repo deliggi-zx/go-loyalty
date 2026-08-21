@@ -133,7 +133,9 @@ export default async function PerfilPage({
     date: v.visit_date,
     time: v.visit_time.slice(0, 5),
     status: v.status as MyVisitRow["status"],
-    canCancel: v.status === "confirmed" && v.visit_date >= today,
+    // Cancelable tanto pendiente (todavía esperando al agente) como
+    // confirmada — rejected/cancelled ya están cerradas.
+    canCancel: (v.status === "pending" || v.status === "confirmed") && v.visit_date >= today,
   }));
 
   const INQUIRY_STATUS_LABEL: Record<string, string> = {

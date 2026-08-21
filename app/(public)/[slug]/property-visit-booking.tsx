@@ -16,13 +16,16 @@ interface PropertyVisitBookingProps {
 }
 
 // Fase 1 Domus: reserva de visita a una propiedad puntual, desde su
-// ficha. Un solo paso (fecha + horario) en vez del wizard de 3 pasos de
-// Huellitas (vet-turnos-booking.tsx) — acá no hace falta elegir "para
-// quién" ni "motivo": la propiedad ya está fija (viene de la ficha) y el
-// cliente ya está identificado por la sesión. El horario mostrado es la
-// unión de todos los agentes (getAvailableVisitSlotsAction) — el cliente
-// nunca elige agente, ver createPropertyVisit en domus-visits-actions.ts
-// para cómo se decide cuál se la lleva.
+// ficha. Dos pasos (modalidad, luego fecha + horario) en vez del wizard
+// de 3 pasos de Huellitas (vet-turnos-booking.tsx) — acá no hace falta
+// elegir "para quién" ni "motivo": la propiedad ya está fija (viene de la
+// ficha) y el cliente ya está identificado por la sesión. El horario
+// mostrado es la unión de todos los agentes (getAvailableVisitSlotsAction,
+// ya expandido a bloques de 30 min a partir del rango que cargó cada
+// agente) — el cliente nunca elige agente, ver createPropertyVisit en
+// domus-visits-actions.ts para cómo se decide cuál se la lleva. El turno
+// nace 'pending': queda confirmado recién cuando el agente lo confirma
+// desde /dashboard/visitas.
 export function PropertyVisitBooking({
   slug,
   orgId,
@@ -30,6 +33,7 @@ export function PropertyVisitBooking({
   primaryColor,
 }: PropertyVisitBookingProps) {
   const [open, setOpen] = useState(false);
+  const [visitMode, setVisitMode] = useState<"con_agente" | "retira_llave" | "">("");
   const [date, setDate] = useState("");
   const [slots, setSlots] = useState<string[] | null>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -61,7 +65,13 @@ export function PropertyVisitBooking({
     setSubmitting(true);
     setSubmitError(null);
 
-    const result = await createPropertyVisit(slug, orgId, { productId, date, time, phone });
+    const result = await createPropertyVisit(slug, orgId, {
+      productId,
+      date,
+      time,
+      phone,
+      visitMode: visitMode as "con_agente" | "retira_llave",
+    });
 
     setSubmitting(false);
 
@@ -98,11 +108,13 @@ export function PropertyVisitBooking({
 
     return (
       <div className="rounded-xl border border-stone-200 bg-stone-50 p-4 space-y-2 text-center">
-        <p className="text-sm font-semibold text-stone-900">¡Visita agendada!</p>
+        <p className="text-sm font-semibold text-stone-900">¡Visita pedida!</p>
         <p className="text-sm text-stone-600 capitalize">
           {displayDate} a las {confirmed.time}
         </p>
-        <p className="text-xs text-stone-400">Un agente te va a estar esperando en el horario elegido.</p>
+        <p className="text-xs text-stone-400">
+          Está pendiente de confirmación — un agente te va a confirmar el horario a la brevedad.
+        </p>
       </div>
     );
   }
@@ -120,16 +132,53 @@ export function PropertyVisitBooking({
     );
   }
 
+  // Fase turnos-rango (CAMBIO 4): la modalidad se pregunta ANTES que
+  // fecha/hora — el resto del flujo es idéntico para las dos (siempre se
+  // reserva un agente real para ese horario, alguien tiene que entregar
+  // la llave en ambos casos).
+  if (!visitMode) {
+    return (
+      <div className="rounded-xl border border-stone-200 p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-stone-900">¿Cómo querés visitarla?</p>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
+          >
+            Cancelar
+          </button>
+        </div>
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => setVisitMode("con_agente")}
+            className="w-full py-3 rounded-lg border border-stone-200 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors text-left px-4"
+          >
+            Con agente
+          </button>
+          <button
+            type="button"
+            onClick={() => setVisitMode("retira_llave")}
+            className="w-full py-3 rounded-lg border border-stone-200 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors text-left px-4"
+          >
+            Retira llave
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-xl border border-stone-200 p-4 space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-stone-900">Elegí día y horario</p>
         <button
           type="button"
-          onClick={() => setOpen(false)}
+          onClick={() => setVisitMode("")}
           className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
         >
-          Cancelar
+          Volver
         </button>
       </div>
 
