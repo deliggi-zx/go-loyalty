@@ -83,6 +83,12 @@ export interface CatalogImage {
   id: string;
   image_url: string;
   display_order: number;
+  // Fase video (Domus): 'image' | 'video' — mismo mecanismo de galería
+  // (product_images) para los dos, mezclados por display_order. Default
+  // 'image' a nivel columna, así que cualquier fila vieja ya viene con
+  // este valor sin backfill. Ver ProductImageCarousel para cómo se
+  // renderiza cada tipo.
+  media_type: string;
 }
 
 export interface CatalogProduct {
@@ -159,15 +165,28 @@ export const getProductCatalog = cache(async (orgId: string): Promise<CatalogPro
     productIds.length > 0
       ? await supabase
           .from("product_images")
-          .select("id, product_id, image_url, display_order")
+          .select("id, product_id, image_url, display_order, media_type")
           .in("product_id", productIds)
           .order("display_order", { ascending: true })
-      : { data: [] as { id: string; product_id: string; image_url: string; display_order: number }[] };
+      : {
+          data: [] as {
+            id: string;
+            product_id: string;
+            image_url: string;
+            display_order: number;
+            media_type: string;
+          }[],
+        };
 
   const imagesByProduct = new Map<string, CatalogImage[]>();
   for (const img of imagesData ?? []) {
     const list = imagesByProduct.get(img.product_id) ?? [];
-    list.push({ id: img.id, image_url: img.image_url, display_order: img.display_order });
+    list.push({
+      id: img.id,
+      image_url: img.image_url,
+      display_order: img.display_order,
+      media_type: img.media_type,
+    });
     imagesByProduct.set(img.product_id, list);
   }
 
@@ -219,13 +238,25 @@ export const getFeaturedProducts = cache(async (orgId: string): Promise<Featured
     productIds.length > 0
       ? await supabase
           .from("product_images")
-          .select("product_id, image_url, display_order")
+          .select("product_id, image_url, display_order, media_type")
           .in("product_id", productIds)
           .order("display_order", { ascending: true })
-      : { data: [] as { product_id: string; image_url: string; display_order: number }[] };
+      : {
+          data: [] as {
+            product_id: string;
+            image_url: string;
+            display_order: number;
+            media_type: string;
+          }[],
+        };
 
+  // Fase video: esta grilla renderiza la portada con <img>, así que un
+  // video en display_order 0 (Fase video, ver ProductImageCarousel para
+  // la galería real) nunca puede quedar elegido acá — se salta hasta
+  // encontrar la primera foto real del producto.
   const mainImageByProduct = new Map<string, string>();
   for (const img of imagesData ?? []) {
+    if (img.media_type === "video") continue;
     if (!mainImageByProduct.has(img.product_id)) {
       mainImageByProduct.set(img.product_id, img.image_url);
     }
@@ -336,13 +367,24 @@ export const getActiveCarousels = cache(async (orgId: string): Promise<ProductCa
     productIds.length > 0
       ? await supabase
           .from("product_images")
-          .select("product_id, image_url, display_order")
+          .select("product_id, image_url, display_order, media_type")
           .in("product_id", productIds)
           .order("display_order", { ascending: true })
-      : { data: [] as { product_id: string; image_url: string; display_order: number }[] };
+      : {
+          data: [] as {
+            product_id: string;
+            image_url: string;
+            display_order: number;
+            media_type: string;
+          }[],
+        };
 
+  // Fase video: mismo criterio que getFeaturedProducts — las cards de
+  // carrusel renderizan con <img>, un video nunca puede quedar elegido
+  // como portada.
   const mainImageByProduct = new Map<string, string>();
   for (const img of imagesData ?? []) {
+    if (img.media_type === "video") continue;
     if (!mainImageByProduct.has(img.product_id)) {
       mainImageByProduct.set(img.product_id, img.image_url);
     }
@@ -387,7 +429,7 @@ export const getProductDetail = cache(
 
     const { data: imagesData } = await supabase
       .from("product_images")
-      .select("id, image_url, display_order")
+      .select("id, image_url, display_order, media_type")
       .eq("product_id", productId)
       .order("display_order", { ascending: true });
 

@@ -40,13 +40,23 @@ export default async function CatalogoPage() {
     productIds.length > 0
       ? await supabase
           .from("product_images")
-          .select("product_id, image_url, display_order")
+          .select("product_id, image_url, display_order, media_type")
           .in("product_id", productIds)
           .order("display_order", { ascending: true })
-      : { data: [] as { product_id: string; image_url: string; display_order: number }[] };
+      : {
+          data: [] as {
+            product_id: string;
+            image_url: string;
+            display_order: number;
+            media_type: string;
+          }[],
+        };
 
+  // Fase video: la card del listado renderiza con <img>, un video en
+  // display_order 0 nunca puede quedar elegido como portada acá.
   const mainImageByProduct = new Map<string, string>();
   for (const img of images ?? []) {
+    if (img.media_type === "video") continue;
     if (!mainImageByProduct.has(img.product_id)) {
       mainImageByProduct.set(img.product_id, img.image_url);
     }
