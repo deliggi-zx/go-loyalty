@@ -18,6 +18,13 @@ export interface SideMenuTransaction {
 export interface SideMenuCategory {
   id: string;
   name: string;
+  // Ajuste 2 Domus: layout.tsx ya pasaba el objeto completo de
+  // getProductCategories (data.ts) acá, parent_id viajaba sin declarar en
+  // el tipo — se expone para poder agrupar Venta/Alquiler con sus
+  // subcategorías debajo, en vez de la lista plana de siempre. Opcional
+  // porque no todas las orgs cargan árbol (SuperElectro sí, vía TV y
+  // Audio, pero ahí sigue rendereándose plano — ver isDomusOrg abajo).
+  parent_id?: string | null;
 }
 
 export interface SideMenuProps {
@@ -82,6 +89,24 @@ export function SideMenu({
   const [showTerms, setShowTerms] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const hasSocials = facebookUrl || instagramUrl || twitterUrl || youtubeUrl;
+
+  // Ajuste 1/2 Domus: mismo criterio simple (slug directo) que isBike en
+  // page.tsx/perfil — sin ícono/prop nueva, esta rama (neonTheme/bikeTheme
+  // ambos false) es la que ya usa Domus.
+  const isDomusOrg = slug === "domus";
+  // Ajuste 2: categorías raíz (parent_id null) y sus hijas, para agrupar
+  // Venta/Alquiler con sus subcategorías debajo — mismo criterio de
+  // filtrado por parent_id que category-drilldown.tsx. Solo se arma/usa
+  // cuando isDomusOrg (ver más abajo); el resto de las orgs sigue con la
+  // lista plana de siempre, sin tocar.
+  const rootCategories = productCategories.filter((c) => !c.parent_id);
+  const childrenByParent = new Map<string, SideMenuCategory[]>();
+  for (const cat of productCategories) {
+    if (!cat.parent_id) continue;
+    const siblings = childrenByParent.get(cat.parent_id) ?? [];
+    siblings.push(cat);
+    childrenByParent.set(cat.parent_id, siblings);
+  }
 
   // Clases condicionadas al tema — mismo criterio que showLoginIcon: una
   // variante de estilo por prop, no un side-menu-<org>.tsx paralelo por
@@ -181,20 +206,52 @@ export function SideMenu({
             />
           ) : (
             <>
-          <Link
-            href={`/${slug}/precios`}
-            onClick={onClose}
-            className={`flex items-center gap-2 text-sm font-medium transition-colors ${linkText}`}
-          >
-            <Receipt className={`w-4 h-4 ${leadIcon}`} />
-            {priceListLabel}
-          </Link>
+          {/* Ajuste 2 Domus: no tiene sentido conceptual "Lista de
+              precios" (un listado plano de todas las propiedades) en esta
+              vertical — el resto de las orgs lo sigue viendo igual. */}
+          {!isDomusOrg && (
+            <Link
+              href={`/${slug}/precios`}
+              onClick={onClose}
+              className={`flex items-center gap-2 text-sm font-medium transition-colors ${linkText}`}
+            >
+              <Receipt className={`w-4 h-4 ${leadIcon}`} />
+              {priceListLabel}
+            </Link>
+          )}
 
           {catalogType === "products" && productCategories.length > 0 && (
             <div className="space-y-2">
               <h3 className={`text-xs font-semibold uppercase tracking-wide ${sectionLabel}`}>
                 Categorías
               </h3>
+              {isDomusOrg ? (
+                // Agrupada: cada raíz (Venta/Alquiler) como encabezado,
+                // sus hijas debajo — mismo criterio de filtro por
+                // parent_id que category-drilldown.tsx. El resto de las
+                // orgs sigue con la lista plana de siempre (rama de abajo,
+                // sin tocar).
+                <div className="space-y-3">
+                  {rootCategories.map((root) => (
+                    <div key={root.id} className="space-y-1">
+                      <p className={`text-xs font-semibold ${sectionLabel}`}>{root.name}</p>
+                      <div className="space-y-1 pl-1">
+                        {(childrenByParent.get(root.id) ?? []).map((child) => (
+                          <Link
+                            key={child.id}
+                            href={`/${slug}/precios?categoria=${child.id}`}
+                            onClick={onClose}
+                            className={`flex items-center gap-2 text-sm transition-colors ${linkTextMuted}`}
+                          >
+                            <Tag className={`w-3.5 h-3.5 ${leadIconSm}`} />
+                            {child.name}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
               <div className="space-y-1">
                 {productCategories.map((cat) => (
                   <Link
@@ -208,6 +265,7 @@ export function SideMenu({
                   </Link>
                 ))}
               </div>
+              )}
             </div>
           )}
 

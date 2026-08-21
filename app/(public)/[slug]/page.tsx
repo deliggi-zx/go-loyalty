@@ -190,9 +190,10 @@ export default async function TenantPage({
   return (
     <>
       {/* Login (solo si no hay sesión; si hay sesión, el badge de puntos ya se muestra en el layout).
-          Gym2 no usa este recuadro: ahí el login se abre desde el ícono de
-          usuario del header (ver hasGymFeatures + showLoginIcon en layout.tsx). */}
-      {!user && !hasGymFeatures && (
+          Gym2 y Domus no usan este recuadro: en esas dos el login se abre
+          desde el ícono de usuario del header (ver hasGymFeatures/isDomus
+          + showLoginIcon en layout.tsx — Ajuste 1). */}
+      {!user && !hasGymFeatures && !isDomus && (
         <div className="max-w-lg mx-auto px-4 pt-4">
           <LoginForm primaryColor={primary} bikeTheme={isBike} orgId={org.id} />
         </div>
@@ -200,20 +201,17 @@ export default async function TenantPage({
 
       {/* Fase 2b Domus: mismo criterio de login-gating que "Solicitar
           visita" en la ficha de producto (Fase 1) — sin sesión, mensaje
-          en vez del botón "Consultas". A diferencia de la ficha de
-          producto (que no tiene login propio), acá NO se repite el
-          LoginForm: el bloque de arriba ya lo muestra para cualquier
-          visitante sin sesión (Domus no tiene hasGymFeatures), así que
-          duplicarlo sería mostrar dos formularios de login uno debajo del
-          otro. */}
+          en vez del botón "Consultas". Ajuste 1: ya no hay un LoginForm
+          inline arriba para señalar (Domus usa el ícono del header, igual
+          que Gym2) — el mensaje apunta ahí en vez de "arriba". */}
       {isDomus &&
         (user ? (
           <div className="max-w-lg mx-auto px-4 pt-4">
             <GeneralInquiryForm slug={params.slug} orgId={org.id} primaryColor={primary} />
           </div>
         ) : (
-          <p className="max-w-lg mx-auto px-4 pt-2 text-xs text-stone-400 text-center">
-            Iniciá sesión arriba para hacer una consulta.
+          <p className="max-w-lg mx-auto px-4 pt-4 text-xs text-stone-400 text-center">
+            Iniciá sesión desde el ícono de arriba para hacer una consulta.
           </p>
         ))}
 
