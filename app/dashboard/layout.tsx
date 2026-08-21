@@ -23,6 +23,10 @@ export default async function DashboardLayout({
   let isCornerOrg = false;
   let showMascotas = false;
   let showTurnos = false;
+  let showVisitas = false;
+  let showConsultas = false;
+  let showOfertas = false;
+  let showInicio = false;
   if (orgId) {
     const [{ data: org }, { count: gymLocationsCount }, { data: membership }] = await Promise.all([
       supabase
@@ -65,6 +69,27 @@ export default async function DashboardLayout({
     // reusado para los dos, porque no tienen por qué seguir coincidiendo
     // si el día de mañana alguno de los dos se habilita para otro role).
     showTurnos = isVetOrg && isAdminOrVetRole;
+    // Fase 1 Domus: panel de visitas (agenda + disponibilidad propia),
+    // mismo criterio de flag local por slug que isVetOrg/isCornerOrg
+    // arriba. Solo role admin (hoy el único role que representa "agente"
+    // en esta org, ver [[domus-test-users]]) — no hay un role 'vet'
+    // equivalente que sumar acá.
+    const isDomusOrg = org?.slug === "domus";
+    const isDomusAdmin = isDomusOrg && membership?.role === "admin";
+    showVisitas = isDomusAdmin;
+    // Fase 2b: panel de consultas, mismo gate exacto que Visitas arriba
+    // (por ahora coinciden 1 a 1, mismo criterio de flags separados que
+    // showMascotas/showTurnos de Huellitas: no tienen por qué seguir
+    // coincidiendo si el día de mañana alguno se habilita para otro role).
+    showConsultas = isDomusAdmin;
+    // Fase 3: panel de ofertas ("ofrecer mi propiedad"), mismo gate exacto
+    // que Visitas/Consultas arriba.
+    showOfertas = isDomusAdmin;
+    // Fase 4b: mini-CRM del agente (Contactos/Consultas/Reuniones/
+    // Seguimiento), mismo gate exacto que Visitas/Consultas/Ofertas. No
+    // reemplaza el redirect de /login (compartido con todas las orgs,
+    // ver Gate 0 de esta fase) — vive como primer ítem del sidebar.
+    showInicio = isDomusAdmin;
   }
 
   return (
@@ -76,6 +101,10 @@ export default async function DashboardLayout({
         showCourts={isCornerOrg}
         showMascotas={showMascotas}
         showTurnos={showTurnos}
+        showVisitas={showVisitas}
+        showConsultas={showConsultas}
+        showOfertas={showOfertas}
+        showInicio={showInicio}
       />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {children}

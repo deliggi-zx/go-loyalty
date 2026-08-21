@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ImageOff } from "lucide-react";
 import type { FeaturedProduct } from "./data";
 import { hasProductDetail } from "./product-detail-utils";
+import { formatPrice } from "@/lib/utils";
 
 interface FeaturedProductsGridProps {
   slug: string;
@@ -50,7 +51,7 @@ export function FeaturedProductsGrid({
           <div className="p-3 space-y-0.5">
             <p className="text-sm font-medium text-stone-900 line-clamp-2">{product.name}</p>
             <p className="text-sm font-semibold" style={{ color: primaryColor }}>
-              ${product.price.toLocaleString("es-AR")}
+              {formatPrice(product.price, product.currency)}
             </p>
           </div>
         </Link>

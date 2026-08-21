@@ -9,11 +9,17 @@ export default async function NuevoProductoPage() {
   const orgId = await getOrgId();
   if (!orgId) redirect("/login");
 
-  const { data: categories } = await supabase
-    .from("product_categories")
-    .select("id, name, parent_id")
-    .eq("org_id", orgId)
-    .order("display_order", { ascending: true });
+  const [{ data: categories }, { data: org }] = await Promise.all([
+    supabase
+      .from("product_categories")
+      .select("id, name, parent_id")
+      .eq("org_id", orgId)
+      .order("display_order", { ascending: true }),
+    // Fase moneda/cuotas: el slug de la org determina el default de
+    // moneda por categoría y si se oculta el campo de cuotas — ambos
+    // scopeados a Domus dentro de ProductForm, ver ese componente.
+    supabase.from("loyalty_organizations").select("slug").eq("id", orgId).maybeSingle(),
+  ]);
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -28,7 +34,7 @@ export default async function NuevoProductoPage() {
       </header>
 
       <div className="p-8">
-        <ProductForm categories={categories ?? []} />
+        <ProductForm categories={categories ?? []} orgSlug={org?.slug} />
       </div>
     </div>
   );

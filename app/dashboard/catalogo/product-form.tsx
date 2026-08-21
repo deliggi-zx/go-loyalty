@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createProduct, updateProduct, deleteProduct } from "./actions";
 
@@ -37,11 +37,44 @@ function buildCategoryOptions(categories: CategoryOption[]): { cat: CategoryOpti
   return result;
 }
 
+// Fase moneda (Domus): sube por parent_id hasta la categoría raíz de
+// `categoryId` — se usa para inferir la moneda por defecto de una
+// propiedad nueva a partir del nombre de esa raíz ("Venta"/"Alquiler").
+// Genérico en la implementación (no busca nada específico de Domus acá,
+// solo camina el árbol), el mapeo nombre→moneda vive en el caller y está
+// scopeado por orgSlug ahí — ver DOMUS_CURRENCY_BY_ROOT_NAME más abajo.
+function findRootAncestor(
+  categories: CategoryOption[],
+  categoryId: string
+): CategoryOption | null {
+  const byId = new Map(categories.map((c) => [c.id, c]));
+  let current = byId.get(categoryId) ?? null;
+  if (!current) return null;
+  while (current.parent_id) {
+    const parent = byId.get(current.parent_id);
+    if (!parent) break;
+    current = parent;
+  }
+  return current;
+}
+
+// Solo se consulta cuando orgSlug === 'domus' (ver efecto de moneda más
+// abajo) — no es un mapeo genérico para cualquier org que llame a una
+// categoría raíz "Venta"/"Alquiler".
+const DOMUS_CURRENCY_BY_ROOT_NAME: Record<string, string> = {
+  Venta: "USD",
+  Alquiler: "ARS",
+};
+
 interface ProductData {
   id: string;
   name: string;
   description: string | null;
   price: number;
+  // Fase moneda: 'ARS' | 'USD' (columna con default 'ARS', ver migración
+  // add_currency_to_products). Genérico para cualquier org — el selector
+  // de abajo está siempre disponible, no solo para Domus.
+  currency: string;
   category_id: string | null;
   active: boolean;
   // Fase 3 SuperElectro: columnas ya existentes desde la Fase 1a (brand
@@ -62,14 +95,26 @@ interface ProductData {
 interface ProductFormProps {
   categories: CategoryOption[];
   product?: ProductData;
+  // Fase moneda / Fase cuotas: slug de la org activa — hoy solo se usa
+  // para dos comportamientos scopeados a Domus (default de moneda por
+  // categoría padre, ocultar el campo de cuotas). El resto del form es
+  // genérico y no lee esta prop. Opcional para no romper ningún caller
+  // que no la pase.
+  orgSlug?: string;
 }
 
-export function ProductForm({ categories, product }: ProductFormProps) {
+export function ProductForm({ categories, product, orgSlug }: ProductFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [name, setName] = useState(product?.name ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
   const [price, setPrice] = useState(product?.price?.toString() ?? "");
+  const [currency, setCurrency] = useState(product?.currency ?? "ARS");
+  // Se prende apenas el agente toca el selector a mano — a partir de ahí
+  // el default automático por categoría (ver efecto más abajo) deja de
+  // pisarlo. Arranca en true al editar un producto existente (currency ya
+  // viene cargada, no hay nada que autocompletar).
+  const [currencyTouched, setCurrencyTouched] = useState(!!product);
   const [categoryId, setCategoryId] = useState(product?.category_id ?? "");
   const [active, setActive] = useState(product?.active ?? true);
   const [brand, setBrand] = useState(product?.brand ?? "");
@@ -85,6 +130,20 @@ export function ProductForm({ categories, product }: ProductFormProps) {
 
   const categoryOptions = useMemo(() => buildCategoryOptions(categories), [categories]);
 
+  // Fase moneda (Domus): al elegir categoría en un producto NUEVO, si el
+  // agente todavía no tocó el selector de moneda a mano, se autocompleta
+  // según el nombre de la categoría raíz (Venta→USD, Alquiler→ARS). Nunca
+  // corre al editar un producto existente (currencyTouched arranca en
+  // true ahí) ni pisa una elección manual ya hecha. Scopeado a
+  // orgSlug === 'domus' — cualquier otra org que llame "Venta"/"Alquiler"
+  // a una categoría raíz no dispara esto.
+  useEffect(() => {
+    if (orgSlug !== "domus" || currencyTouched || !categoryId) return;
+    const root = findRootAncestor(categories, categoryId);
+    const inferred = root ? DOMUS_CURRENCY_BY_ROOT_NAME[root.name] : undefined;
+    if (inferred) setCurrency(inferred);
+  }, [categoryId, categories, orgSlug, currencyTouched]);
+
   function handleSave() {
     if (!name.trim()) {
       setError("El nombre es obligatorio");
@@ -96,6 +155,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       name: name.trim(),
       description: description.trim() || null,
       price: parseFloat(price) || 0,
+      currency,
       category_id: categoryId || null,
       active,
       brand: brand.trim() || null,
@@ -153,7 +213,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-[1fr_92px] gap-4">
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-stone-600">Precio</label>
             <input
@@ -166,20 +226,35 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-stone-600">Categoría</label>
+            <label className="text-xs font-medium text-stone-600">Moneda</label>
             <select
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors bg-white"
+              value={currency}
+              onChange={(e) => {
+                setCurrency(e.target.value);
+                setCurrencyTouched(true);
+              }}
+              className="w-full h-10 px-2 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors bg-white"
             >
-              <option value="">Sin categoría</option>
-              {categoryOptions.map(({ cat, depth }) => (
-                <option key={cat.id} value={cat.id}>
-                  {"—".repeat(depth)} {cat.name}
-                </option>
-              ))}
+              <option value="ARS">ARS</option>
+              <option value="USD">USD</option>
             </select>
           </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-stone-600">Categoría</label>
+          <select
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+            className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors bg-white"
+          >
+            <option value="">Sin categoría</option>
+            {categoryOptions.map(({ cat, depth }) => (
+              <option key={cat.id} value={cat.id}>
+                {"—".repeat(depth)} {cat.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -228,15 +303,22 @@ export function ProductForm({ categories, product }: ProductFormProps) {
               className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
             />
           </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-stone-600">Texto de cuotas</label>
-            <input
-              value={installmentsText}
-              onChange={(e) => setInstallmentsText(e.target.value)}
-              placeholder='Ej. "12 cuotas sin interés"'
-              className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
-            />
-          </div>
+          {/* Fase cuotas: sin sentido en una vertical inmobiliaria — Domus
+              no financia en cuotas una propiedad. Oculto solo por slug
+              (no por catalog_type ni ningún flag genérico): SuperElectro y
+              el resto de las orgs con catálogo de productos lo siguen
+              viendo igual que siempre. */}
+          {orgSlug !== "domus" && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-stone-600">Texto de cuotas</label>
+              <input
+                value={installmentsText}
+                onChange={(e) => setInstallmentsText(e.target.value)}
+                placeholder='Ej. "12 cuotas sin interés"'
+                className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
+              />
+            </div>
+          )}
         </div>
 
         <div className="space-y-1.5">

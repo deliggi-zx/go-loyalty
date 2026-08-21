@@ -13,6 +13,10 @@ import {
   MapPin,
   PawPrint,
   CalendarClock,
+  Home,
+  MessageSquare,
+  FileText,
+  LayoutGrid,
   ScanLine,
   Settings,
   LogOut,
@@ -54,6 +58,28 @@ const mascotasNavItem = { href: "/dashboard/mascotas", label: "Mascotas", icon: 
 // mascotas-manager.tsx.
 const turnosNavItem = { href: "/dashboard/turnos", label: "Turnos", icon: CalendarClock };
 
+// Solo Domus (Fase 1), y solo role admin (hoy el único role que
+// representa "agente" en esta org) — ver showVisitas en
+// dashboard/layout.tsx. Mismo criterio que turnosNavItem: ruta propia en
+// vez de una pestaña dentro de Catálogo, son datos y acciones separados.
+const visitasNavItem = { href: "/dashboard/visitas", label: "Visitas", icon: Home };
+
+// Solo Domus (Fase 2b), mismo gate que visitasNavItem (slug domus + role
+// admin) — ver showConsultas en dashboard/layout.tsx.
+const consultasNavItem = { href: "/dashboard/consultas", label: "Consultas", icon: MessageSquare };
+
+// Solo Domus (Fase 3), mismo gate que consultasNavItem/visitasNavItem
+// (slug domus + role admin) — ver showOfertas en dashboard/layout.tsx.
+const ofertasNavItem = { href: "/dashboard/ofertas", label: "Ofertas", icon: FileText };
+
+// Solo Domus (Fase 4b), mismo gate que el resto de Domus (slug domus +
+// role admin) — ver showInicio en dashboard/layout.tsx. Va PRIMERO en el
+// nav (antes que "Dashboard"), no reemplaza el redirect del login: ese
+// sigue siendo /dashboard para todas las orgs (compartido, riesgoso de
+// tocar — ver Gate 0 de la Fase 4). Mini-CRM del agente: Contactos/
+// Consultas/Reuniones/Seguimiento, ver app/dashboard/inicio/page.tsx.
+const inicioNavItem = { href: "/dashboard/inicio", label: "Inicio", icon: LayoutGrid };
+
 const trailingNavItems = [
   { href: "/pos", label: "POS", icon: ScanLine },
   { href: "/dashboard/configuracion", label: "Configuración", icon: Settings },
@@ -66,6 +92,10 @@ interface SidebarProps {
   showCourts?: boolean;
   showMascotas?: boolean;
   showTurnos?: boolean;
+  showVisitas?: boolean;
+  showConsultas?: boolean;
+  showOfertas?: boolean;
+  showInicio?: boolean;
 }
 
 export function Sidebar({
@@ -75,15 +105,23 @@ export function Sidebar({
   showCourts = false,
   showMascotas = false,
   showTurnos = false,
+  showVisitas = false,
+  showConsultas = false,
+  showOfertas = false,
+  showInicio = false,
 }: SidebarProps) {
   const pathname = usePathname();
   const navItems = [
+    ...(showInicio ? [inicioNavItem] : []),
     ...baseNavItems,
     ...(showCatalog ? [catalogNavItem] : []),
     ...(showGym ? gymNavItems : []),
     ...(showCourts ? [courtsNavItem] : []),
     ...(showMascotas ? [mascotasNavItem] : []),
     ...(showTurnos ? [turnosNavItem] : []),
+    ...(showVisitas ? [visitasNavItem] : []),
+    ...(showConsultas ? [consultasNavItem] : []),
+    ...(showOfertas ? [ofertasNavItem] : []),
     ...trailingNavItems,
   ];
 

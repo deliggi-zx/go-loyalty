@@ -16,12 +16,12 @@ export default async function EditarProductoPage({
   const orgId = await getOrgId();
   if (!orgId) redirect("/login");
 
-  const [{ data: product }, { data: categories }, { data: images }, { data: carousels }, { data: carouselLinks }] =
+  const [{ data: product }, { data: categories }, { data: images }, { data: carousels }, { data: carouselLinks }, { data: org }] =
     await Promise.all([
       supabase
         .from("products")
         .select(
-          "id, name, description, price, category_id, active, brand, screen_size_inches, specs, compare_at_price, installments_text, shipping_badge_text"
+          "id, name, description, price, currency, category_id, active, brand, screen_size_inches, specs, compare_at_price, installments_text, shipping_badge_text"
         )
         .eq("id", params.id)
         .eq("org_id", orgId)
@@ -47,6 +47,9 @@ export default async function EditarProductoPage({
         .from("catalog_carousel_products")
         .select("carousel_id")
         .eq("product_id", params.id),
+      // Fase moneda/cuotas: mismo criterio que productos/nuevo/page.tsx —
+      // ver comentario ahí.
+      supabase.from("loyalty_organizations").select("slug").eq("id", orgId).maybeSingle(),
     ]);
 
   if (!product) return notFound();
@@ -64,7 +67,7 @@ export default async function EditarProductoPage({
       </header>
 
       <div className="p-8 space-y-10">
-        <ProductForm categories={categories ?? []} product={product} />
+        <ProductForm categories={categories ?? []} product={product} orgSlug={org?.slug} />
         <ProductImagesManager orgId={orgId} productId={product.id} images={images ?? []} />
         <ProductSpecsManager
           productId={product.id}

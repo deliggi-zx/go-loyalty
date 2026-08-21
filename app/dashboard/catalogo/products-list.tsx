@@ -4,13 +4,14 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ToggleLeft, ToggleRight, Pencil, Package, Star } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 import { toggleProductActive, toggleProductFeatured } from "./actions";
 
 export interface ProductRow {
   id: string;
   name: string;
   price: number;
+  currency: string;
   active: boolean;
   is_featured: boolean;
   category_id: string | null;
@@ -183,7 +184,7 @@ export function ProductsList({ products: initialProducts, categories }: Products
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold text-stone-900 tabular-nums">
-                    ${product.price.toLocaleString("es-AR")}
+                    {formatPrice(product.price, product.currency)}
                   </span>
                   <Link
                     href={`/dashboard/catalogo/productos/${product.id}`}

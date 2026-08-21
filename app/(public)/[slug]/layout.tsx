@@ -95,6 +95,10 @@ const FLOATING_HEADER_SLUGS = new Set(["bike"]);
 // de texto (h1 con org.name) de siempre.
 const ORG_LOGO_LOCKUP: Record<string, string> = {
   superelectro: "/superelectro/superelectro-logo-completo.png",
+  // Fase logo Domus: isotipo (D→casa) + wordmark + tagline "Soluciones
+  // Inmobiliarias", fondo marfil — coincide con background_color de la
+  // org, mismo criterio que el resto de este mapa.
+  domus: "/domus/domus-logo-completo.png",
 };
 
 export default async function TenantLayout({
@@ -190,6 +194,7 @@ export default async function TenantLayout({
       orgId={org.id}
       floatingOverlay={isFloatingHeaderOrg}
       showScanIcon={!isFloatingHeaderOrg}
+      orgSlug={params.slug}
       menuProps={{
         slug: params.slug,
         orgName: org.name,
