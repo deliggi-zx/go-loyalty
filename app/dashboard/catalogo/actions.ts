@@ -121,6 +121,8 @@ export interface ProductInput {
   name: string;
   description: string | null;
   price: number;
+  // Fase moneda: 'ARS' | 'USD' — ver migración add_currency_to_products.
+  currency: string;
   category_id: string | null;
   active: boolean;
   brand: string | null;
@@ -154,6 +156,7 @@ export async function createProduct(data: ProductInput): Promise<string> {
       name: data.name,
       description: data.description,
       price: data.price,
+      currency: data.currency,
       category_id: data.category_id,
       active: data.active,
       brand: data.brand,
@@ -182,6 +185,7 @@ export async function updateProduct(id: string, data: ProductInput) {
       name: data.name,
       description: data.description,
       price: data.price,
+      currency: data.currency,
       category_id: data.category_id,
       active: data.active,
       brand: data.brand,

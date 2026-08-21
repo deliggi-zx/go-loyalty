@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getTenantOrg, getProductDetail } from "../../data";
+import { getTenantOrg, getTenantUser, getProductDetail } from "../../data";
 import { ProductImageCarousel } from "../../product-image-carousel";
 import { ProductDetailActions } from "../../product-detail-actions";
+import { PropertyVisitBooking } from "../../property-visit-booking";
+import { LoginForm } from "../../login-form";
+import { formatPrice } from "@/lib/utils";
 
 // Ficha de producto individual (Fase 3) — /[slug]/producto/[id]. Mismo
 // patrón de ruteo que /[slug]/sede/[locationId] (Gym2): org por slug,
@@ -21,6 +24,13 @@ export default async function ProductoPage({
 
   const product = await getProductDetail(org.id, params.id);
   if (!product) return notFound();
+
+  // Fase 1 Domus: "Solicitar visita" solo para esta org — ver mismo
+  // patrón orgSlug === "domus" que ProductDetailActions/CartPanel más
+  // abajo. getTenantUser() está cache()-ado (ver data.ts), así que no
+  // duplica la llamada que ya hace layout.tsx en el mismo request.
+  const isDomus = params.slug === "domus";
+  const user = isDomus ? await getTenantUser() : null;
 
   const primary = org.primary_color ?? "#f59e0b";
   const images = [...product.images].sort((a, b) => a.display_order - b.display_order);
@@ -47,7 +57,7 @@ export default async function ProductoPage({
         )}
         <h1 className="text-xl font-semibold text-stone-900">{product.name}</h1>
         <p className="text-2xl font-bold" style={{ color: primary }}>
-          ${product.price.toLocaleString("es-AR")}
+          {formatPrice(product.price, product.currency)}
         </p>
       </div>
 
@@ -62,7 +72,25 @@ export default async function ProductoPage({
         imageUrl={images[0]?.image_url ?? null}
         primaryColor={primary}
         whatsappNumber={org.whatsapp_number}
+        orgSlug={params.slug}
       />
+
+      {isDomus &&
+        (user ? (
+          <PropertyVisitBooking
+            slug={params.slug}
+            orgId={org.id}
+            productId={product.id}
+            primaryColor={primary}
+          />
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm text-stone-600 text-center">
+              Iniciá sesión para solicitar una visita.
+            </p>
+            <LoginForm primaryColor={primary} orgId={org.id} />
+          </div>
+        ))}
 
       {specsEntries.length > 0 && (
         <div className="space-y-2">

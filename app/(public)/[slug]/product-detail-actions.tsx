@@ -11,6 +11,10 @@ interface ProductDetailActionsProps {
   imageUrl: string | null;
   primaryColor: string;
   whatsappNumber: string | null;
+  // Fase Carrito→Favoritos: mismo patrón que en ClientHeader/CartPanel/
+  // ProductModal — ver comentario en ClientHeader. addItem/useCart de
+  // abajo no cambian, solo el texto del botón.
+  orgSlug?: string;
 }
 
 // Fase 3: acciones de la ficha de producto — mismo "Agregar al carrito"
@@ -26,7 +30,9 @@ export function ProductDetailActions({
   imageUrl,
   primaryColor,
   whatsappNumber,
+  orgSlug,
 }: ProductDetailActionsProps) {
+  const isDomus = orgSlug === "domus";
   const [added, setAdded] = useState(false);
   const { addItem } = useCart();
 
@@ -49,7 +55,7 @@ export function ProductDetailActions({
         className="w-full py-3 rounded-xl text-white font-medium transition-opacity disabled:opacity-70"
         style={{ backgroundColor: primaryColor }}
       >
-        {added ? "Agregado ✓" : "Agregar al carrito"}
+        {added ? "Agregado ✓" : isDomus ? "Agregar a favoritos" : "Agregar al carrito"}
       </button>
 
       {whatsappHref && (

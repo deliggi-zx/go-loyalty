@@ -15,6 +15,10 @@ import { GymFeaturedBanner } from "../gym-featured-banner";
 import { GymRecommendedPopup } from "../gym-recommended-popup";
 import { VetMyPets } from "../vet-my-pets";
 import { VetReviewsSection } from "../vet-reviews-section";
+import { PropertyOfferForm } from "../property-offer-form";
+import { MyVisitsList, type MyVisitRow } from "../my-visits-list";
+import { todayLocalYmd } from "../vet-appointments-config";
+import { formatPrice } from "@/lib/utils";
 
 export default async function PerfilPage({
   params,
@@ -72,6 +76,77 @@ export default async function PerfilPage({
   // arriba si no hay sesión), así que el role siempre se puede pedir.
   const vetRole = hasVetFeatures ? await getOrgRole(org.id, user.id) : null;
   const vetReviews = hasVetFeatures ? await getVetReviews(org.id, user.id, vetRole) : [];
+
+  // Fase 3 Domus: "ofrecer mi propiedad" — mismo criterio simple (slug
+  // directo) que isBike/hasVetFeatures de este archivo. Esta página ya
+  // redirige arriba si !user, así que no hace falta gating adicional acá
+  // (a diferencia de Visitas/Consultas, que viven en páginas públicas sin
+  // login obligatorio).
+  const isDomus = params.slug === "domus";
+
+  // Fase 5 Domus: "Mis consultas" / "Mis visitas" / "Mis propiedades
+  // ofrecidas" — mismo criterio isDomus que "ofrecer mi propiedad" arriba,
+  // tres queries scoped al profile_id/client_profile_id/owner_profile_id
+  // de ESTE usuario (nunca toda la org, a diferencia de los paneles del
+  // agente en /dashboard). Se piden en paralelo, no en cascada.
+  const [{ data: myInquiriesData }, { data: myVisitsData }, { data: myOffersData }] = isDomus
+    ? await Promise.all([
+        supabase
+          .from("domus_general_inquiries")
+          .select("id, message, status, created_at")
+          .eq("org_id", org.id)
+          .eq("client_profile_id", user.id)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("domus_property_visits")
+          .select("id, product_id, visit_date, visit_time, status")
+          .eq("org_id", org.id)
+          .eq("client_profile_id", user.id)
+          .order("visit_date", { ascending: false })
+          .order("visit_time", { ascending: false }),
+        supabase
+          .from("domus_property_offers")
+          .select(
+            "id, operation_type, property_type, address, requested_price, currency, status, scheduled_at, created_at"
+          )
+          .eq("org_id", org.id)
+          .eq("owner_profile_id", user.id)
+          .order("created_at", { ascending: false }),
+      ])
+    : [{ data: null }, { data: null }, { data: null }];
+
+  const myInquiries = myInquiriesData ?? [];
+  const myVisitsRaw = myVisitsData ?? [];
+  const myOffers = myOffersData ?? [];
+
+  const myVisitProductIds = Array.from(new Set(myVisitsRaw.map((v) => v.product_id)));
+  const { data: myVisitProductsData } =
+    isDomus && myVisitProductIds.length > 0
+      ? await supabase.from("products").select("id, name").in("id", myVisitProductIds)
+      : { data: [] as { id: string; name: string }[] };
+  const productNameById = new Map((myVisitProductsData ?? []).map((p) => [p.id, p.name]));
+
+  const today = todayLocalYmd();
+  const myVisits: MyVisitRow[] = myVisitsRaw.map((v) => ({
+    id: v.id,
+    propertyName: productNameById.get(v.product_id) ?? "—",
+    date: v.visit_date,
+    time: v.visit_time.slice(0, 5),
+    status: v.status as MyVisitRow["status"],
+    canCancel: v.status === "confirmed" && v.visit_date >= today,
+  }));
+
+  const INQUIRY_STATUS_LABEL: Record<string, string> = {
+    nuevo: "Enviada",
+    contactado: "Te contactamos",
+    cerrado: "Resuelta",
+  };
+  const OFFER_STATUS_LABEL: Record<string, string> = {
+    nuevo: "En revisión",
+    sumado_al_stock: "¡Publicada!",
+    reunion_agendada: "Reunión agendada",
+    seguimiento: "En seguimiento",
+  };
 
   const userName = profile?.full_name || user.email?.split("@")[0] || "Socio";
   const hour = new Date().getHours();
@@ -145,6 +220,94 @@ export default async function PerfilPage({
           mismo criterio de "un bloque más" que el resto de esta página. */}
       {hasVetFeatures && (
         <VetReviewsSection slug={params.slug} orgId={org.id} primaryColor={primary} reviews={vetReviews} />
+      )}
+
+      {/* Ofrecer mi propiedad (Fase 3 Domus) — bloque propio, mismo
+          criterio de "un bloque más" que Mis Mascotas/Comentarios arriba. */}
+      {isDomus && (
+        <PropertyOfferForm slug={params.slug} orgId={org.id} userId={user.id} primaryColor={primary} />
+      )}
+
+      {/* Fase 5 Domus: historial del cliente — tres secciones separadas,
+          cada una con su propio título (pedido explícito: no mezclar en
+          una sola lista), mismo estilo de card blanca con borde que
+          "Historial de consumo" más abajo. */}
+      {isDomus && (
+        <div className="space-y-2">
+          <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
+            Mis consultas
+          </h2>
+          {myInquiries.length > 0 ? (
+            <div className="bg-white divide-y divide-stone-100 border border-stone-100 rounded-lg overflow-hidden">
+              {myInquiries.map((i) => (
+                <div key={i.id} className="px-4 py-3 text-sm space-y-0.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs text-stone-400">
+                      {new Date(i.created_at).toLocaleDateString("es-AR", {
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </span>
+                    <span className="text-xs font-medium text-stone-500">
+                      {INQUIRY_STATUS_LABEL[i.status] ?? i.status}
+                    </span>
+                  </div>
+                  <p className="text-stone-700">{i.message}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-stone-400">Todavía no hiciste ninguna consulta.</p>
+          )}
+        </div>
+      )}
+
+      {isDomus && (
+        <div className="space-y-2">
+          <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
+            Mis visitas
+          </h2>
+          <MyVisitsList slug={params.slug} visits={myVisits} primaryColor={primary} />
+        </div>
+      )}
+
+      {isDomus && (
+        <div className="space-y-2">
+          <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
+            Mis propiedades ofrecidas
+          </h2>
+          {myOffers.length > 0 ? (
+            <div className="bg-white divide-y divide-stone-100 border border-stone-100 rounded-lg overflow-hidden">
+              {myOffers.map((o) => (
+                <div key={o.id} className="px-4 py-3 text-sm space-y-0.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-medium text-stone-900">
+                      {o.property_type} en {o.operation_type} — {o.address}
+                    </p>
+                    <span className="text-xs font-medium text-stone-500 shrink-0">
+                      {OFFER_STATUS_LABEL[o.status] ?? o.status}
+                      {o.status === "reunion_agendada" && o.scheduled_at && (
+                        <>
+                          {" "}
+                          ·{" "}
+                          {new Date(o.scheduled_at).toLocaleDateString("es-AR", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </>
+                      )}
+                    </span>
+                  </div>
+                  <p className="text-stone-500">{formatPrice(o.requested_price, o.currency)}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-stone-400">Todavía no ofreciste ninguna propiedad.</p>
+          )}
+        </div>
       )}
 
       <div className="flex justify-center">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Menu, ScanLine, ShoppingCart, User } from "lucide-react";
+import { Menu, ScanLine, ShoppingCart, Star, User } from "lucide-react";
 import { SideMenu, type SideMenuProps } from "./side-menu";
 import { CartPanel } from "./cart-panel";
 import { LoginModal } from "./login-modal";
@@ -36,6 +36,11 @@ interface ClientHeaderProps {
   // Ícono de escaneo QR — hoy se saca por completo (no solo se oculta)
   // para "bike" (Fase 3c), no tiene lector del otro lado todavía.
   showScanIcon?: boolean;
+  // Fase Carrito→Favoritos: mismo patrón que orgSlug en ProductForm
+  // (dashboard/catalogo/product-form.tsx) — slug de la org activa, solo
+  // para el toggle carrito/favoritos scopeado a Domus acá abajo y en
+  // CartPanel. El resto del componente es genérico y no la lee.
+  orgSlug?: string;
 }
 
 export function ClientHeader({
@@ -50,12 +55,17 @@ export function ClientHeader({
   orgId,
   floatingOverlay = false,
   showScanIcon = true,
+  orgSlug,
 }: ClientHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const { totalQuantity } = useCart();
   const showCart = catalogType === "products";
+  // Fase Carrito→Favoritos: mismo mecanismo (useCart, cartOpen, badge de
+  // totalQuantity) para todas las orgs — acá solo cambia qué ícono/texto
+  // se muestra, nunca la lógica. Ver mismo criterio en CartPanel.
+  const isDomus = orgSlug === "domus";
 
   const iconColorClass = neonTheme ? "neon-icon" : floatingOverlay ? "bike-icon" : "text-white";
   const iconActiveClass = neonTheme ? "neon-icon-active" : floatingOverlay ? "bike-icon-active" : "";
@@ -102,12 +112,20 @@ export function ClientHeader({
           {showCart && (
             <button
               onClick={() => setCartOpen(true)}
-              aria-label="Abrir carrito"
+              aria-label={isDomus ? "Abrir favoritos" : "Abrir carrito"}
               className="relative p-2"
             >
-              <ShoppingCart
-                className={`w-5 h-5 ${iconColorClass} ${totalQuantity > 0 ? iconActiveClass : ""}`}
-              />
+              {isDomus ? (
+                <Star
+                  className={`w-5 h-5 ${iconColorClass} ${totalQuantity > 0 ? iconActiveClass : ""} ${
+                    totalQuantity > 0 ? "fill-current" : ""
+                  }`}
+                />
+              ) : (
+                <ShoppingCart
+                  className={`w-5 h-5 ${iconColorClass} ${totalQuantity > 0 ? iconActiveClass : ""}`}
+                />
+              )}
               {totalQuantity > 0 && (
                 <span
                   className="absolute top-0 right-0 min-w-[16px] h-4 px-1 rounded-full bg-white text-[10px] font-semibold flex items-center justify-center"
@@ -147,6 +165,7 @@ export function ClientHeader({
           isOpen={cartOpen}
           onClose={() => setCartOpen(false)}
           primaryColor={primaryColor}
+          orgSlug={orgSlug}
         />
       )}
       {showLoginIcon && (

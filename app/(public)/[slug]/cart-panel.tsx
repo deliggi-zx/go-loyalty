@@ -1,18 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { X, ShoppingCart, Minus, Plus, ImageOff } from "lucide-react";
+import { X, ShoppingCart, Star, Minus, Plus, ImageOff } from "lucide-react";
 import { useCart } from "./cart-context";
 
 interface CartPanelProps {
   isOpen: boolean;
   onClose: () => void;
   primaryColor: string;
+  // Fase Carrito→Favoritos: mismo patrón que en ClientHeader — ver
+  // comentario ahí. La lógica de items/cantidad/total de abajo es
+  // exactamente la misma para las dos orgs, no se toca cart-context.
+  orgSlug?: string;
 }
 
-export function CartPanel({ isOpen, onClose, primaryColor }: CartPanelProps) {
+export function CartPanel({ isOpen, onClose, primaryColor, orgSlug }: CartPanelProps) {
   const { items, setQuantity, clear } = useCart();
   const [confirmed, setConfirmed] = useState(false);
+  const isDomus = orgSlug === "domus";
 
   const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
@@ -41,10 +46,10 @@ export function CartPanel({ isOpen, onClose, primaryColor }: CartPanelProps) {
         }`}
       >
         <div className="flex items-center justify-between px-5 h-14 border-b border-stone-100 shrink-0">
-          <span className="font-semibold text-stone-900">Carrito</span>
+          <span className="font-semibold text-stone-900">{isDomus ? "Favoritos" : "Carrito"}</span>
           <button
             onClick={handleClose}
-            aria-label="Cerrar carrito"
+            aria-label={isDomus ? "Cerrar favoritos" : "Cerrar carrito"}
             className="p-1.5 text-stone-400 hover:text-stone-700 transition-colors"
           >
             <X className="w-5 h-5" />
@@ -57,11 +62,17 @@ export function CartPanel({ isOpen, onClose, primaryColor }: CartPanelProps) {
               className="w-14 h-14 rounded-full flex items-center justify-center"
               style={{ backgroundColor: primaryColor }}
             >
-              <ShoppingCart className="w-6 h-6 text-white" />
+              {isDomus ? (
+                <Star className="w-6 h-6 text-white fill-current" />
+              ) : (
+                <ShoppingCart className="w-6 h-6 text-white" />
+              )}
             </div>
             <h3 className="text-lg font-semibold text-stone-900">¡Listo!</h3>
             <p className="text-sm text-stone-500">
-              Te contactamos para coordinar el pago y la entrega.
+              {isDomus
+                ? "Un agente se va a poner en contacto a la brevedad."
+                : "Te contactamos para coordinar el pago y la entrega."}
             </p>
             <button
               onClick={handleClose}
@@ -73,8 +84,14 @@ export function CartPanel({ isOpen, onClose, primaryColor }: CartPanelProps) {
           </div>
         ) : items.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
-            <ShoppingCart className="w-10 h-10 text-stone-200 mb-3" />
-            <p className="text-sm text-stone-400">Todavía no agregaste nada.</p>
+            {isDomus ? (
+              <Star className="w-10 h-10 text-stone-200 mb-3" />
+            ) : (
+              <ShoppingCart className="w-10 h-10 text-stone-200 mb-3" />
+            )}
+            <p className="text-sm text-stone-400">
+              {isDomus ? "Todavía no marcaste ningún favorito." : "Todavía no agregaste nada."}
+            </p>
           </div>
         ) : (
           <>
@@ -141,7 +158,11 @@ export function CartPanel({ isOpen, onClose, primaryColor }: CartPanelProps) {
                 className="w-full py-3 rounded-xl text-white font-medium transition-opacity hover:opacity-90"
                 style={{ backgroundColor: primaryColor }}
               >
-                Finalizar compra
+                {/* Fase Carrito→Favoritos: placeholder simple para Domus,
+                    sin funcionalidad real todavía (misma handleCheckout de
+                    siempre: limpia y muestra la pantalla de confirmación) —
+                    la conexión real con Consultas es la Fase 2, aparte. */}
+                {isDomus ? "Enviar consulta" : "Finalizar compra"}
               </button>
             </div>
           </>

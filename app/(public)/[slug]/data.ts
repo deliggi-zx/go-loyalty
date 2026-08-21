@@ -102,6 +102,11 @@ export interface CatalogProduct {
   // hasProductDetail en product-detail-utils.ts. No se muestra en la
   // grilla.
   specs: Record<string, string> | null;
+  // Fase moneda: 'ARS' | 'USD' (columna con default 'ARS', ver migración
+  // add_currency_to_products) — determina el símbolo que arma
+  // formatPrice() en lib/utils.ts. Genérico para cualquier org, no
+  // exclusivo de Domus.
+  currency: string;
   images: CatalogImage[];
 }
 
@@ -140,7 +145,9 @@ export const getProductCatalog = cache(async (orgId: string): Promise<CatalogPro
   const supabase = createClient();
   const { data: productsData } = await supabase
     .from("products")
-    .select("id, name, description, price, category_id, brand, screen_size_inches, specs, display_order")
+    .select(
+      "id, name, description, price, category_id, brand, screen_size_inches, specs, currency, display_order"
+    )
     .eq("org_id", orgId)
     .eq("active", true)
     .order("display_order", { ascending: true });
@@ -173,6 +180,7 @@ export const getProductCatalog = cache(async (orgId: string): Promise<CatalogPro
     brand: p.brand,
     screen_size_inches: p.screen_size_inches,
     specs: (p.specs as Record<string, string> | null) ?? null,
+    currency: p.currency,
     images: imagesByProduct.get(p.id) ?? [],
   }));
 });
@@ -185,6 +193,8 @@ export interface FeaturedProduct {
   // Fase 4: mismo criterio que CatalogProduct.specs — ver hasProductDetail
   // en product-detail-utils.ts.
   specs: Record<string, string> | null;
+  // Fase moneda: ver CatalogProduct.currency más arriba.
+  currency: string;
 }
 
 // Productos marcados como destacados desde el admin (products.is_featured,
@@ -196,7 +206,7 @@ export const getFeaturedProducts = cache(async (orgId: string): Promise<Featured
   const supabase = createClient();
   const { data: productsData } = await supabase
     .from("products")
-    .select("id, name, price, specs, display_order")
+    .select("id, name, price, specs, currency, display_order")
     .eq("org_id", orgId)
     .eq("active", true)
     .eq("is_featured", true)
@@ -227,6 +237,7 @@ export const getFeaturedProducts = cache(async (orgId: string): Promise<Featured
     price: p.price,
     imageUrl: mainImageByProduct.get(p.id) ?? null,
     specs: (p.specs as Record<string, string> | null) ?? null,
+    currency: p.currency,
   }));
 });
 
@@ -244,6 +255,8 @@ export interface ProductDetail {
   brand: string | null;
   screen_size_inches: number | null;
   specs: Record<string, string> | null;
+  // Fase moneda: ver CatalogProduct.currency más arriba.
+  currency: string;
   images: CatalogImage[];
 }
 
@@ -267,6 +280,8 @@ export interface CarouselProductItem {
   shippingBadgeText: string | null;
   imageUrl: string | null;
   specs: Record<string, string> | null;
+  // Fase moneda: ver CatalogProduct.currency más arriba.
+  currency: string;
 }
 
 export interface ProductCarousel {
@@ -311,7 +326,7 @@ export const getActiveCarousels = cache(async (orgId: string): Promise<ProductCa
   const { data: productsData } = await supabase
     .from("products")
     .select(
-      "id, name, price, compare_at_price, installments_text, shipping_badge_text, specs"
+      "id, name, price, compare_at_price, installments_text, shipping_badge_text, specs, currency"
     )
     .in("id", productIds)
     .eq("org_id", orgId)
@@ -350,6 +365,7 @@ export const getActiveCarousels = cache(async (orgId: string): Promise<ProductCa
           shippingBadgeText: p.shipping_badge_text,
           imageUrl: mainImageByProduct.get(p.id) ?? null,
           specs: (p.specs as Record<string, string> | null) ?? null,
+          currency: p.currency,
         }));
       return { id: c.id, title: c.title, products, autoplay: c.autoplay };
     })
@@ -361,7 +377,7 @@ export const getProductDetail = cache(
     const supabase = createClient();
     const { data: product } = await supabase
       .from("products")
-      .select("id, name, description, price, brand, screen_size_inches, specs")
+      .select("id, name, description, price, brand, screen_size_inches, specs, currency")
       .eq("id", productId)
       .eq("org_id", orgId)
       .eq("active", true)
@@ -383,6 +399,7 @@ export const getProductDetail = cache(
       brand: product.brand,
       screen_size_inches: product.screen_size_inches,
       specs: (product.specs as Record<string, string> | null) ?? null,
+      currency: product.currency,
       images: imagesData ?? [],
     };
   }

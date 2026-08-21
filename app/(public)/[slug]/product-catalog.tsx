@@ -7,6 +7,7 @@ import { ProductModal } from "./product-modal";
 import { CategoryDrilldown, type CatalogSelection } from "./category-drilldown";
 import type { CatalogCategory, CatalogProduct } from "./data";
 import { hasProductDetail } from "./product-detail-utils";
+import { formatPrice } from "@/lib/utils";
 
 interface ProductCatalogProps {
   slug: string;
@@ -179,7 +180,7 @@ export function ProductCatalog({
                     {product.name}
                   </p>
                   <p className="text-sm font-semibold" style={{ color: primaryColor }}>
-                    ${product.price.toLocaleString("es-AR")}
+                    {formatPrice(product.price, product.currency)}
                   </p>
                 </div>
               </>
@@ -211,6 +212,7 @@ export function ProductCatalog({
           product={selectedProduct}
           primaryColor={primaryColor}
           onClose={() => setSelectedProduct(null)}
+          orgSlug={slug}
         />
       )}
 

@@ -5,14 +5,20 @@ import { X } from "lucide-react";
 import type { CatalogProduct } from "./data";
 import { useCart } from "./cart-context";
 import { ProductImageCarousel } from "./product-image-carousel";
+import { formatPrice } from "@/lib/utils";
 
 interface ProductModalProps {
   product: CatalogProduct;
   primaryColor: string;
   onClose: () => void;
+  // Fase Carrito→Favoritos: mismo patrón que en ClientHeader/CartPanel —
+  // ver comentario ahí. addItem/useCart de abajo no cambian, solo el
+  // texto del botón.
+  orgSlug?: string;
 }
 
-export function ProductModal({ product, primaryColor, onClose }: ProductModalProps) {
+export function ProductModal({ product, primaryColor, onClose, orgSlug }: ProductModalProps) {
+  const isDomus = orgSlug === "domus";
   const images = [...product.images].sort((a, b) => a.display_order - b.display_order);
   const [added, setAdded] = useState(false);
   const { addItem } = useCart();
@@ -46,7 +52,7 @@ export function ProductModal({ product, primaryColor, onClose }: ProductModalPro
           <div>
             <h2 className="text-lg font-semibold text-stone-900">{product.name}</h2>
             <p className="text-xl font-bold mt-1" style={{ color: primaryColor }}>
-              ${product.price.toLocaleString("es-AR")}
+              {formatPrice(product.price, product.currency)}
             </p>
           </div>
 
@@ -60,7 +66,7 @@ export function ProductModal({ product, primaryColor, onClose }: ProductModalPro
             className="w-full py-3 rounded-xl text-white font-medium transition-opacity disabled:opacity-70"
             style={{ backgroundColor: primaryColor }}
           >
-            {added ? "Agregado ✓" : "Agregar al carrito"}
+            {added ? "Agregado ✓" : isDomus ? "Agregar a favoritos" : "Agregar al carrito"}
           </button>
         </div>
       </div>

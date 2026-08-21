@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ImageOff } from "lucide-react";
 import type { CarouselProductItem } from "./data";
 import { hasProductDetail } from "./product-detail-utils";
+import { formatPrice } from "@/lib/utils";
 
 interface ProductRailProps {
   slug: string;
@@ -143,11 +144,11 @@ export function ProductRail({
                 <p className="text-sm font-medium text-stone-900 line-clamp-2">{product.name}</p>
                 {showCompareAt && (
                   <p className="text-xs text-stone-400 line-through">
-                    ${product.compareAtPrice!.toLocaleString("es-AR")}
+                    {formatPrice(product.compareAtPrice!, product.currency)}
                   </p>
                 )}
                 <p className="text-sm font-semibold" style={{ color: primaryColor }}>
-                  ${product.price.toLocaleString("es-AR")}
+                  {formatPrice(product.price, product.currency)}
                 </p>
                 {product.installmentsText && (
                   <p className="text-[11px] text-stone-500">{product.installmentsText}</p>
