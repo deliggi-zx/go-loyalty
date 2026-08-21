@@ -150,6 +150,14 @@ export default async function TenantLayout({
   const hasGymFeatures = gymLocations.length > 0;
   const isFloatingHeaderOrg = FLOATING_HEADER_SLUGS.has(params.slug);
 
+  // Ajuste 1 Domus: mismo criterio simple (slug directo) que ORG_LOGO_LOCKUP/
+  // isVetOrgSlug de este archivo — Domus también abre el login desde el
+  // ícono del header en vez del recuadro inline de la home (ver showLoginIcon
+  // más abajo), pero SIN heredar neonTheme ni requireInviteCode: esos dos
+  // siguen exclusivos de Gym2 (showLoginIcon ya es una prop independiente de
+  // neonTheme en ClientHeader/LoginModal, no hace falta tocar nada ahí).
+  const isDomusOrg = params.slug === "domus";
+
   // Veterinaria (Fase 0, Huellitas): la home es una pantalla bespoke propia
   // (video full-screen + botones huella, ver page.tsx/huellitas-home.tsx),
   // sin el header/banner/hero-video/ticker estándar de esta plantilla. En
@@ -188,7 +196,7 @@ export default async function TenantLayout({
       primaryColor={primary}
       userDisplayName={user ? userDisplayName : null}
       catalogType={org.catalog_type}
-      showLoginIcon={hasGymFeatures && !user}
+      showLoginIcon={(hasGymFeatures || isDomusOrg) && !user}
       neonTheme={hasGymFeatures}
       requireInviteCode={hasGymFeatures}
       orgId={org.id}

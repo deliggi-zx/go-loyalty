@@ -8,10 +8,11 @@ export interface MyVisitRow {
   propertyName: string;
   date: string;
   time: string;
-  status: "confirmed" | "cancelled";
-  // Calculado en el server (status==='confirmed' && fecha >= hoy) — ver
-  // perfil/page.tsx. No se recalcula acá para no duplicar el criterio de
-  // "hoy" en dos lugares (mismo espíritu que todayLocalYmd centralizado).
+  status: "pending" | "confirmed" | "rejected" | "cancelled";
+  // Calculado en el server (status en pending/confirmed && fecha >= hoy)
+  // — ver perfil/page.tsx. No se recalcula acá para no duplicar el
+  // criterio de "hoy" en dos lugares (mismo espíritu que todayLocalYmd
+  // centralizado).
   canCancel: boolean;
 }
 
@@ -22,12 +23,16 @@ interface MyVisitsListProps {
 }
 
 const STATUS_LABEL: Record<MyVisitRow["status"], string> = {
+  pending: "Esperando confirmación",
   confirmed: "Confirmada",
+  rejected: "No disponible",
   cancelled: "Cancelada",
 };
 
 const STATUS_BADGE_CLASS: Record<MyVisitRow["status"], string> = {
+  pending: "bg-amber-50 text-amber-700",
   confirmed: "bg-emerald-50 text-emerald-700",
+  rejected: "bg-stone-100 text-stone-500",
   cancelled: "bg-stone-100 text-stone-500",
 };
 

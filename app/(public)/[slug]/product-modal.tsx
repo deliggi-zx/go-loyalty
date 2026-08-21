@@ -28,7 +28,11 @@ export function ProductModal({ product, primaryColor, onClose, orgSlug }: Produc
       id: product.id,
       name: product.name,
       price: product.price,
-      imageUrl: images[0]?.image_url ?? null,
+      // Fase video: la miniatura del carrito es un <img>, se salta un
+      // video si quedó primero en la galería (images acá arriba se pasa
+      // completo, con video incluido, a ProductImageCarousel — esto es
+      // aparte, solo para esta miniatura puntual).
+      imageUrl: images.find((img) => img.media_type !== "video")?.image_url ?? null,
     });
     setAdded(true);
   }

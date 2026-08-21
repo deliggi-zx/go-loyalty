@@ -58,8 +58,25 @@ export function ProductImageCarousel({
               className="absolute inset-0 transition-opacity duration-300"
               style={{ opacity: i === current ? 1 : 0, pointerEvents: i === current ? "auto" : "none" }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={img.image_url} alt={alt} className="w-full h-full object-cover" />
+              {/* Fase video (Domus): mezclado en la misma galería que las
+                  fotos, por display_order — sin autoplay (el visitante
+                  cambia de slide con las flechas/dots/swipe de siempre,
+                  el video no arranca solo). preload="metadata" en vez de
+                  "auto" para no descargar los N videos enteros de una
+                  propiedad con varios, ya que todos quedan montados a la
+                  vez (solo el actual es visible, ver opacity arriba). */}
+              {img.media_type === "video" ? (
+                <video
+                  src={img.image_url}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={img.image_url} alt={alt} className="w-full h-full object-cover" />
+              )}
             </div>
           ))
         ) : (

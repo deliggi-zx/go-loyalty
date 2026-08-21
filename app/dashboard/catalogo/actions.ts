@@ -274,10 +274,14 @@ async function requireOwnedProduct(productId: string, orgId: string) {
   if (!product) throw new Error("Producto no encontrado");
 }
 
+// Fase video (Domus): mediaType 'image' por default (mismo default que la
+// columna) — cualquier caller existente que no lo pasa sigue insertando
+// fotos exactamente igual que antes.
 export async function addProductImage(
   productId: string,
   imageUrl: string,
-  displayOrder: number
+  displayOrder: number,
+  mediaType: "image" | "video" = "image"
 ) {
   const supabase = createClient();
   const orgId = await requireOrgId();
@@ -285,8 +289,13 @@ export async function addProductImage(
 
   const { data: inserted, error } = await supabase
     .from("product_images")
-    .insert({ product_id: productId, image_url: imageUrl, display_order: displayOrder })
-    .select("id, image_url, display_order")
+    .insert({
+      product_id: productId,
+      image_url: imageUrl,
+      display_order: displayOrder,
+      media_type: mediaType,
+    })
+    .select("id, image_url, display_order, media_type")
     .single();
 
   if (error) throw new Error(error.message);

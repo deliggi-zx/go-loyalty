@@ -69,7 +69,10 @@ export default async function ProductoPage({
         productId={product.id}
         productName={product.name}
         price={product.price}
-        imageUrl={images[0]?.image_url ?? null}
+        // Fase video: miniatura del carrito, se salta un video si quedó
+        // primero en la galería (el carrusel de arriba sí recibe `images`
+        // completo, con video incluido).
+        imageUrl={images.find((img) => img.media_type !== "video")?.image_url ?? null}
         primaryColor={primary}
         whatsappNumber={org.whatsapp_number}
         orgSlug={params.slug}

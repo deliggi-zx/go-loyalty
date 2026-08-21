@@ -257,31 +257,38 @@ export function ProductForm({ categories, product, orgSlug }: ProductFormProps) 
           </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-stone-600">Marca</label>
-            <input
-              value={brand}
-              onChange={(e) => setBrand(e.target.value)}
-              placeholder="Opcional"
-              className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
-            />
+        {/* Fase campos Domus: Marca y Tamaño de pantalla no tienen
+            sentido conceptual en una vertical inmobiliaria — mismo
+            criterio de slug directo (no catalog_type) que ya usa "Texto
+            de cuotas" más abajo. SuperElectro y el resto siguen viendo
+            estos dos campos exactamente igual que antes. */}
+        {orgSlug !== "domus" && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-stone-600">Marca</label>
+              <input
+                value={brand}
+                onChange={(e) => setBrand(e.target.value)}
+                placeholder="Opcional"
+                className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-stone-600">
+                Tamaño de pantalla (pulgadas)
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={screenSizeInches}
+                onChange={(e) => setScreenSizeInches(e.target.value)}
+                placeholder="Solo para TVs/monitores"
+                className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
+              />
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-stone-600">
-              Tamaño de pantalla (pulgadas)
-            </label>
-            <input
-              type="number"
-              min="0"
-              step="any"
-              value={screenSizeInches}
-              onChange={(e) => setScreenSizeInches(e.target.value)}
-              placeholder="Solo para TVs/monitores"
-              className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
-            />
-          </div>
-        </div>
+        )}
 
         {/* Fase Home: tres campos cosméticos para las cards del
             product-rail — sin lógica real detrás (ver comentario en
@@ -289,26 +296,24 @@ export function ProductForm({ categories, product, orgSlug }: ProductFormProps) 
             campos "core" del producto porque se guardan con el mismo
             botón "Guardar cambios" (a diferencia de specs/imágenes/
             carruseles, que tienen su propia sección con guardado
-            independiente más abajo en la página de edición). */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-stone-600">Precio de lista</label>
-            <input
-              type="number"
-              min="0"
-              step="any"
-              value={compareAtPrice}
-              onChange={(e) => setCompareAtPrice(e.target.value)}
-              placeholder="Opcional — se tacha si es mayor al precio"
-              className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
-            />
-          </div>
-          {/* Fase cuotas: sin sentido en una vertical inmobiliaria — Domus
-              no financia en cuotas una propiedad. Oculto solo por slug
-              (no por catalog_type ni ningún flag genérico): SuperElectro y
-              el resto de las orgs con catálogo de productos lo siguen
-              viendo igual que siempre. */}
-          {orgSlug !== "domus" && (
+            independiente más abajo en la página de edición).
+            Fase campos Domus: "Precio de lista" (tachado tipo oferta) y
+            "Texto de cuotas" tampoco tienen sentido acá — se oculta el
+            grid entero para Domus en vez de dejar una columna vacía. */}
+        {orgSlug !== "domus" && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-stone-600">Precio de lista</label>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={compareAtPrice}
+                onChange={(e) => setCompareAtPrice(e.target.value)}
+                placeholder="Opcional — se tacha si es mayor al precio"
+                className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
+              />
+            </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-stone-600">Texto de cuotas</label>
               <input
@@ -318,18 +323,22 @@ export function ProductForm({ categories, product, orgSlug }: ProductFormProps) 
                 className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
               />
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-stone-600">Badge de envío</label>
-          <input
-            value={shippingBadgeText}
-            onChange={(e) => setShippingBadgeText(e.target.value)}
-            placeholder='Ej. "Envío gratis", "Retiralo ya"'
-            className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
-          />
-        </div>
+        {/* Fase campos Domus: "Badge de envío" ("Envío gratis", etc.) no
+            aplica a inmuebles. */}
+        {orgSlug !== "domus" && (
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-stone-600">Badge de envío</label>
+            <input
+              value={shippingBadgeText}
+              onChange={(e) => setShippingBadgeText(e.target.value)}
+              placeholder='Ej. "Envío gratis", "Retiralo ya"'
+              className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
+            />
+          </div>
+        )}
 
         <label className="flex items-center gap-2 text-sm text-stone-700 cursor-pointer w-fit">
           <input

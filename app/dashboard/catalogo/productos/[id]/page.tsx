@@ -33,7 +33,7 @@ export default async function EditarProductoPage({
         .order("display_order", { ascending: true }),
       supabase
         .from("product_images")
-        .select("id, image_url, display_order")
+        .select("id, image_url, display_order, media_type")
         .eq("product_id", params.id)
         .order("display_order", { ascending: true }),
       // Fase Home: todos los carruseles de la org (activos o no, ver
@@ -68,7 +68,12 @@ export default async function EditarProductoPage({
 
       <div className="p-8 space-y-10">
         <ProductForm categories={categories ?? []} product={product} orgSlug={org?.slug} />
-        <ProductImagesManager orgId={orgId} productId={product.id} images={images ?? []} />
+        <ProductImagesManager
+          orgId={orgId}
+          productId={product.id}
+          images={images ?? []}
+          orgSlug={org?.slug}
+        />
         <ProductSpecsManager
           productId={product.id}
           specs={(product.specs as Record<string, string> | null) ?? {}}

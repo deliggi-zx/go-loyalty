@@ -156,9 +156,13 @@ export function ProductCatalog({
       ) : (
         <div className="grid grid-cols-2 gap-4">
           {filteredProducts.map((product) => {
-            const mainImage = [...product.images].sort(
-              (a, b) => a.display_order - b.display_order
-            )[0];
+            // Fase video: la card de la grilla renderiza con <img>, así
+            // que se salta cualquier item de tipo 'video' al elegir la
+            // portada — el video sí aparece en la galería completa (ver
+            // ProductImageCarousel, dentro de la ficha de detalle).
+            const mainImage = [...product.images]
+              .sort((a, b) => a.display_order - b.display_order)
+              .find((img) => img.media_type !== "video");
             const cardClassName =
               "text-left rounded-2xl overflow-hidden bg-white shadow-sm border border-stone-200 hover:shadow-md transition-shadow";
             const cardContent = (
