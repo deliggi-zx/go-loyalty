@@ -147,12 +147,18 @@ export function CartPanel({ isOpen, onClose, primaryColor, orgSlug }: CartPanelP
             </div>
 
             <div className="border-t border-stone-100 p-4 space-y-3 shrink-0">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-stone-500">Total</span>
-                <span className="text-lg font-bold text-stone-900">
-                  ${total.toLocaleString("es-AR")}
-                </span>
-              </div>
+              {/* Fase Favoritos sin total: sumar precios de propiedades no
+                  tiene sentido conceptual (no se "compran" varias juntas
+                  en un checkout) — el precio por-ítem de arriba sí se
+                  mantiene, es información real de cada propiedad. */}
+              {!isDomus && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-stone-500">Total</span>
+                  <span className="text-lg font-bold text-stone-900">
+                    ${total.toLocaleString("es-AR")}
+                  </span>
+                </div>
+              )}
               <button
                 onClick={handleCheckout}
                 className="w-full py-3 rounded-xl text-white font-medium transition-opacity hover:opacity-90"

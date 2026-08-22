@@ -7,6 +7,11 @@ interface GeneralInquiryFormProps {
   slug: string;
   orgId: string;
   primaryColor: string;
+  // Fase Mi Perfil / casillero de búsqueda: mismo form exacto, pero
+  // arrancando expandido (sin el botón "Consultas" colapsado) para el
+  // bloque grande y visible de /domus/perfil — el uso original (home
+  // pública) sigue arrancando colapsado, default false no lo afecta.
+  startOpen?: boolean;
 }
 
 // Fase 2b Domus: mismo patrón de toggle que PropertyVisitBooking (Fase
@@ -14,8 +19,8 @@ interface GeneralInquiryFormProps {
 // Para cuando el cliente no busca una propiedad puntual sino que "busca
 // algo" — más simple que "ofrecer mi propiedad" (esa es la Fase 3, con
 // fotos y cuestionario): acá es un solo textarea libre.
-export function GeneralInquiryForm({ slug, orgId, primaryColor }: GeneralInquiryFormProps) {
-  const [open, setOpen] = useState(false);
+export function GeneralInquiryForm({ slug, orgId, primaryColor, startOpen = false }: GeneralInquiryFormProps) {
+  const [open, setOpen] = useState(startOpen);
   const [message, setMessage] = useState("");
   const [phone, setPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
