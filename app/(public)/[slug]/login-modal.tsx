@@ -20,6 +20,9 @@ interface LoginModalProps {
   // porqué de mantenerlos separados de neonTheme.
   requireInviteCode?: boolean;
   orgId?: string;
+  // Fase registro extendido (Domus): se pasa tal cual a LoginForm, ver ahí
+  // el porqué (campos nuevos de registro scopeados a esta org).
+  orgSlug?: string;
 }
 
 // Modal centrado que aloja el mismo LoginForm de siempre (variant="bare",
@@ -33,6 +36,7 @@ export function LoginModal({
   bikeTheme = false,
   requireInviteCode = false,
   orgId,
+  orgSlug,
 }: LoginModalProps) {
   const darkChrome = neonTheme || bikeTheme;
   const panelClass = darkChrome
@@ -78,6 +82,7 @@ export function LoginModal({
             bikeTheme={bikeTheme}
             requireInviteCode={requireInviteCode}
             orgId={orgId}
+            orgSlug={orgSlug}
           />
         </div>
       </div>

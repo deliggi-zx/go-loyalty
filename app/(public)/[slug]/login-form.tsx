@@ -44,6 +44,14 @@ interface LoginFormProps {
   // con algún caller que hoy no lo pase, pero todos los que importan
   // (page.tsx, ClientHeader, HuellitasHome) ya lo pasan.
   orgId?: string;
+  // Fase registro extendido (Domus): slug de la org activa, solo para
+  // mostrar los campos nuevos (apellido/teléfono/profesión/presupuesto/
+  // zona) scopeados a esta org — mismo patrón que orgSlug en ClientHeader/
+  // CartPanel. El resto del formulario es genérico y no la lee. Este
+  // LoginForm inline de page.tsx nunca se monta para Domus (ver Ajuste 1,
+  // usa el ícono del header) — el único caller real que necesita pasarlo
+  // es LoginModal.
+  orgSlug?: string;
 }
 
 export function LoginForm({
@@ -53,14 +61,23 @@ export function LoginForm({
   bikeTheme = false,
   requireInviteCode = false,
   orgId,
+  orgSlug,
 }: LoginFormProps) {
   const supabase = createClient();
   const router = useRouter();
+  const isDomus = orgSlug === "domus";
   const [mode, setMode] = useState<"login" | "register">("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [inviteCode, setInviteCode] = useState("");
+  // Fase registro extendido (Domus): apellido obligatorio, el resto
+  // opcional — solo se leen/insertan cuando isDomus, ver handleSubmit.
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [profession, setProfession] = useState("");
+  const [budgetRange, setBudgetRange] = useState("");
+  const [interestZone, setInterestZone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [registered, setRegistered] = useState(false);
@@ -195,6 +212,32 @@ export function LoginForm({
         }
       }
 
+      // Fase registro extendido (Domus): mismo criterio directo-desde-el-
+      // cliente que loyalty_members arriba (no una server action aparte —
+      // la sesión ya queda activa acá porque la confirmación de mail está
+      // apagada en todo el proyecto, así que este insert corre autenticado
+      // como el usuario recién creado). No se toca handle_new_user() (SQL
+      // compartido por todo Go Loyalty, riesgoso) — profiles solo recibe
+      // full_name como siempre, el resto de los campos van en esta tabla
+      // aparte.
+      if (isDomus && orgId && signUpData.user) {
+        const { error: detailsError } = await supabase.from("domus_client_profile_details").insert({
+          org_id: orgId,
+          profile_id: signUpData.user.id,
+          last_name: lastName.trim(),
+          phone: phone.trim() || null,
+          profession: profession.trim() || null,
+          budget_range: budgetRange.trim() || null,
+          interest_zone: interestZone.trim() || null,
+        });
+        if (detailsError) {
+          console.error("No se pudo crear domus_client_profile_details al registrarse:", detailsError.message);
+          setError("No pudimos completar el registro, intentá de nuevo.");
+          setLoading(false);
+          return;
+        }
+      }
+
       setRegistered(true);
     }
 
@@ -308,6 +351,16 @@ export function LoginForm({
             className={inputClass}
           />
         )}
+        {mode === "register" && isDomus && (
+          <input
+            type="text"
+            placeholder="Apellido"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            required
+            className={inputClass}
+          />
+        )}
         <input
           type="email"
           placeholder="tu@email.com"
@@ -334,6 +387,38 @@ export function LoginForm({
             required
             className={inputClass}
           />
+        )}
+        {mode === "register" && isDomus && (
+          <>
+            <input
+              type="tel"
+              placeholder="Teléfono (opcional)"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className={inputClass}
+            />
+            <input
+              type="text"
+              placeholder="Profesión (opcional)"
+              value={profession}
+              onChange={(e) => setProfession(e.target.value)}
+              className={inputClass}
+            />
+            <input
+              type="text"
+              placeholder='Presupuesto aproximado (opcional, ej. "USD 80.000 - 120.000")'
+              value={budgetRange}
+              onChange={(e) => setBudgetRange(e.target.value)}
+              className={inputClass}
+            />
+            <input
+              type="text"
+              placeholder="Zona de interés (opcional)"
+              value={interestZone}
+              onChange={(e) => setInterestZone(e.target.value)}
+              className={inputClass}
+            />
+          </>
         )}
         <button type="submit" disabled={loading} className={submitClass} style={submitStyle}>
           {loading ? "Cargando..." : mode === "login" ? "Ingresar" : "Registrarme"}
