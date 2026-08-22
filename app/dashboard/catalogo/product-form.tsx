@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createProduct, updateProduct, deleteProduct } from "./actions";
+import { findRootAncestor } from "@/lib/category-tree";
 
 interface CategoryOption {
   id: string;
@@ -35,27 +36,6 @@ function buildCategoryOptions(categories: CategoryOption[]): { cat: CategoryOpti
   }
   walk(null, 0);
   return result;
-}
-
-// Fase moneda (Domus): sube por parent_id hasta la categoría raíz de
-// `categoryId` — se usa para inferir la moneda por defecto de una
-// propiedad nueva a partir del nombre de esa raíz ("Venta"/"Alquiler").
-// Genérico en la implementación (no busca nada específico de Domus acá,
-// solo camina el árbol), el mapeo nombre→moneda vive en el caller y está
-// scopeado por orgSlug ahí — ver DOMUS_CURRENCY_BY_ROOT_NAME más abajo.
-function findRootAncestor(
-  categories: CategoryOption[],
-  categoryId: string
-): CategoryOption | null {
-  const byId = new Map(categories.map((c) => [c.id, c]));
-  let current = byId.get(categoryId) ?? null;
-  if (!current) return null;
-  while (current.parent_id) {
-    const parent = byId.get(current.parent_id);
-    if (!parent) break;
-    current = parent;
-  }
-  return current;
 }
 
 // Solo se consulta cuando orgSlug === 'domus' (ver efecto de moneda más

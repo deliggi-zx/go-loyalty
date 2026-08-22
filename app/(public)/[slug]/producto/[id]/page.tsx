@@ -1,12 +1,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getTenantOrg, getTenantUser, getProductDetail } from "../../data";
+import { getTenantOrg, getTenantUser, getProductDetail, getProductCategories } from "../../data";
 import { ProductImageCarousel } from "../../product-image-carousel";
 import { ProductDetailActions } from "../../product-detail-actions";
 import { PropertyVisitBooking } from "../../property-visit-booking";
 import { LoginForm } from "../../login-form";
 import { DomusChatWidget } from "../../domus-chat-widget";
 import { formatPrice } from "@/lib/utils";
+import { findRootAncestor } from "@/lib/category-tree";
+
+// Fase Requisitos (Domus): mismo criterio que DOMUS_CURRENCY_BY_ROOT_NAME
+// en dashboard/catalogo/product-form.tsx — el tipo de operación de una
+// propiedad se infiere de su categoría raíz ("Venta"/"Alquiler"), no es
+// una columna propia de `products`. Solo se consulta para orgSlug ===
+// 'domus', ninguna otra org nombra así a sus categorías raíz.
+const DOMUS_OPERATION_BY_ROOT_NAME: Record<string, "venta" | "alquiler"> = {
+  Venta: "venta",
+  Alquiler: "alquiler",
+};
 
 // Ficha de producto individual (Fase 3) — /[slug]/producto/[id]. Mismo
 // patrón de ruteo que /[slug]/sede/[locationId] (Gym2): org por slug,
@@ -36,6 +47,24 @@ export default async function ProductoPage({
   const primary = org.primary_color ?? "#f59e0b";
   const images = [...product.images].sort((a, b) => a.display_order - b.display_order);
   const specsEntries = product.specs ? Object.entries(product.specs) : [];
+
+  // Fase Requisitos (Domus): "Requisitos" reemplaza al botón "Consultar
+  // por WhatsApp" en ProductDetailActions (ya redundante con el botón
+  // flotante de WhatsApp, ver WhatsAppButton en layout.tsx — mismo
+  // destino/número). Se resuelve acá, no en el componente cliente, para
+  // no tener que mandarle categorías/mapeos — solo el texto ya elegido.
+  let requirementsText: string | null = null;
+  if (isDomus && product.category_id) {
+    const categories = await getProductCategories(org.id);
+    const root = findRootAncestor(categories, product.category_id);
+    const operationType = root ? DOMUS_OPERATION_BY_ROOT_NAME[root.name] : undefined;
+    requirementsText =
+      operationType === "venta"
+        ? org.purchase_requirements_text
+        : operationType === "alquiler"
+        ? org.rental_requirements_text
+        : null;
+  }
 
   return (
     <div className="max-w-lg mx-auto px-4 py-4 space-y-5">
@@ -77,6 +106,7 @@ export default async function ProductoPage({
         primaryColor={primary}
         whatsappNumber={org.whatsapp_number}
         orgSlug={params.slug}
+        requirementsText={requirementsText}
       />
 
       {isDomus &&

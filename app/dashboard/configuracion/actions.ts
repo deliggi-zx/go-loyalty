@@ -158,3 +158,26 @@ export async function updateOrgContact(data: {
 
   revalidatePath("/dashboard/configuracion");
 }
+
+// ── Requisitos (Domus) ───────────────────────────────────────────────────────
+
+// Fase Requisitos: columnas genéricas en loyalty_organizations (cualquier
+// org podría tener datos acá), pero el form que llama a esto solo se
+// renderiza para orgSlug === 'domus' (ver RequirementsForm/page.tsx) — no
+// hace falta re-validar el slug acá, requireOrgId ya scopea al org del
+// usuario logueado.
+export async function updateOrgRequirements(data: {
+  rental_requirements_text?: string | null;
+  purchase_requirements_text?: string | null;
+}) {
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+
+  const payload = Object.fromEntries(
+    Object.entries(data).filter(([, v]) => v !== undefined)
+  );
+
+  await supabase.from("loyalty_organizations").update(payload).eq("id", orgId);
+
+  revalidatePath("/dashboard/configuracion");
+}

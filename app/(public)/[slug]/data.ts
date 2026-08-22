@@ -6,7 +6,7 @@ export const getTenantOrg = cache(async (slug: string) => {
   const { data } = await supabase
     .from("loyalty_organizations")
     .select(
-      "id, name, banner_url, hero_video_url, background_url, background_color, primary_color, secondary_color, accent_color, member_tier_label, next_reward_threshold, about_text, whatsapp_number, phone_number, facebook_url, instagram_url, twitter_url, youtube_url, terms_text, catalog_type"
+      "id, name, banner_url, hero_video_url, background_url, background_color, primary_color, secondary_color, accent_color, member_tier_label, next_reward_threshold, about_text, whatsapp_number, phone_number, facebook_url, instagram_url, twitter_url, youtube_url, terms_text, catalog_type, rental_requirements_text, purchase_requirements_text"
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -288,6 +288,11 @@ export interface ProductDetail {
   specs: Record<string, string> | null;
   // Fase moneda: ver CatalogProduct.currency más arriba.
   currency: string;
+  // Fase Requisitos (Domus): se usa para inferir el tipo de operación
+  // (venta/alquiler) subiendo hasta la categoría raíz del producto — ver
+  // findRootAncestor en lib/category-tree.ts y su uso en producto/[id]/
+  // page.tsx. null para cualquier producto sin categoría asignada.
+  category_id: string | null;
   images: CatalogImage[];
 }
 
@@ -419,7 +424,7 @@ export const getProductDetail = cache(
     const supabase = createClient();
     const { data: product } = await supabase
       .from("products")
-      .select("id, name, description, price, brand, screen_size_inches, specs, currency")
+      .select("id, name, description, price, brand, screen_size_inches, specs, currency, category_id")
       .eq("id", productId)
       .eq("org_id", orgId)
       .eq("active", true)
@@ -442,6 +447,7 @@ export const getProductDetail = cache(
       screen_size_inches: product.screen_size_inches,
       specs: (product.specs as Record<string, string> | null) ?? null,
       currency: product.currency,
+      category_id: product.category_id,
       images: imagesData ?? [],
     };
   }
