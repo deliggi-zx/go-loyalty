@@ -5,6 +5,7 @@ import { ProductImageCarousel } from "../../product-image-carousel";
 import { ProductDetailActions } from "../../product-detail-actions";
 import { PropertyVisitBooking } from "../../property-visit-booking";
 import { LoginForm } from "../../login-form";
+import { DomusChatWidget } from "../../domus-chat-widget";
 import { formatPrice } from "@/lib/utils";
 
 // Ficha de producto individual (Fase 3) — /[slug]/producto/[id]. Mismo
@@ -109,6 +110,13 @@ export default async function ProductoPage({
             ))}
           </div>
         </div>
+      )}
+
+      {/* Fase chatbot Domus: mismo widget que la home, reusado tal cual
+          (contexto server-side con TODAS las propiedades activas, no
+          solo esta) — no hace falta ninguna lógica específica de ficha. */}
+      {isDomus && (
+        <DomusChatWidget slug={params.slug} orgId={org.id} whatsappNumber={org.whatsapp_number} />
       )}
     </div>
   );
