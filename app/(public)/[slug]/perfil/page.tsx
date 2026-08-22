@@ -20,6 +20,8 @@ import { GeneralInquiryForm } from "../general-inquiry-form";
 import { MyVisitsList, type MyVisitRow } from "../my-visits-list";
 import { todayLocalYmd } from "../vet-appointments-config";
 import { formatPrice } from "@/lib/utils";
+import { DomusAgentPanel } from "@/app/dashboard/inicio/domus-agent-panel";
+import { getDomusAgentBadgeCounts } from "@/app/dashboard/inicio/domus-badge-counts";
 
 export default async function PerfilPage({
   params,
@@ -150,59 +152,15 @@ export default async function PerfilPage({
     canCancel: (v.status === "pending" || v.status === "confirmed") && v.visit_date >= today,
   }));
 
-  // Fase perfil agente: resumen condensado en vez de las secciones de
-  // cliente — mismos filtros exactos que /dashboard/inicio/consultas,
-  // /seguimiento y /reuniones (ver Gate 0), pero pedidos como count en
-  // vez de traer las filas completas, ya que acá solo se muestra el
-  // número con un link a la pantalla completa correspondiente.
-  const [
-    { count: inquiriesOpenCount },
-    { count: offersNewCount },
-    { count: offersFollowUpCount },
-    { count: inquiriesContactedCount },
-    { count: offersMeetingCount },
-    { count: visitsConfirmedCount },
-  ] = isDomusAgent
-    ? await Promise.all([
-        supabase
-          .from("domus_general_inquiries")
-          .select("id", { count: "exact", head: true })
-          .eq("org_id", org.id)
-          .in("status", ["nuevo", "contactado"]),
-        supabase
-          .from("domus_property_offers")
-          .select("id", { count: "exact", head: true })
-          .eq("org_id", org.id)
-          .eq("status", "nuevo"),
-        supabase
-          .from("domus_property_offers")
-          .select("id", { count: "exact", head: true })
-          .eq("org_id", org.id)
-          .eq("status", "seguimiento"),
-        supabase
-          .from("domus_general_inquiries")
-          .select("id", { count: "exact", head: true })
-          .eq("org_id", org.id)
-          .eq("status", "contactado"),
-        supabase
-          .from("domus_property_offers")
-          .select("id", { count: "exact", head: true })
-          .eq("org_id", org.id)
-          .eq("status", "reunion_agendada"),
-        supabase
-          .from("domus_property_visits")
-          .select("id", { count: "exact", head: true })
-          .eq("org_id", org.id)
-          .eq("status", "confirmed"),
-      ])
-    : [{ count: 0 }, { count: 0 }, { count: 0 }, { count: 0 }, { count: 0 }, { count: 0 }];
-
-  // Mismo criterio "no mutuamente excluyentes" que las pantallas
-  // completas: una consulta 'contactado' cuenta en Consultas Y en
-  // Seguimiento a la vez, a propósito.
-  const consultasSinResponder = (inquiriesOpenCount ?? 0) + (offersNewCount ?? 0);
-  const clientesEnSeguimiento = (offersFollowUpCount ?? 0) + (inquiriesContactedCount ?? 0);
-  const proximasReuniones = (offersMeetingCount ?? 0) + (visitsConfirmedCount ?? 0);
+  // Fase Unificar panel del agente (CAMBIO 1): antes acá vivía un resumen
+  // condensado de 3 contadores ("Tu mini-CRM") con un link a "ver el
+  // mini-CRM completo" en /dashboard/inicio — ahora se muestra DIRECTO el
+  // mismo panel de 5 botones de esa pantalla (DomusAgentPanel), así que
+  // solo hace falta pedir los 2 contadores de sus badges (ver
+  // domus-badge-counts.ts), no los 6 counts de antes.
+  const domusBadgeCounts = isDomusAgent
+    ? await getDomusAgentBadgeCounts(org.id)
+    : { consultasNuevoCount: 0, reunionesHoyCount: 0 };
 
   const INQUIRY_STATUS_LABEL: Record<string, string> = {
     nuevo: "Enviada",
@@ -301,46 +259,19 @@ export default async function PerfilPage({
         <GeneralInquiryForm slug={params.slug} orgId={org.id} primaryColor={primary} startOpen />
       )}
 
-      {/* Resumen condensado del agente — reemplaza las secciones de
-          cliente de acá abajo (Ofrecer propiedad / Mis consultas/visitas/
-          ofertas no tienen sentido para su propio perfil). Mismos counts
-          que /dashboard/inicio/{consultas,seguimiento,reuniones}, con
-          link a cada pantalla completa por si quiere ver el detalle. */}
+      {/* Panel del agente (CAMBIO 1) — reemplaza las secciones de cliente
+          de acá abajo (Ofrecer propiedad / Mis consultas/visitas/ofertas
+          no tienen sentido para su propio perfil). Mismo componente que
+          /dashboard/inicio, con los mismos badges rojos. */}
       {isDomusAgent && (
-        <div className="space-y-2">
-          <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
-            Tu mini-CRM
+        <div className="space-y-2 -mx-4">
+          <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide px-4">
+            Panel del agente
           </h2>
-          <div className="bg-white divide-y divide-stone-100 border border-stone-100 rounded-lg overflow-hidden">
-            <Link
-              href="/dashboard/inicio/consultas"
-              className="flex items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-stone-50 transition-colors"
-            >
-              <span className="text-stone-700">Consultas sin responder</span>
-              <span className="font-semibold text-stone-900">{consultasSinResponder}</span>
-            </Link>
-            <Link
-              href="/dashboard/inicio/seguimiento"
-              className="flex items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-stone-50 transition-colors"
-            >
-              <span className="text-stone-700">Clientes en seguimiento</span>
-              <span className="font-semibold text-stone-900">{clientesEnSeguimiento}</span>
-            </Link>
-            <Link
-              href="/dashboard/inicio/reuniones"
-              className="flex items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-stone-50 transition-colors"
-            >
-              <span className="text-stone-700">Próximas reuniones</span>
-              <span className="font-semibold text-stone-900">{proximasReuniones}</span>
-            </Link>
-          </div>
-          <Link
-            href="/dashboard/inicio"
-            className="inline-block text-xs font-medium transition-colors"
-            style={{ color: primary }}
-          >
-            Ver el mini-CRM completo ›
-          </Link>
+          <DomusAgentPanel
+            consultasNuevoCount={domusBadgeCounts.consultasNuevoCount}
+            reunionesHoyCount={domusBadgeCounts.reunionesHoyCount}
+          />
         </div>
       )}
 

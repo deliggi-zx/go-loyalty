@@ -57,14 +57,22 @@ export function generateDaySlots(): string[] {
   return slots;
 }
 
-// "YYYY-MM-DD" en hora LOCAL del navegador/servidor, no UTC — Date#
-// toISOString() correría el día para cualquiera al oeste de UTC después
-// de las 21hs aprox. Se usa tanto para el `min` del input de fecha como
-// para validar server-side que la fecha elegida no sea pasada.
-export function todayLocalYmd(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
+// "YYYY-MM-DD" de un Date puntual, en hora LOCAL del navegador/servidor,
+// no UTC — Date#toISOString() correría el día para cualquiera al oeste
+// de UTC después de las 21hs aprox. Factoreado de todayLocalYmd (Fase
+// badges Domus) para poder comparar contra "hoy" cualquier fecha que
+// llegue como Date (ej. domus_property_offers.scheduled_at), no solo
+// "ahora mismo".
+export function localYmd(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+// "YYYY-MM-DD" de hoy, en hora local. Se usa tanto para el `min` del
+// input de fecha como para validar server-side que la fecha elegida no
+// sea pasada.
+export function todayLocalYmd(): string {
+  return localYmd(new Date());
 }

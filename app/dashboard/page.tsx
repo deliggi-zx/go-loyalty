@@ -2,7 +2,8 @@ import { Users, Stamp, Gift, TrendingUp } from "lucide-react";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
-import { DomusMobileHome } from "./inicio/domus-mobile-home";
+import { DomusAgentPanel } from "./inicio/domus-agent-panel";
+import { getDomusAgentBadgeCounts } from "./inicio/domus-badge-counts";
 
 const recentActivity = [
   { id: 1, type: "sello",    customer: "María González", detail: "2 sellos emitidos",          time: "hace 5 min",  avatar: "MG" },
@@ -33,6 +34,8 @@ export default async function DashboardPage() {
   // viewport+role. Requiere org.slug + el role del usuario, que esta
   // página no pedía antes (nadie lo necesitaba).
   let isDomusAdmin = false;
+  let domusConsultasNuevoCount = 0;
+  let domusReunionesHoyCount = 0;
 
   if (orgId) {
     const {
@@ -70,6 +73,16 @@ export default async function DashboardPage() {
     totalPoints =
       txRes.data?.reduce((sum, tx) => sum + (tx.points ?? 0), 0) ?? 0;
     isDomusAdmin = orgRes.data?.slug === "domus" && membershipRes.data?.role === "admin";
+
+    // Badges del panel (CAMBIO 3): solo tienen sentido si de verdad se va
+    // a mostrar el panel más abajo, así que se piden después de resolver
+    // isDomusAdmin en vez de sumarlas al Promise.all de arriba (mismo
+    // criterio que hasGymFeatures/gymClasses en perfil/page.tsx).
+    if (isDomusAdmin) {
+      const counts = await getDomusAgentBadgeCounts(orgId);
+      domusConsultasNuevoCount = counts.consultasNuevoCount;
+      domusReunionesHoyCount = counts.reunionesHoyCount;
+    }
   }
 
   const today = new Date().toLocaleDateString("es-AR", {
@@ -86,7 +99,10 @@ export default async function DashboardPage() {
     return (
       <div className="flex-1 overflow-y-auto">
         <div className="md:hidden">
-          <DomusMobileHome />
+          <DomusAgentPanel
+            consultasNuevoCount={domusConsultasNuevoCount}
+            reunionesHoyCount={domusReunionesHoyCount}
+          />
         </div>
         <div className="hidden md:block">
           <DashboardContent today={today} customerCount={customerCount} activeRewardsCount={activeRewardsCount} totalPoints={totalPoints} />
