@@ -16,6 +16,7 @@ import { GymRecommendedPopup } from "../gym-recommended-popup";
 import { VetMyPets } from "../vet-my-pets";
 import { VetReviewsSection } from "../vet-reviews-section";
 import { PropertyOfferForm } from "../property-offer-form";
+import { GeneralInquiryForm } from "../general-inquiry-form";
 import { MyVisitsList, type MyVisitRow } from "../my-visits-list";
 import { todayLocalYmd } from "../vet-appointments-config";
 import { formatPrice } from "@/lib/utils";
@@ -84,12 +85,23 @@ export default async function PerfilPage({
   // login obligatorio).
   const isDomus = params.slug === "domus";
 
+  // Fase perfil agente vs. cliente: reusa getOrgRole (ya importado arriba
+  // para vetRole, mismo query que membership.role en dashboard/layout.tsx)
+  // en vez de escribir un query nuevo. Solo Domus tiene esta rama — el
+  // resto de las orgs no diferencia agente/cliente en Mi Perfil.
+  const domusRole = isDomus ? await getOrgRole(org.id, user.id) : null;
+  const isDomusAgent = isDomus && domusRole === "admin";
+  const isDomusCustomer = isDomus && !isDomusAgent;
+
   // Fase 5 Domus: "Mis consultas" / "Mis visitas" / "Mis propiedades
-  // ofrecidas" — mismo criterio isDomus que "ofrecer mi propiedad" arriba,
-  // tres queries scoped al profile_id/client_profile_id/owner_profile_id
-  // de ESTE usuario (nunca toda la org, a diferencia de los paneles del
-  // agente en /dashboard). Se piden en paralelo, no en cascada.
-  const [{ data: myInquiriesData }, { data: myVisitsData }, { data: myOffersData }] = isDomus
+  // ofrecidas" — mismo criterio isDomusCustomer (antes isDomus a secas:
+  // un agente viendo su propio perfil no tiene sentido que vea "sus"
+  // consultas/visitas/ofertas como cliente, ve el resumen de abajo en su
+  // lugar), tres queries scoped al profile_id/client_profile_id/
+  // owner_profile_id de ESTE usuario (nunca toda la org, a diferencia de
+  // los paneles del agente en /dashboard). Se piden en paralelo, no en
+  // cascada.
+  const [{ data: myInquiriesData }, { data: myVisitsData }, { data: myOffersData }] = isDomusCustomer
     ? await Promise.all([
         supabase
           .from("domus_general_inquiries")
@@ -121,7 +133,7 @@ export default async function PerfilPage({
 
   const myVisitProductIds = Array.from(new Set(myVisitsRaw.map((v) => v.product_id)));
   const { data: myVisitProductsData } =
-    isDomus && myVisitProductIds.length > 0
+    isDomusCustomer && myVisitProductIds.length > 0
       ? await supabase.from("products").select("id, name").in("id", myVisitProductIds)
       : { data: [] as { id: string; name: string }[] };
   const productNameById = new Map((myVisitProductsData ?? []).map((p) => [p.id, p.name]));
@@ -137,6 +149,60 @@ export default async function PerfilPage({
     // confirmada — rejected/cancelled ya están cerradas.
     canCancel: (v.status === "pending" || v.status === "confirmed") && v.visit_date >= today,
   }));
+
+  // Fase perfil agente: resumen condensado en vez de las secciones de
+  // cliente — mismos filtros exactos que /dashboard/inicio/consultas,
+  // /seguimiento y /reuniones (ver Gate 0), pero pedidos como count en
+  // vez de traer las filas completas, ya que acá solo se muestra el
+  // número con un link a la pantalla completa correspondiente.
+  const [
+    { count: inquiriesOpenCount },
+    { count: offersNewCount },
+    { count: offersFollowUpCount },
+    { count: inquiriesContactedCount },
+    { count: offersMeetingCount },
+    { count: visitsConfirmedCount },
+  ] = isDomusAgent
+    ? await Promise.all([
+        supabase
+          .from("domus_general_inquiries")
+          .select("id", { count: "exact", head: true })
+          .eq("org_id", org.id)
+          .in("status", ["nuevo", "contactado"]),
+        supabase
+          .from("domus_property_offers")
+          .select("id", { count: "exact", head: true })
+          .eq("org_id", org.id)
+          .eq("status", "nuevo"),
+        supabase
+          .from("domus_property_offers")
+          .select("id", { count: "exact", head: true })
+          .eq("org_id", org.id)
+          .eq("status", "seguimiento"),
+        supabase
+          .from("domus_general_inquiries")
+          .select("id", { count: "exact", head: true })
+          .eq("org_id", org.id)
+          .eq("status", "contactado"),
+        supabase
+          .from("domus_property_offers")
+          .select("id", { count: "exact", head: true })
+          .eq("org_id", org.id)
+          .eq("status", "reunion_agendada"),
+        supabase
+          .from("domus_property_visits")
+          .select("id", { count: "exact", head: true })
+          .eq("org_id", org.id)
+          .eq("status", "confirmed"),
+      ])
+    : [{ count: 0 }, { count: 0 }, { count: 0 }, { count: 0 }, { count: 0 }, { count: 0 }];
+
+  // Mismo criterio "no mutuamente excluyentes" que las pantallas
+  // completas: una consulta 'contactado' cuenta en Consultas Y en
+  // Seguimiento a la vez, a propósito.
+  const consultasSinResponder = (inquiriesOpenCount ?? 0) + (offersNewCount ?? 0);
+  const clientesEnSeguimiento = (offersFollowUpCount ?? 0) + (inquiriesContactedCount ?? 0);
+  const proximasReuniones = (offersMeetingCount ?? 0) + (visitsConfirmedCount ?? 0);
 
   const INQUIRY_STATUS_LABEL: Record<string, string> = {
     nuevo: "Enviada",
@@ -224,9 +290,63 @@ export default async function PerfilPage({
         <VetReviewsSection slug={params.slug} orgId={org.id} primaryColor={primary} reviews={vetReviews} />
       )}
 
+      {/* Casillero "¿Qué estás buscando?" — mismo GeneralInquiryForm de la
+          Fase 2b (mismo backend domus_general_inquiries, misma
+          confirmación "¡Consulta enviada!"), acá arrancando expandido y
+          arriba de todo para que sea el bloque más visible del perfil
+          del cliente, no escondido detrás de un botón "Consultas" como
+          en la home pública. Solo cliente — un agente no le manda una
+          consulta a sí mismo, ve el resumen de abajo en su lugar. */}
+      {isDomusCustomer && (
+        <GeneralInquiryForm slug={params.slug} orgId={org.id} primaryColor={primary} startOpen />
+      )}
+
+      {/* Resumen condensado del agente — reemplaza las secciones de
+          cliente de acá abajo (Ofrecer propiedad / Mis consultas/visitas/
+          ofertas no tienen sentido para su propio perfil). Mismos counts
+          que /dashboard/inicio/{consultas,seguimiento,reuniones}, con
+          link a cada pantalla completa por si quiere ver el detalle. */}
+      {isDomusAgent && (
+        <div className="space-y-2">
+          <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
+            Tu mini-CRM
+          </h2>
+          <div className="bg-white divide-y divide-stone-100 border border-stone-100 rounded-lg overflow-hidden">
+            <Link
+              href="/dashboard/inicio/consultas"
+              className="flex items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-stone-50 transition-colors"
+            >
+              <span className="text-stone-700">Consultas sin responder</span>
+              <span className="font-semibold text-stone-900">{consultasSinResponder}</span>
+            </Link>
+            <Link
+              href="/dashboard/inicio/seguimiento"
+              className="flex items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-stone-50 transition-colors"
+            >
+              <span className="text-stone-700">Clientes en seguimiento</span>
+              <span className="font-semibold text-stone-900">{clientesEnSeguimiento}</span>
+            </Link>
+            <Link
+              href="/dashboard/inicio/reuniones"
+              className="flex items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-stone-50 transition-colors"
+            >
+              <span className="text-stone-700">Próximas reuniones</span>
+              <span className="font-semibold text-stone-900">{proximasReuniones}</span>
+            </Link>
+          </div>
+          <Link
+            href="/dashboard/inicio"
+            className="inline-block text-xs font-medium transition-colors"
+            style={{ color: primary }}
+          >
+            Ver el mini-CRM completo ›
+          </Link>
+        </div>
+      )}
+
       {/* Ofrecer mi propiedad (Fase 3 Domus) — bloque propio, mismo
           criterio de "un bloque más" que Mis Mascotas/Comentarios arriba. */}
-      {isDomus && (
+      {isDomusCustomer && (
         <PropertyOfferForm slug={params.slug} orgId={org.id} userId={user.id} primaryColor={primary} />
       )}
 
@@ -234,7 +354,7 @@ export default async function PerfilPage({
           cada una con su propio título (pedido explícito: no mezclar en
           una sola lista), mismo estilo de card blanca con borde que
           "Historial de consumo" más abajo. */}
-      {isDomus && (
+      {isDomusCustomer && (
         <div className="space-y-2">
           <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
             Mis consultas
@@ -264,7 +384,7 @@ export default async function PerfilPage({
         </div>
       )}
 
-      {isDomus && (
+      {isDomusCustomer && (
         <div className="space-y-2">
           <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
             Mis visitas
@@ -273,7 +393,7 @@ export default async function PerfilPage({
         </div>
       )}
 
-      {isDomus && (
+      {isDomusCustomer && (
         <div className="space-y-2">
           <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
             Mis propiedades ofrecidas
@@ -312,6 +432,13 @@ export default async function PerfilPage({
         </div>
       )}
 
+      {/* Fase puntos fuera de Mi Perfil (Domus): ni cliente ni agente ven
+          el panel de puntos ni la barra de progreso — Domus no tiene
+          mecánica de sellos/puntos real (no hay flujo de "compra"), este
+          bloque entero solo tenía sentido genérico heredado. El resto de
+          las orgs (SuperElectro, Bike, Gym2, Corner, Huellitas) sigue
+          viéndolo exactamente igual. */}
+      {!isDomus && (
       <div className="flex justify-center">
         <div className="w-full max-w-sm space-y-4">
           <PointsPanel
@@ -349,6 +476,7 @@ export default async function PerfilPage({
           </div>
         </div>
       </div>
+      )}
 
       {/* Historial de consumo */}
       <div className="space-y-2">

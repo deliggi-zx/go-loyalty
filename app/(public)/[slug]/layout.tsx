@@ -225,7 +225,14 @@ export default async function TenantLayout({
     />
   );
 
-  const pointsBadge = user && (
+  // Fase puntos fuera de Domus: Domus no tiene ninguna mecánica real de
+  // puntos en ningún lado (no hay flujo de "compra" que emita sellos) —
+  // el badge chico "tierLabel · balance pts" se oculta site-wide para
+  // esta org, no solo en /perfil (mismo criterio que showLoginIcon un
+  // poco más arriba: chrome compartido por layout.tsx, no algo que se
+  // pueda scopear por página sin lógica nueva de ruta). El resto de las
+  // orgs sigue viéndolo exactamente igual.
+  const pointsBadge = user && !isDomusOrg && (
     <PointsBadge
       tierLabel={org.member_tier_label ?? "Socio Frecuente"}
       balance={pointsBalance}
