@@ -21,9 +21,13 @@ export interface ProductRow {
 interface ProductsListProps {
   products: ProductRow[];
   categories: { id: string; name: string }[];
+  // Fase catálogo Domus: "Agregar propiedad" en vez de "Nuevo producto"
+  // — mismo botón, mismo destino, ya estaba visible de entrada sin
+  // gating (nada que abrir antes), solo cambia el texto.
+  isDomus?: boolean;
 }
 
-export function ProductsList({ products: initialProducts, categories }: ProductsListProps) {
+export function ProductsList({ products: initialProducts, categories, isDomus = false }: ProductsListProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [products, setProducts] = useState(initialProducts);
@@ -73,7 +77,7 @@ export function ProductsList({ products: initialProducts, categories }: Products
           href="/dashboard/catalogo/productos/nuevo"
           className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
         >
-          Nuevo producto
+          {isDomus ? "Agregar propiedad" : "Nuevo producto"}
         </Link>
       </div>
 

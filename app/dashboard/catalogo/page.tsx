@@ -13,11 +13,16 @@ export default async function CatalogoPage() {
 
   const { data: org } = await supabase
     .from("loyalty_organizations")
-    .select("catalog_type")
+    .select("catalog_type, slug")
     .eq("id", orgId)
     .maybeSingle();
 
   if (org?.catalog_type !== "products") redirect("/dashboard");
+
+  // Fase catálogo Domus: categorías colapsadas + "Agregar propiedad" en
+  // vez de "Nuevo producto" — mismo criterio simple de slug directo que
+  // el resto de las fases Domus (ProductForm, ProductImagesManager).
+  const isDomus = org?.slug === "domus";
 
   const [categoriesRes, productsRes] = await Promise.all([
     supabase
@@ -91,8 +96,8 @@ export default async function CatalogoPage() {
       </header>
 
       <div className="p-8 space-y-10 max-w-5xl">
-        <CategoryManager categories={categories} />
-        <ProductsList products={products} categories={categories} />
+        <CategoryManager categories={categories} isDomus={isDomus} />
+        <ProductsList products={products} categories={categories} isDomus={isDomus} />
       </div>
     </div>
   );
