@@ -4,6 +4,7 @@ import { getVetReviews } from "./vet-reviews-data";
 import { getGymLocations, getGymClasses, getGymTestimonials } from "./gym-data";
 import { LoginForm } from "./login-form";
 import { GeneralInquiryForm } from "./general-inquiry-form";
+import { DomusChatWidget } from "./domus-chat-widget";
 import { Carousel } from "./carousel";
 import { SocialLinks } from "./social-links";
 import { GymAboutSection } from "./gym-about-section";
@@ -206,14 +207,23 @@ export default async function TenantPage({
           que Gym2) — el mensaje apunta ahí en vez de "arriba". */}
       {isDomus &&
         (user ? (
-          <div className="max-w-lg mx-auto px-4 pt-4">
+          <div id="consultas" className="max-w-lg mx-auto px-4 pt-4">
             <GeneralInquiryForm slug={params.slug} orgId={org.id} primaryColor={primary} />
           </div>
         ) : (
-          <p className="max-w-lg mx-auto px-4 pt-4 text-xs text-stone-400 text-center">
+          <p id="consultas" className="max-w-lg mx-auto px-4 pt-4 text-xs text-stone-400 text-center">
             Iniciá sesión desde el ícono de arriba para hacer una consulta.
           </p>
         ))}
+
+      {/* Fase chatbot Domus: solo esta org, botón flotante propio (no
+          reemplaza ni convive mal con WhatsAppButton de layout.tsx —
+          este vive apilado arriba, bottom-24 en vez de bottom-5, ver
+          domus-chat-widget.tsx). whatsappNumber ya viaja acá abajo para
+          el fallback "hablar con un agente" del chat. */}
+      {isDomus && (
+        <DomusChatWidget slug={params.slug} orgId={org.id} whatsappNumber={org.whatsapp_number} />
+      )}
 
       {/* Fase Home: carruseles configurables — debajo de la card de
           puntos (login o badge, ambos viven arriba: LoginForm acá mismo,
