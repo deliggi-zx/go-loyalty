@@ -16,6 +16,7 @@ import {
   Home,
   MessageSquare,
   FileText,
+  BookmarkCheck,
   LayoutGrid,
   ScanLine,
   Settings,
@@ -72,6 +73,10 @@ const consultasNavItem = { href: "/dashboard/consultas", label: "Consultas", ico
 // (slug domus + role admin) — ver showOfertas en dashboard/layout.tsx.
 const ofertasNavItem = { href: "/dashboard/ofertas", label: "Ofertas", icon: FileText };
 
+// Solo Domus (Fase Reservas), mismo gate que el resto de Domus (slug
+// domus + role admin) — ver showReservas en dashboard/layout.tsx.
+const reservasNavItem = { href: "/dashboard/reservas", label: "Reservas", icon: BookmarkCheck };
+
 // Solo Domus (Fase 4b), mismo gate que el resto de Domus (slug domus +
 // role admin) — ver showInicio en dashboard/layout.tsx. Va PRIMERO en el
 // nav (antes que "Dashboard"), no reemplaza el redirect del login: ese
@@ -95,6 +100,7 @@ interface SidebarProps {
   showVisitas?: boolean;
   showConsultas?: boolean;
   showOfertas?: boolean;
+  showReservas?: boolean;
   showInicio?: boolean;
   // Fase sidebar responsive: nombre real de la org en vez del "Go
   // Loyalty" hardcodeado de siempre — no encontré ningún indicio de que
@@ -124,6 +130,7 @@ export function Sidebar({
   showVisitas = false,
   showConsultas = false,
   showOfertas = false,
+  showReservas = false,
   showInicio = false,
   orgName,
   orgLogo,
@@ -141,6 +148,7 @@ export function Sidebar({
     ...(showVisitas ? [visitasNavItem] : []),
     ...(showConsultas ? [consultasNavItem] : []),
     ...(showOfertas ? [ofertasNavItem] : []),
+    ...(showReservas ? [reservasNavItem] : []),
     ...trailingNavItems,
   ];
 

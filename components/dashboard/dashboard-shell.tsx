@@ -14,6 +14,7 @@ interface DashboardShellProps {
   showVisitas?: boolean;
   showConsultas?: boolean;
   showOfertas?: boolean;
+  showReservas?: boolean;
   showInicio?: boolean;
   orgName?: string;
   orgLogo?: string | null;
@@ -43,6 +44,7 @@ export function DashboardShell({
   showVisitas,
   showConsultas,
   showOfertas,
+  showReservas,
   showInicio,
   orgName,
   orgLogo,
@@ -62,6 +64,7 @@ export function DashboardShell({
       showVisitas={showVisitas}
       showConsultas={showConsultas}
       showOfertas={showOfertas}
+      showReservas={showReservas}
       showInicio={showInicio}
       orgName={orgName}
       orgLogo={orgLogo}

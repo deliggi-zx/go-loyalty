@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { getConfirmedReservedProductIds } from "./domus-reservations-data";
 
 export const getTenantOrg = cache(async (slug: string) => {
   const supabase = createClient();
@@ -113,6 +114,13 @@ export interface CatalogProduct {
   // formatPrice() en lib/utils.ts. Genérico para cualquier org, no
   // exclusivo de Domus.
   currency: string;
+  // Fase Reservas (Domus): true solo si hay una reserva CONFIRMADA para
+  // este producto (ver domus-reservations-data.ts — una pendiente ya
+  // oculta "Reservar" en la ficha, pero recién se anuncia acá una vez
+  // confirmada) — siempre false para cualquier otra org, esa tabla nunca
+  // tiene filas suyas. Alimenta el badge "Reservada" de la grilla
+  // (product-catalog.tsx).
+  reserved: boolean;
   images: CatalogImage[];
 }
 
@@ -190,6 +198,8 @@ export const getProductCatalog = cache(async (orgId: string): Promise<CatalogPro
     imagesByProduct.set(img.product_id, list);
   }
 
+  const reservedProductIds = await getConfirmedReservedProductIds(productIds);
+
   return products.map((p) => ({
     id: p.id,
     name: p.name,
@@ -198,6 +208,7 @@ export const getProductCatalog = cache(async (orgId: string): Promise<CatalogPro
     category_id: p.category_id,
     brand: p.brand,
     screen_size_inches: p.screen_size_inches,
+    reserved: reservedProductIds.has(p.id),
     specs: (p.specs as Record<string, string> | null) ?? null,
     currency: p.currency,
     images: imagesByProduct.get(p.id) ?? [],
