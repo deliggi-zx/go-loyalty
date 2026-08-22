@@ -2,6 +2,7 @@ import { Users, Stamp, Gift, TrendingUp } from "lucide-react";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
+import { DomusMobileHome } from "./inicio/domus-mobile-home";
 
 const recentActivity = [
   { id: 1, type: "sello",    customer: "María González", detail: "2 sellos emitidos",          time: "hace 5 min",  avatar: "MG" },
@@ -25,9 +26,20 @@ export default async function DashboardPage() {
   let customerCount = 0;
   let activeRewardsCount = 0;
   let totalPoints = 0;
+  // Fase Home mobile Domus (CAMBIO 2): "aterrizar en /dashboard desde el
+  // celular debe mostrar la misma pantalla simplificada" — sin tocar el
+  // redirect de login (compartido con todas las orgs, sigue apuntando acá
+  // igual que siempre), esta página en sí decide qué mostrar según
+  // viewport+role. Requiere org.slug + el role del usuario, que esta
+  // página no pedía antes (nadie lo necesitaba).
+  let isDomusAdmin = false;
 
   if (orgId) {
-    const [customersRes, rewardsRes, txRes] = await Promise.all([
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const [customersRes, rewardsRes, txRes, orgRes, membershipRes] = await Promise.all([
       supabase
         .from("loyalty_members")
         .select("*", { count: "exact", head: true })
@@ -42,12 +54,22 @@ export default async function DashboardPage() {
         .from("loyalty_transactions")
         .select("points")
         .eq("org_id", orgId),
+      supabase.from("loyalty_organizations").select("slug").eq("id", orgId).maybeSingle(),
+      user
+        ? supabase
+            .from("loyalty_members")
+            .select("role")
+            .eq("org_id", orgId)
+            .eq("profile_id", user.id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
     ]);
 
     customerCount = customersRes.count ?? 0;
     activeRewardsCount = rewardsRes.count ?? 0;
     totalPoints =
       txRes.data?.reduce((sum, tx) => sum + (tx.points ?? 0), 0) ?? 0;
+    isDomusAdmin = orgRes.data?.slug === "domus" && membershipRes.data?.role === "admin";
   }
 
   const today = new Date().toLocaleDateString("es-AR", {
@@ -57,8 +79,45 @@ export default async function DashboardPage() {
     day: "numeric",
   });
 
+  // Fase Home mobile Domus: en mobile, el agente ve la pantalla
+  // simplificada acá mismo — no hace falta redirect ni tocar
+  // app/login/actions.ts, esta página ya es el destino de siempre.
+  if (isDomusAdmin) {
+    return (
+      <div className="flex-1 overflow-y-auto">
+        <div className="md:hidden">
+          <DomusMobileHome />
+        </div>
+        <div className="hidden md:block">
+          <DashboardContent today={today} customerCount={customerCount} activeRewardsCount={activeRewardsCount} totalPoints={totalPoints} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 overflow-y-auto">
+      <DashboardContent today={today} customerCount={customerCount} activeRewardsCount={activeRewardsCount} totalPoints={totalPoints} />
+    </div>
+  );
+}
+
+// Contenido de siempre, extraído para poder reusarlo tal cual en las dos
+// ramas de arriba (agente Domus en desktop / cualquier otra org, sin
+// cambios de comportamiento ni de mercado) sin duplicar el JSX.
+function DashboardContent({
+  today,
+  customerCount,
+  activeRewardsCount,
+  totalPoints,
+}: {
+  today: string;
+  customerCount: number;
+  activeRewardsCount: number;
+  totalPoints: number;
+}) {
+  return (
+    <>
       <header className="bg-white border-b border-stone-200 px-8 h-16 flex items-center justify-between shrink-0">
         <div>
           <h1 className="text-lg font-semibold text-stone-900">Dashboard</h1>
@@ -148,6 +207,6 @@ export default async function DashboardPage() {
           </div>
         </section>
       </div>
-    </div>
+    </>
   );
 }

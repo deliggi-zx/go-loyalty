@@ -96,6 +96,22 @@ interface SidebarProps {
   showConsultas?: boolean;
   showOfertas?: boolean;
   showInicio?: boolean;
+  // Fase sidebar responsive: nombre real de la org en vez del "Go
+  // Loyalty" hardcodeado de siempre — no encontré ningún indicio de que
+  // ese texto fuera marca paraguas deliberada (sin comentario, sin
+  // mención en ninguna fase anterior), así que se reemplaza directo.
+  // Fallback a "Go Loyalty" si algún caller no lo pasa (no debería
+  // pasar, DashboardLayout siempre lo tiene disponible).
+  orgName?: string;
+  // ORG_LOGO_LOCKUP[slug] resuelto por el caller — mismo mecanismo que ya
+  // usa el sitio público (loyalty_organizations.logo_url sigue sin
+  // usarse en ningún lado). Si no hay entrada para la org, se cae al
+  // ícono genérico de siempre.
+  orgLogo?: string | null;
+  // Fase sidebar responsive: en mobile, cada click de nav debería cerrar
+  // el drawer (DashboardShell es quien controla ese estado, esto es solo
+  // el hook para avisarle). No hace nada en desktop.
+  onNavigate?: () => void;
 }
 
 export function Sidebar({
@@ -109,6 +125,9 @@ export function Sidebar({
   showConsultas = false,
   showOfertas = false,
   showInicio = false,
+  orgName,
+  orgLogo,
+  onNavigate,
 }: SidebarProps) {
   const pathname = usePathname();
   const navItems = [
@@ -127,15 +146,22 @@ export function Sidebar({
 
   return (
     <aside className="w-60 shrink-0 flex flex-col h-screen bg-white border-r border-stone-200">
-      {/* Logo */}
+      {/* Logo / nombre de la org */}
       <div className="flex items-center gap-2.5 px-5 h-16 border-b border-stone-200">
-        <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center shrink-0">
-          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M12 3C7 3 3 7 3 12s4 9 9 9 9-4 9-9M12 3c2.5 0 4.5 2 4.5 4.5S14.5 12 12 12m0-9C9.5 3 7.5 5 7.5 7.5S9.5 12 12 12" />
-          </svg>
-        </div>
-        <span className="font-bold text-stone-900 text-base">Go Loyalty</span>
+        {orgLogo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={orgLogo} alt={orgName ?? "Logo"} className="h-8 w-auto max-w-[10rem] object-contain" />
+        ) : (
+          <>
+            <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center shrink-0">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M12 3C7 3 3 7 3 12s4 9 9 9 9-4 9-9M12 3c2.5 0 4.5 2 4.5 4.5S14.5 12 12 12m0-9C9.5 3 7.5 5 7.5 7.5S9.5 12 12 12" />
+              </svg>
+            </div>
+            <span className="font-bold text-stone-900 text-base truncate">{orgName ?? "Go Loyalty"}</span>
+          </>
+        )}
       </div>
 
       {/* Nav */}
@@ -146,6 +172,7 @@ export function Sidebar({
             <Link
               key={href}
               href={href}
+              onClick={onNavigate}
               className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                 active

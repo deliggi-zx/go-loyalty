@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Users, MessageSquare, CalendarClock, Eye } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
+import { DomusMobileHome } from "./domus-mobile-home";
 
 // Mismo gate exacto que Visitas/Consultas/Ofertas — slug domus + role
 // admin.
@@ -76,7 +77,18 @@ export default async function InicioPage() {
         </div>
       </header>
 
-      <div className="p-8">
+      {/* Fase Home mobile Domus (CAMBIO 2): por debajo de md, esta misma
+          pantalla se reemplaza por los 5 botones grandes de
+          DomusMobileHome (mismos 4 destinos + Catálogo) — el sidebar no
+          es alcanzable en mobile para este role (ver DashboardShell,
+          hideMobileNav), así que esta pantalla ES la navegación completa
+          del agente en el celular. En md y superior, la grilla de
+          siempre, sin cambios. */}
+      <div className="md:hidden">
+        <DomusMobileHome />
+      </div>
+
+      <div className="hidden md:block p-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
           {MENU_ITEMS.map(({ href, label, description, icon: Icon }) => (
             <Link

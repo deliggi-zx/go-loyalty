@@ -176,6 +176,7 @@ export function ClientHeader({
           neonTheme={neonTheme}
           requireInviteCode={requireInviteCode}
           orgId={orgId}
+          orgSlug={orgSlug}
         />
       )}
     </>

@@ -139,18 +139,47 @@ export default async function ContactosPage() {
   }
 
   const profileIds = Array.from(contactsById.keys());
-  const { data: profilesData } =
+  const [{ data: profilesData }, { data: detailsData }] = await Promise.all([
     profileIds.length > 0
-      ? await supabase.from("profiles").select("id, full_name").in("id", profileIds)
-      : { data: [] as { id: string; full_name: string | null }[] };
+      ? supabase.from("profiles").select("id, full_name").in("id", profileIds)
+      : Promise.resolve({ data: [] as { id: string; full_name: string | null }[] }),
+    // Fase registro extendido: apellido/teléfono/profesión/presupuesto/
+    // zona cargados al registrarse — solo existen para quien se registró
+    // después de esta fase, el resto simplemente no tiene fila acá
+    // (ausencia normal, no un error).
+    profileIds.length > 0
+      ? supabase
+          .from("domus_client_profile_details")
+          .select("profile_id, last_name, phone, profession, budget_range, interest_zone")
+          .eq("org_id", orgId)
+          .in("profile_id", profileIds)
+      : Promise.resolve({
+          data: [] as {
+            profile_id: string;
+            last_name: string;
+            phone: string | null;
+            profession: string | null;
+            budget_range: string | null;
+            interest_zone: string | null;
+          }[],
+        }),
+  ]);
   const nameById = new Map((profilesData ?? []).map((p) => [p.id, p.full_name]));
+  const detailsByProfileId = new Map((detailsData ?? []).map((d) => [d.profile_id, d]));
 
   const contacts = Array.from(contactsById.values())
-    .map((c) => ({
-      ...c,
-      name: nameById.get(c.profileId) ?? "—",
-      interactions: c.interactions.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
-    }))
+    .map((c) => {
+      const details = detailsByProfileId.get(c.profileId);
+      const firstName = nameById.get(c.profileId) ?? "—";
+      return {
+        ...c,
+        name: details?.last_name ? `${firstName} ${details.last_name}` : firstName,
+        profession: details?.profession ?? null,
+        budgetRange: details?.budget_range ?? null,
+        interestZone: details?.interest_zone ?? null,
+        interactions: c.interactions.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
+      };
+    })
     .sort((a, b) =>
       a.interactions[0].createdAt < b.interactions[0].createdAt ? 1 : -1
     );
@@ -178,6 +207,21 @@ export default async function ContactosPage() {
                   <p className="text-xs text-stone-500">
                     {c.phone} · último contacto {formatDate(c.interactions[0].createdAt)}
                   </p>
+                  {/* Fase registro extendido: solo aparece para quien se
+                      registró cargando estos datos — el resto de los
+                      contactos (llegaron sin registrarse, o se
+                      registraron antes de esta fase) no muestra nada acá. */}
+                  {(c.profession || c.budgetRange || c.interestZone) && (
+                    <p className="text-xs text-stone-400 mt-0.5">
+                      {[
+                        c.profession && `Profesión: ${c.profession}`,
+                        c.budgetRange && `Presupuesto: ${c.budgetRange}`,
+                        c.interestZone && `Zona: ${c.interestZone}`,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   {c.interactions.map((int, i) => (
