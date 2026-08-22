@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2, ChevronUp, ChevronDown, Pencil, Check, X, Plus } from "lucide-react";
 import {
@@ -55,7 +55,17 @@ function flattenTree(categories: CategoryRow[]): TreeNode[] {
   return result;
 }
 
-export function CategoryManager({ categories: initialCategories }: { categories: CategoryRow[] }) {
+interface CategoryManagerProps {
+  categories: CategoryRow[];
+  // Fase catálogo Domus: el árbol (que puede tener 2-3 niveles, ver Fase
+  // árbol) pasa a vivir colapsado por defecto, no ocupando espacio fijo
+  // arriba de la lista de propiedades — el resto de las orgs (con árboles
+  // más chicos, ej. TV y Audio de SuperElectro) sigue viendo todo
+  // expandido como siempre.
+  isDomus?: boolean;
+}
+
+export function CategoryManager({ categories: initialCategories, isDomus = false }: CategoryManagerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [categories, setCategories] = useState(initialCategories);
@@ -63,6 +73,22 @@ export function CategoryManager({ categories: initialCategories }: { categories:
   const [newParentId, setNewParentId] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  // Colapsado por defecto solo para Domus — el resto de las orgs arranca
+  // ya expandido y no tiene forma de colapsar (isDomus=false de entrada
+  // ignora este estado en el render de abajo).
+  const [expanded, setExpanded] = useState(false);
+  // Al abrir desde "Crear nueva categoría" (no desde "Editar
+  // categorías"), enfoca el input de nombre apenas se monta la sección
+  // expandida — sin esto, expandir no deja claro por dónde arrancar.
+  const [focusOnExpand, setFocusOnExpand] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (expanded && focusOnExpand) {
+      nameInputRef.current?.focus();
+      setFocusOnExpand(false);
+    }
+  }, [expanded, focusOnExpand]);
 
   const tree = useMemo(() => flattenTree(categories), [categories]);
 
@@ -145,16 +171,68 @@ export function CategoryManager({ categories: initialCategories }: { categories:
     });
   }
 
+  // Fase catálogo Domus: colapsado, la sección es solo el título/
+  // descripción + dos links de entrada — nada de árbol ni de form
+  // ocupando espacio. No hay pantalla separada de gestión de categorías
+  // a la que enlazar (Gate 0: todo vive en este mismo componente), así
+  // que los dos links expanden esta misma sección; "Crear nueva
+  // categoría" además enfoca el input de nombre al abrir.
+  if (isDomus && !expanded) {
+    return (
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">
+            Categorías
+          </h2>
+          <p className="text-xs text-stone-400 mt-0.5">
+            {categories.length} categoría{categories.length === 1 ? "" : "s"} cargada
+            {categories.length === 1 ? "" : "s"}
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => {
+              setExpanded(true);
+              setFocusOnExpand(true);
+            }}
+            className="text-xs font-medium text-amber-600 hover:text-amber-700 transition-colors"
+          >
+            Crear nueva categoría
+          </button>
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            className="text-xs font-medium text-stone-500 hover:text-stone-800 transition-colors"
+          >
+            Editar categorías
+          </button>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-4">
-      <div>
-        <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">
-          Categorías
-        </h2>
-        <p className="text-xs text-stone-400 mt-0.5">
-          Organizá tus productos en categorías. La indentación muestra qué es hija de qué. Borrar
-          una categoría no borra sus productos.
-        </p>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">
+            Categorías
+          </h2>
+          <p className="text-xs text-stone-400 mt-0.5">
+            Organizá tus productos en categorías. La indentación muestra qué es hija de qué. Borrar
+            una categoría no borra sus productos.
+          </p>
+        </div>
+        {isDomus && (
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            className="shrink-0 text-xs font-medium text-stone-400 hover:text-stone-700 transition-colors"
+          >
+            Colapsar
+          </button>
+        )}
       </div>
 
       {tree.length > 0 ? (
@@ -246,6 +324,7 @@ export function CategoryManager({ categories: initialCategories }: { categories:
 
       <div className="bg-white rounded-xl border border-stone-200 p-4 flex items-center gap-3">
         <input
+          ref={nameInputRef}
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleCreate()}

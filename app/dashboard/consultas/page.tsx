@@ -40,7 +40,7 @@ export default async function ConsultasPage() {
   // intencionalmente simple, sin tabs ni filtros todavía.
   const { data: inquiriesData } = await supabase
     .from("domus_general_inquiries")
-    .select("id, client_profile_id, message, phone, status, created_at")
+    .select("id, client_profile_id, message, phone, status, topic, created_at")
     .eq("org_id", orgId)
     .order("created_at", { ascending: false });
 
@@ -60,6 +60,7 @@ export default async function ConsultasPage() {
     message: i.message,
     phone: i.phone,
     status: i.status as InquiryRow["status"],
+    topic: i.topic as InquiryRow["topic"],
     createdAt: i.created_at,
   }));
 

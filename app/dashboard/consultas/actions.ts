@@ -44,3 +44,21 @@ export async function markInquiryClosed(id: string) {
 
   revalidatePath("/dashboard/consultas");
 }
+
+// Fase filtros de consultas: tema opcional, lo asigna el agente al leer
+// la consulta (nunca el cliente al enviarla) — no bloquea nada, se puede
+// asignar o reasignar en cualquier momento. Mismo ownership check que
+// las dos de arriba (.eq("org_id", orgId), la tabla no tiene RLS).
+export async function setInquiryTopic(id: string, topic: "compra" | "alquiler" | "desarrollo") {
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+
+  const { error } = await supabase
+    .from("domus_general_inquiries")
+    .update({ topic })
+    .eq("id", id)
+    .eq("org_id", orgId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/dashboard/consultas");
+}
