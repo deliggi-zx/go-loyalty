@@ -1,12 +1,13 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { getConfirmedReservedProductIds } from "./domus-reservations-data";
 
 export const getTenantOrg = cache(async (slug: string) => {
   const supabase = createClient();
   const { data } = await supabase
     .from("loyalty_organizations")
     .select(
-      "id, name, banner_url, hero_video_url, background_url, background_color, primary_color, secondary_color, accent_color, member_tier_label, next_reward_threshold, about_text, whatsapp_number, phone_number, facebook_url, instagram_url, twitter_url, youtube_url, terms_text, catalog_type"
+      "id, name, banner_url, hero_video_url, background_url, background_color, primary_color, secondary_color, accent_color, member_tier_label, next_reward_threshold, about_text, whatsapp_number, phone_number, facebook_url, instagram_url, twitter_url, youtube_url, terms_text, catalog_type, rental_requirements_text, purchase_requirements_text"
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -113,6 +114,13 @@ export interface CatalogProduct {
   // formatPrice() en lib/utils.ts. Genérico para cualquier org, no
   // exclusivo de Domus.
   currency: string;
+  // Fase Reservas (Domus): true solo si hay una reserva CONFIRMADA para
+  // este producto (ver domus-reservations-data.ts — una pendiente ya
+  // oculta "Reservar" en la ficha, pero recién se anuncia acá una vez
+  // confirmada) — siempre false para cualquier otra org, esa tabla nunca
+  // tiene filas suyas. Alimenta el badge "Reservada" de la grilla
+  // (product-catalog.tsx).
+  reserved: boolean;
   images: CatalogImage[];
 }
 
@@ -190,6 +198,8 @@ export const getProductCatalog = cache(async (orgId: string): Promise<CatalogPro
     imagesByProduct.set(img.product_id, list);
   }
 
+  const reservedProductIds = await getConfirmedReservedProductIds(productIds);
+
   return products.map((p) => ({
     id: p.id,
     name: p.name,
@@ -198,6 +208,7 @@ export const getProductCatalog = cache(async (orgId: string): Promise<CatalogPro
     category_id: p.category_id,
     brand: p.brand,
     screen_size_inches: p.screen_size_inches,
+    reserved: reservedProductIds.has(p.id),
     specs: (p.specs as Record<string, string> | null) ?? null,
     currency: p.currency,
     images: imagesByProduct.get(p.id) ?? [],
@@ -288,6 +299,11 @@ export interface ProductDetail {
   specs: Record<string, string> | null;
   // Fase moneda: ver CatalogProduct.currency más arriba.
   currency: string;
+  // Fase Requisitos (Domus): se usa para inferir el tipo de operación
+  // (venta/alquiler) subiendo hasta la categoría raíz del producto — ver
+  // findRootAncestor en lib/category-tree.ts y su uso en producto/[id]/
+  // page.tsx. null para cualquier producto sin categoría asignada.
+  category_id: string | null;
   images: CatalogImage[];
 }
 
@@ -419,7 +435,7 @@ export const getProductDetail = cache(
     const supabase = createClient();
     const { data: product } = await supabase
       .from("products")
-      .select("id, name, description, price, brand, screen_size_inches, specs, currency")
+      .select("id, name, description, price, brand, screen_size_inches, specs, currency, category_id")
       .eq("id", productId)
       .eq("org_id", orgId)
       .eq("active", true)
@@ -442,6 +458,7 @@ export const getProductDetail = cache(
       screen_size_inches: product.screen_size_inches,
       specs: (product.specs as Record<string, string> | null) ?? null,
       currency: product.currency,
+      category_id: product.category_id,
       images: imagesData ?? [],
     };
   }

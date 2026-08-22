@@ -27,6 +27,7 @@ export default async function DashboardLayout({
   let showVisitas = false;
   let showConsultas = false;
   let showOfertas = false;
+  let showReservas = false;
   let showInicio = false;
   let orgName: string | undefined;
   let orgSlug: string | undefined;
@@ -94,6 +95,9 @@ export default async function DashboardLayout({
     // Fase 3: panel de ofertas ("ofrecer mi propiedad"), mismo gate exacto
     // que Visitas/Consultas arriba.
     showOfertas = isDomusAdmin;
+    // Fase Reservas: panel de reservas pendientes, mismo gate exacto que
+    // el resto de Domus.
+    showReservas = isDomusAdmin;
     // Fase 4b: mini-CRM del agente (Contactos/Consultas/Reuniones/
     // Seguimiento), mismo gate exacto que Visitas/Consultas/Ofertas. No
     // reemplaza el redirect de /login (compartido con todas las orgs,
@@ -112,6 +116,7 @@ export default async function DashboardLayout({
       showVisitas={showVisitas}
       showConsultas={showConsultas}
       showOfertas={showOfertas}
+      showReservas={showReservas}
       showInicio={showInicio}
       orgName={orgName}
       orgLogo={orgSlug ? ORG_LOGO_LOCKUP[orgSlug] ?? null : null}

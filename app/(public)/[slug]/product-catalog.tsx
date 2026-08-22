@@ -164,9 +164,17 @@ export function ProductCatalog({
               .sort((a, b) => a.display_order - b.display_order)
               .find((img) => img.media_type !== "video");
             const cardClassName =
-              "text-left rounded-2xl overflow-hidden bg-white shadow-sm border border-stone-200 hover:shadow-md transition-shadow";
+              "relative text-left rounded-2xl overflow-hidden bg-white shadow-sm border border-stone-200 hover:shadow-md transition-shadow";
             const cardContent = (
               <>
+                {/* Fase Reservas (Domus): badge visible en la grilla, no
+                    solo en la ficha — para cualquier otra org `reserved`
+                    siempre es false (ver getProductCatalog). */}
+                {product.reserved && (
+                  <span className="absolute top-2 left-2 z-10 text-[10px] font-semibold uppercase tracking-wide text-white bg-stone-900/80 px-2 py-1 rounded-full">
+                    Reservada
+                  </span>
+                )}
                 <div className="aspect-square bg-stone-100 flex items-center justify-center overflow-hidden">
                   {mainImage ? (
                     // eslint-disable-next-line @next/next/no-img-element

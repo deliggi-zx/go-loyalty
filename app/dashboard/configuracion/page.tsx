@@ -6,6 +6,7 @@ import { CarouselManager } from "./carousel-manager";
 import { PromoManager } from "./promo-manager";
 import { PriceListManager } from "./price-list-manager";
 import { ContactForm } from "./contact-form";
+import { RequirementsForm } from "./requirements-form";
 
 export default async function ConfiguracionPage() {
   const supabase = createClient();
@@ -17,7 +18,7 @@ export default async function ConfiguracionPage() {
     supabase
       .from("loyalty_organizations")
       .select(
-        "id, slug, name, banner_url, background_url, background_color, primary_color, secondary_color, accent_color, member_tier_label, next_reward_threshold, about_text, whatsapp_number, phone_number, facebook_url, instagram_url, twitter_url, youtube_url, terms_text"
+        "id, slug, name, banner_url, background_url, background_color, primary_color, secondary_color, accent_color, member_tier_label, next_reward_threshold, about_text, whatsapp_number, phone_number, facebook_url, instagram_url, twitter_url, youtube_url, terms_text, rental_requirements_text, purchase_requirements_text"
       )
       .eq("id", orgId)
       .single(),
@@ -66,6 +67,9 @@ export default async function ConfiguracionPage() {
         <PromoManager orgId={orgId} items={promoItems} />
         <PriceListManager orgId={orgId} items={priceItems} />
         <ContactForm org={org} />
+        {/* Fase Requisitos: solo Domus tiene "venta"/"alquiler" como
+            concepto — el resto de las orgs no ve este bloque. */}
+        {org.slug === "domus" && <RequirementsForm org={org} />}
       </div>
     </div>
   );
