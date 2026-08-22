@@ -13,6 +13,7 @@ import { WhatsAppButton } from "./whatsapp-button";
 import { HeroVideo } from "./hero-video";
 import { SectionNavTabs, type SectionNavTabItem } from "./section-nav-tabs";
 import { getGymLocations } from "./gym-data";
+import { ORG_LOGO_LOCKUP } from "@/lib/org-logo-lockup";
 
 // Copy de las franjas del hero, por org (keyed por slug). Cada org que
 // quiera el ticker agrega su propia entrada acá — el componente no
@@ -93,13 +94,8 @@ const FLOATING_HEADER_SLUGS = new Set(["bike"]);
 // fallback deja de usarse solo; no hace falta sacarlo de acá. Cualquier
 // otra org sin banner_url que no esté en este mapa sigue con el fallback
 // de texto (h1 con org.name) de siempre.
-const ORG_LOGO_LOCKUP: Record<string, string> = {
-  superelectro: "/superelectro/superelectro-logo-completo.png",
-  // Fase logo Domus: isotipo (D→casa) + wordmark + tagline "Soluciones
-  // Inmobiliarias", fondo marfil — coincide con background_color de la
-  // org, mismo criterio que el resto de este mapa.
-  domus: "/domus/domus-logo-completo.png",
-};
+// Movido a lib/org-logo-lockup.ts (Fase sidebar responsive) — el panel
+// admin necesitó el mismo mapa, ver comentario ahí.
 
 export default async function TenantLayout({
   children,
