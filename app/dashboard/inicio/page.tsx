@@ -52,7 +52,11 @@ export default async function InicioPage() {
         </div>
       </header>
 
-      <DomusAgentPanel consultasNuevoCount={consultasNuevoCount} reunionesHoyCount={reunionesHoyCount} />
+      <DomusAgentPanel
+        orgId={orgId}
+        consultasNuevoCount={consultasNuevoCount}
+        reunionesHoyCount={reunionesHoyCount}
+      />
     </div>
   );
 }

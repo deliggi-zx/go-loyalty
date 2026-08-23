@@ -1,5 +1,9 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MessageSquare, Package, Eye, CalendarClock, Users } from "lucide-react";
+import { getMorningSummary } from "./domus-morning-summary-actions";
 
 // Fase Unificar panel del agente (antes "DomusMobileHome", solo para
 // mobile en /dashboard/inicio y /dashboard — ver DashboardShell,
@@ -32,15 +36,49 @@ const DOMUS_SAND = "#D6B98C";
 const DOMUS_IVORY = "#F8F6F1";
 
 interface DomusAgentPanelProps {
+  orgId: string;
   consultasNuevoCount: number;
   reunionesHoyCount: number;
 }
 
-export function DomusAgentPanel({ consultasNuevoCount, reunionesHoyCount }: DomusAgentPanelProps) {
+export function DomusAgentPanel({ orgId, consultasNuevoCount, reunionesHoyCount }: DomusAgentPanelProps) {
   const countsByKey = { consultasNuevoCount, reunionesHoyCount };
+
+  // Fase Resumen matutino: se pide al montar (una llamada a Gemini por
+  // cada vez que este panel se monta — perfil, inicio, o el mobile de
+  // /dashboard, ver los 3 callers), null mientras carga (skeleton), texto
+  // ya resuelto una vez que vuelve. getMorningSummary nunca tira (cae a
+  // un texto fijo si Gemini falla), así que acá no hace falta manejar un
+  // estado de error aparte.
+  const [summary, setSummary] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSummary(null);
+    getMorningSummary(orgId).then((text) => {
+      if (!cancelled) setSummary(text);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId]);
 
   return (
     <div className="min-h-full p-4 space-y-3" style={{ backgroundColor: DOMUS_IVORY }}>
+      <div className="rounded-2xl px-5 py-4 bg-white border border-stone-200">
+        <p className="text-xs font-semibold uppercase tracking-wide text-stone-400 mb-1.5">
+          Resumen del día
+        </p>
+        {summary === null ? (
+          <div className="space-y-2 animate-pulse" aria-label="Cargando resumen del día">
+            <div className="h-3 rounded bg-stone-200 w-full" />
+            <div className="h-3 rounded bg-stone-200 w-4/5" />
+          </div>
+        ) : (
+          <p className="text-sm text-stone-700 leading-relaxed">{summary}</p>
+        )}
+      </div>
+
       {DOMUS_AGENT_ITEMS.map(({ href, label, icon: Icon, badgeKey }) => {
         const badgeCount = badgeKey ? countsByKey[badgeKey] : 0;
         return (

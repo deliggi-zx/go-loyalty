@@ -3,7 +3,12 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { markInquiryContacted, markInquiryClosed, setInquiryTopic } from "./actions";
+import {
+  markInquiryContacted,
+  markInquiryClosed,
+  setInquiryTopic,
+  suggestInquiryReply,
+} from "./actions";
 
 export interface InquiryRow {
   id: string;
@@ -94,6 +99,38 @@ export function ConsultasManager({ inquiries: initialInquiries }: ConsultasManag
       setUpdatingId(null);
       router.refresh();
     });
+  }
+
+  // Fase B (borrador asistido): un draft por fila, editable a mano antes
+  // de copiarlo — mismo criterio "el agente ajusta antes de mandar" que
+  // pidió la fase, por eso vive en un textarea normal (value + onChange),
+  // no en un texto de solo lectura. suggestingId marca qué fila está
+  // esperando la respuesta de Gemini (loading puntual, no global).
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [suggestingId, setSuggestingId] = useState<string | null>(null);
+  const [draftErrorId, setDraftErrorId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  function handleSuggestReply(id: string) {
+    setSuggestingId(id);
+    setDraftErrorId(null);
+    startTransition(async () => {
+      const result = await suggestInquiryReply(id);
+      setSuggestingId(null);
+      if (result.ok) {
+        setDrafts((prev) => ({ ...prev, [id]: result.draft }));
+      } else {
+        setDraftErrorId(id);
+      }
+    });
+  }
+
+  async function handleCopy(id: string) {
+    const text = drafts[id];
+    if (!text) return;
+    await navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId((current) => (current === id ? null : current)), 2000);
   }
 
   const filtered = useMemo(() => {
@@ -243,6 +280,42 @@ export function ConsultasManager({ inquiries: initialInquiries }: ConsultasManag
                   className="text-xs font-medium text-stone-500 hover:text-stone-800 disabled:opacity-50 transition-colors"
                 >
                   Marcar cerrado
+                </button>
+                <button
+                  type="button"
+                  disabled={suggestingId === row.id}
+                  onClick={() => handleSuggestReply(row.id)}
+                  className="text-xs font-medium text-emerald-600 hover:text-emerald-800 disabled:opacity-50 transition-colors"
+                >
+                  {suggestingId === row.id ? "Pensando..." : "Sugerir respuesta"}
+                </button>
+              </div>
+            )}
+
+            {/* Fase B: borrador editable + Copiar — se arma con Gemini
+                (mensaje real de la consulta + tema, ver actions.ts), el
+                agente lo ajusta acá mismo antes de pegarlo en WhatsApp. */}
+            {draftErrorId === row.id && (
+              <p className="text-xs text-red-600">
+                No pudimos generar una sugerencia. Probá de nuevo.
+              </p>
+            )}
+            {drafts[row.id] !== undefined && (
+              <div className="space-y-1.5 pt-1">
+                <textarea
+                  value={drafts[row.id]}
+                  onChange={(e) =>
+                    setDrafts((prev) => ({ ...prev, [row.id]: e.target.value }))
+                  }
+                  rows={4}
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors resize-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleCopy(row.id)}
+                  className="text-xs font-medium text-white bg-amber-500 hover:bg-amber-600 rounded-lg px-3 py-1.5 transition-colors"
+                >
+                  {copiedId === row.id ? "¡Copiado!" : "Copiar"}
                 </button>
               </div>
             )}

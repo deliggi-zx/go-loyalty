@@ -95,11 +95,12 @@ export default async function DashboardPage() {
   // Fase Home mobile Domus: en mobile, el agente ve la pantalla
   // simplificada acá mismo — no hace falta redirect ni tocar
   // app/login/actions.ts, esta página ya es el destino de siempre.
-  if (isDomusAdmin) {
+  if (isDomusAdmin && orgId) {
     return (
       <div className="flex-1 overflow-y-auto">
         <div className="md:hidden">
           <DomusAgentPanel
+            orgId={orgId}
             consultasNuevoCount={domusConsultasNuevoCount}
             reunionesHoyCount={domusReunionesHoyCount}
           />
