@@ -100,6 +100,24 @@ export function ProductRail({
     resetTimer();
   }
 
+  // Fase fix carruseles Home: onTouchStart/End solo cubre mobile — en
+  // desktop el timer seguía corriendo sin importar el mouse, así que el
+  // estante se corría solo debajo del cursor entre que el usuario
+  // apuntaba una card y efectivamente hacía click, mandándolo a la ficha
+  // de OTRA propiedad (o directo al catálogo si el click terminaba
+  // cayendo afuera de cualquier card) — reproducido real en "En alquiler"
+  // (Domus) y afecta por igual a cualquier carrusel con autoplay activo
+  // de cualquier org (ProductRail es compartido, ver más arriba). Mismo
+  // criterio pausa/retoma que el touch: se pausa mientras el mouse está
+  // arriba del estante entero, se retoma recién al salir.
+  function handleMouseEnter() {
+    if (timerRef.current) clearInterval(timerRef.current);
+  }
+
+  function handleMouseLeave() {
+    resetTimer();
+  }
+
   if (products.length === 0) return null;
 
   return (
@@ -109,6 +127,8 @@ export function ProductRail({
         ref={scrollRef}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 snap-x snap-mandatory"
       >
         {products.map((product) => {
