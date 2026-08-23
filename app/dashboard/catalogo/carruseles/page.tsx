@@ -23,7 +23,7 @@ export default async function CarrucelesPage() {
 
   const { data: carousels } = await supabase
     .from("catalog_carousels")
-    .select("id, title, display_order, active, autoplay")
+    .select("id, title, display_order, active, autoplay, loop_infinite, autoplay_speed_ms, direction")
     .eq("org_id", orgId)
     .order("display_order", { ascending: true });
 

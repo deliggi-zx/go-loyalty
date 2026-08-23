@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
+import { CAROUSEL_SPEED_MIN_MS, CAROUSEL_SPEED_MAX_MS } from "./carousel-constants";
 
 async function requireOrgId() {
   const orgId = await getOrgId();
@@ -467,6 +468,66 @@ export async function toggleCarouselAutoplay(id: string, autoplay: boolean) {
   await supabase
     .from("catalog_carousels")
     .update({ autoplay })
+    .eq("id", id)
+    .eq("org_id", orgId);
+
+  revalidatePath("/dashboard/catalogo/carruseles");
+  revalidatePath("/dashboard/catalogo");
+}
+
+// ── Ecualizador de carruseles ────────────────────────────────────────────────
+// Tres controles nuevos, cada uno con default que reproduce el
+// comportamiento de siempre (ver migración add_equalizer_columns_to_
+// catalog_carousels y product-rail.tsx) — activarlos es una decisión
+// explícita por carrusel, igual criterio que toggleCarouselAutoplay
+// arriba.
+
+// Fase Ecualizador: default false — sin loop, "En venta" y el resto de
+// los carruseles ya existentes siguen con el salto duro de siempre
+// hasta que Die lo prenda acá a mano.
+export async function toggleCarouselLoop(id: string, loopInfinite: boolean) {
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+
+  await supabase
+    .from("catalog_carousels")
+    .update({ loop_infinite: loopInfinite })
+    .eq("id", id)
+    .eq("org_id", orgId);
+
+  revalidatePath("/dashboard/catalogo/carruseles");
+  revalidatePath("/dashboard/catalogo");
+}
+
+// Rango en carousel-constants.ts (CAROUSEL_SPEED_MIN_MS/MAX_MS) — un
+// archivo "use server" solo puede exportar funciones async, así que esas
+// constantes no pueden vivir acá; se clampean igual server-side por si
+// el payload viene manipulado desde el cliente.
+export async function updateCarouselSpeed(id: string, speedMs: number) {
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+
+  const clamped = Math.min(Math.max(Math.round(speedMs), CAROUSEL_SPEED_MIN_MS), CAROUSEL_SPEED_MAX_MS);
+
+  await supabase
+    .from("catalog_carousels")
+    .update({ autoplay_speed_ms: clamped })
+    .eq("id", id)
+    .eq("org_id", orgId);
+
+  revalidatePath("/dashboard/catalogo/carruseles");
+  revalidatePath("/dashboard/catalogo");
+}
+
+// Fase Ecualizador: default 'forward' — mismo sentido único que tenían
+// todos los carruseles hasta ahora.
+export async function toggleCarouselDirection(id: string, direction: "forward" | "reverse") {
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+
+  await supabase
+    .from("catalog_carousels")
+    .update({ direction })
     .eq("id", id)
     .eq("org_id", orgId);
 
