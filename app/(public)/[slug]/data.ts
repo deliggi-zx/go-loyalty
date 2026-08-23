@@ -339,6 +339,14 @@ export interface ProductCarousel {
   // add_autoplay_to_catalog_carousels), así que sin cambios para los
   // carruseles existentes hasta que Die lo prenda a mano en el admin.
   autoplay: boolean;
+  // Fase Ecualizador de carruseles: defaults que reproducen el
+  // comportamiento de siempre (ver migración add_equalizer_columns_to_
+  // catalog_carousels) — false/3500/'forward' es exactamente lo que ya
+  // hacía product-rail.tsx antes de esta fase, así que ningún carrusel
+  // existente cambia hasta que se toque a mano.
+  loopInfinite: boolean;
+  autoplaySpeedMs: number;
+  direction: "forward" | "reverse";
 }
 
 // Solo carruseles activos, con solo productos activos adentro (un
@@ -351,7 +359,7 @@ export const getActiveCarousels = cache(async (orgId: string): Promise<ProductCa
   const supabase = createClient();
   const { data: carouselsData } = await supabase
     .from("catalog_carousels")
-    .select("id, title, autoplay")
+    .select("id, title, autoplay, loop_infinite, autoplay_speed_ms, direction")
     .eq("org_id", orgId)
     .eq("active", true)
     .order("display_order", { ascending: true });
@@ -425,7 +433,15 @@ export const getActiveCarousels = cache(async (orgId: string): Promise<ProductCa
           specs: (p.specs as Record<string, string> | null) ?? null,
           currency: p.currency,
         }));
-      return { id: c.id, title: c.title, products, autoplay: c.autoplay };
+      return {
+        id: c.id,
+        title: c.title,
+        products,
+        autoplay: c.autoplay,
+        loopInfinite: c.loop_infinite,
+        autoplaySpeedMs: c.autoplay_speed_ms,
+        direction: c.direction as "forward" | "reverse",
+      };
     })
     .filter((c) => c.products.length > 0);
 });

@@ -242,6 +242,9 @@ export default async function TenantPage({
               primaryColor={primary}
               catalogHref={`/${params.slug}/precios`}
               autoplay={carousel.autoplay}
+              loopInfinite={carousel.loopInfinite}
+              autoplaySpeedMs={carousel.autoplaySpeedMs}
+              direction={carousel.direction}
             />
           ))}
         </div>

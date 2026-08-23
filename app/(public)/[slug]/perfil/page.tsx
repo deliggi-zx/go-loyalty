@@ -269,6 +269,7 @@ export default async function PerfilPage({
             Panel del agente
           </h2>
           <DomusAgentPanel
+            orgId={org.id}
             consultasNuevoCount={domusBadgeCounts.consultasNuevoCount}
             reunionesHoyCount={domusBadgeCounts.reunionesHoyCount}
           />

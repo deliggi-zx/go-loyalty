@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
+import { getGeminiClient, GEMINI_MODEL } from "@/lib/gemini";
 
 async function requireOrgId() {
   const orgId = await getOrgId();
@@ -61,4 +62,77 @@ export async function setInquiryTopic(id: string, topic: "compra" | "alquiler" |
   if (error) throw new Error(error.message);
 
   revalidatePath("/dashboard/consultas");
+}
+
+// ── Borrador de respuesta asistido (Fase B) ─────────────────────────────────
+
+export type SuggestInquiryReplyResult =
+  | { ok: true; draft: string }
+  | { ok: false; error: "not_found" | "empty" | "gemini_error" };
+
+const TOPIC_LABEL: Record<string, string> = {
+  compra: "compra",
+  alquiler: "alquiler",
+  desarrollo: "desarrollo/inversión",
+};
+
+// Borrador de WhatsApp para responder UNA consulta puntual — mismo
+// criterio "estricto con los datos" que askDomusChat (domus-chat-
+// actions.ts): solo se le pasa a Gemini el mensaje real de la consulta +
+// el tema si tiene asignado + nombre de la org, nunca precios ni
+// propiedades inventadas. Mismo ownership check (.eq("org_id", orgId))
+// que el resto de las acciones de este archivo.
+export async function suggestInquiryReply(id: string): Promise<SuggestInquiryReplyResult> {
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+
+  const [{ data: inquiry }, { data: org }] = await Promise.all([
+    supabase
+      .from("domus_general_inquiries")
+      .select("message, topic")
+      .eq("id", id)
+      .eq("org_id", orgId)
+      .maybeSingle(),
+    // whatsapp_number no se cita en el prompt (el borrador YA es el
+    // mensaje de WhatsApp de la inmobiliaria hacia el cliente, no tiene
+    // sentido que se autorreferencie su propio número) — se trae igual
+    // por si el día de mañana hace falta ("respondé desde nuestro
+    // WhatsApp oficial", etc.), mismo criterio de "contexto básico" que
+    // pidió la fase.
+    supabase.from("loyalty_organizations").select("name, whatsapp_number").eq("id", orgId).maybeSingle(),
+  ]);
+
+  if (!inquiry) return { ok: false, error: "not_found" };
+
+  const topicLine = inquiry.topic
+    ? `Tema que el agente ya le asignó a esta consulta: ${TOPIC_LABEL[inquiry.topic] ?? inquiry.topic}.`
+    : "";
+
+  const prompt = `
+Sos un agente inmobiliario de ${org?.name ?? "la inmobiliaria"} redactando un mensaje de WhatsApp para responderle a un cliente.
+
+Consulta del cliente:
+"${inquiry.message}"
+${topicLine}
+
+Escribí un borrador de respuesta corto (2 a 4 oraciones), profesional pero cálido, en español rioplatense, listo para pegar directo en WhatsApp. Tiene que:
+- Responder concretamente lo que el cliente preguntó, usando SOLO la información de la consulta de arriba — nunca inventes datos de propiedades, precios, zonas ni disponibilidad que no te dieron.
+- Ofrecer un siguiente paso claro (coordinar una visita, pedirle más datos para asesorarlo mejor, etc.), sin prometer nada que no puedas cumplir.
+- Arrancar directo, sin un saludo tipo "Estimado/a" — un tono natural y cercano.
+Devolvé SOLO el texto del mensaje, sin comillas ni encabezados ni explicaciones.
+`.trim();
+
+  try {
+    const ai = getGeminiClient();
+    const response = await ai.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    });
+    const draft = response.text?.trim();
+    if (!draft) return { ok: false, error: "empty" };
+    return { ok: true, draft };
+  } catch (err) {
+    console.error("Error al sugerir respuesta:", err instanceof Error ? err.message : err);
+    return { ok: false, error: "gemini_error" };
+  }
 }
