@@ -1,44 +1,23 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
+import { ContactosManager, type ContactRow, type ContactInteraction } from "./contactos-manager";
 
-const ALLOWED_ROLES = ["admin"];
-
-interface Interaction {
-  type: "consulta" | "oferta" | "visita";
-  createdAt: string;
-  summary: string;
-}
-
-const TYPE_LABEL: Record<Interaction["type"], string> = {
-  consulta: "Consulta",
-  oferta: "Oferta de propiedad",
-  visita: "Visita a propiedad",
-};
-
-const TYPE_BADGE_CLASS: Record<Interaction["type"], string> = {
-  consulta: "bg-sky-50 text-sky-700",
-  oferta: "bg-violet-50 text-violet-700",
-  visita: "bg-emerald-50 text-emerald-700",
-};
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("es-AR", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+// Fase reorganizar panel: antes solo admin, ahora también agente — mismo
+// criterio ya aplicado a Consultas (Fase 1c) y a los demás destinos del
+// panel del agente.
+const ALLOWED_ROLES = ["admin", "agente"];
 
 // Fase 4b: directorio único — junta domus_general_inquiries +
 // domus_property_offers + domus_property_visits agrupadas por
 // profile_id, sin tabla nueva (mismo profile puede aparecer en las 3, acá
 // aparece una sola vez con todas sus interacciones listadas). Solo
 // lectura, sin acciones — el punto es tener panorama, las acciones de
-// cambio de estado siguen viviendo en Consultas/Ofertas/Visitas.
+// cambio de estado siguen viviendo en Consultas/Ofertas-Reservas/Visitas.
+// Fase Cartera de clientes: arma los datos acá (server) y delega el
+// orden alfabético/buscador/colapsado a ContactosManager (client) — ver
+// Gate 0 sobre por qué se extrajo.
 export default async function ContactosPage() {
   const supabase = createClient();
   const orgId = await getOrgId();
@@ -95,11 +74,11 @@ export default async function ContactosPage() {
     // al final, no sirve como referencia de "más reciente" mientras se
     // arma el map).
     phoneUpdatedAt: string;
-    interactions: Interaction[];
+    interactions: ContactInteraction[];
   }
   const contactsById = new Map<string, Contact>();
 
-  function touch(profileId: string, phone: string, createdAt: string, interaction: Interaction) {
+  function touch(profileId: string, phone: string, createdAt: string, interaction: ContactInteraction) {
     const existing = contactsById.get(profileId);
     if (existing) {
       existing.interactions.push(interaction);
@@ -167,22 +146,25 @@ export default async function ContactosPage() {
   const nameById = new Map((profilesData ?? []).map((p) => [p.id, p.full_name]));
   const detailsByProfileId = new Map((detailsData ?? []).map((d) => [d.profile_id, d]));
 
-  const contacts = Array.from(contactsById.values())
-    .map((c) => {
-      const details = detailsByProfileId.get(c.profileId);
-      const firstName = nameById.get(c.profileId) ?? "—";
-      return {
-        ...c,
-        name: details?.last_name ? `${firstName} ${details.last_name}` : firstName,
-        profession: details?.profession ?? null,
-        budgetRange: details?.budget_range ?? null,
-        interestZone: details?.interest_zone ?? null,
-        interactions: c.interactions.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
-      };
-    })
-    .sort((a, b) =>
-      a.interactions[0].createdAt < b.interactions[0].createdAt ? 1 : -1
-    );
+  // Fase Cartera de clientes: sin el sort de "más reciente primero" de
+  // antes — ContactosManager ordena alfabético él solo. Acá solo se
+  // ordenan las interactions de cada contacto (más reciente primero
+  // adentro del historial, sigue teniendo sentido) y se arma lastContactAt.
+  const contacts: ContactRow[] = Array.from(contactsById.values()).map((c) => {
+    const details = detailsByProfileId.get(c.profileId);
+    const firstName = nameById.get(c.profileId) ?? "—";
+    const sortedInteractions = [...c.interactions].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    return {
+      profileId: c.profileId,
+      phone: c.phone,
+      name: details?.last_name ? `${firstName} ${details.last_name}` : firstName,
+      profession: details?.profession ?? null,
+      budgetRange: details?.budget_range ?? null,
+      interestZone: details?.interest_zone ?? null,
+      lastContactAt: sortedInteractions[0].createdAt,
+      interactions: sortedInteractions,
+    };
+  });
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -194,57 +176,7 @@ export default async function ContactosPage() {
       </header>
 
       <div className="p-8">
-        {contacts.length === 0 ? (
-          <div className="bg-white rounded-xl border border-dashed border-stone-200 py-16 text-center text-stone-400 text-sm">
-            Todavía no hay contactos.
-          </div>
-        ) : (
-          <div className="space-y-4 max-w-3xl">
-            {contacts.map((c) => (
-              <div key={c.profileId} className="bg-white rounded-xl border border-stone-200 p-4 space-y-3">
-                <div>
-                  <p className="text-sm font-semibold text-stone-900">{c.name}</p>
-                  <p className="text-xs text-stone-500">
-                    {c.phone} · último contacto {formatDate(c.interactions[0].createdAt)}
-                  </p>
-                  {/* Fase registro extendido: solo aparece para quien se
-                      registró cargando estos datos — el resto de los
-                      contactos (llegaron sin registrarse, o se
-                      registraron antes de esta fase) no muestra nada acá. */}
-                  {(c.profession || c.budgetRange || c.interestZone) && (
-                    <p className="text-xs text-stone-400 mt-0.5">
-                      {[
-                        c.profession && `Profesión: ${c.profession}`,
-                        c.budgetRange && `Presupuesto: ${c.budgetRange}`,
-                        c.interestZone && `Zona: ${c.interestZone}`,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-1.5">
-                  {c.interactions.map((int, i) => (
-                    <div key={i} className="flex items-start gap-2 text-sm">
-                      <span
-                        className={cn(
-                          "shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium mt-0.5",
-                          TYPE_BADGE_CLASS[int.type]
-                        )}
-                      >
-                        {TYPE_LABEL[int.type]}
-                      </span>
-                      <span className="text-stone-600">{int.summary}</span>
-                      <span className="text-stone-400 text-xs ml-auto shrink-0">
-                        {formatDate(int.createdAt)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <ContactosManager contacts={contacts} />
       </div>
     </div>
   );

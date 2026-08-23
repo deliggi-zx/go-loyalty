@@ -13,8 +13,18 @@ const NOTHING_PENDING_TEXT = "Todo tranquilo por ahora, sin pendientes urgentes.
 // nunca a un mensaje de error técnico visible para el agente.
 const FALLBACK_TEXT = "No pudimos armar el resumen del día, pero tu panel sigue al día más abajo.";
 
-function formatMeeting(m: { clientName: string; time: string; kind: "reunion" | "visita" }): string {
-  return `- ${m.clientName} a las ${m.time} (${m.kind === "reunion" ? "reunión" : "visita"})`;
+function formatMeeting(m: {
+  clientName: string;
+  time: string;
+  kind: "reunion" | "visita";
+  propertyName?: string;
+}): string {
+  const kindLabel = m.kind === "reunion" ? "reunión" : "visita";
+  // Fase resumen ampliado: las reuniones (ofertas) no tienen propiedad
+  // propia (todavía no está en el catálogo, por eso es una oferta) — solo
+  // las visitas la incluyen.
+  const propertyPart = m.propertyName ? ` a ${m.propertyName}` : "";
+  return `- ${m.clientName} a las ${m.time} (${kindLabel}${propertyPart})`;
 }
 
 // Server action llamada desde DomusAgentPanel (client component) al
@@ -28,7 +38,8 @@ export async function getMorningSummary(orgId: string): Promise<string> {
   const isEmpty =
     ctx.newInquiries.length === 0 &&
     ctx.meetingsToday.length === 0 &&
-    ctx.staleFollowUps.length === 0;
+    ctx.staleFollowUps.length === 0 &&
+    ctx.pendingReservations.length === 0;
   if (isEmpty) return NOTHING_PENDING_TEXT;
 
   const inquiriesText =
@@ -41,6 +52,12 @@ export async function getMorningSummary(orgId: string): Promise<string> {
     ctx.staleFollowUps.length > 0
       ? ctx.staleFollowUps.map((s) => `- ${s.clientName}, sin novedades hace ${s.daysSince} días`).join("\n")
       : "Ninguno.";
+  const reservationsText =
+    ctx.pendingReservations.length > 0
+      ? ctx.pendingReservations
+          .map((r) => `- ${r.propertyName}, esperando hace ${r.hoursWaiting} horas`)
+          .join("\n")
+      : "Ninguna.";
 
   const prompt = `
 Datos reales de hoy para un agente inmobiliario (Domus):
@@ -53,6 +70,9 @@ ${meetingsText}
 
 Clientes en seguimiento sin novedades hace más de ${SEGUIMIENTO_STALE_DAYS} días (${ctx.staleFollowUps.length}):
 ${staleText}
+
+Reservas pendientes de confirmar (${ctx.pendingReservations.length}):
+${reservationsText}
 
 Escribí un resumen breve (2 a 4 oraciones), en tono cálido pero profesional, dirigido directamente al agente (ej. "Tenés...", "Te esperan..."). Usá SOLO estos datos reales — no inventes nombres, propiedades, cifras ni detalles que no estén acá. Si hay varias cosas del mismo tipo, podés agruparlas en vez de listarlas una por una. No hace falta un saludo ni un cierre, andá directo al resumen.
 `.trim();

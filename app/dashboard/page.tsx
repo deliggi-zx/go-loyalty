@@ -42,6 +42,7 @@ export default async function DashboardPage() {
   let isDomusManager = false;
   let domusConsultasNuevoCount = 0;
   let domusReunionesHoyCount = 0;
+  let domusOfertasReservasCount = 0;
 
   if (orgId) {
     const {
@@ -92,6 +93,7 @@ export default async function DashboardPage() {
       const counts = await getDomusAgentBadgeCounts(orgId, isDomusManager ? null : user?.id);
       domusConsultasNuevoCount = counts.consultasNuevoCount;
       domusReunionesHoyCount = counts.reunionesHoyCount;
+      domusOfertasReservasCount = counts.ofertasReservasCount;
     }
   }
 
@@ -113,6 +115,7 @@ export default async function DashboardPage() {
             orgId={orgId}
             consultasNuevoCount={domusConsultasNuevoCount}
             reunionesHoyCount={domusReunionesHoyCount}
+            ofertasReservasCount={domusOfertasReservasCount}
           />
         </div>
         <div className="hidden md:block">

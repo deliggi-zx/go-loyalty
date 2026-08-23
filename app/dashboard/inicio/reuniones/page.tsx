@@ -6,7 +6,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
 import { buildGoogleCalendarUrl } from "@/lib/google-calendar";
 
-const ALLOWED_ROLES = ["admin"];
+// Fase reorganizar panel: antes solo admin, ahora también agente — mismo
+// criterio ya aplicado a Consultas (Fase 1c) y a los demás destinos del
+// panel del agente.
+const ALLOWED_ROLES = ["admin", "agente"];
 
 // Fase 4b: mezcla domus_property_offers (reunion_agendada, con
 // scheduled_at de la Fase 4a) + domus_property_visits (confirmed, ya
@@ -125,7 +128,7 @@ export default async function InicioReunionesPage() {
         <Link href="/dashboard/inicio" className="text-sm text-stone-400 hover:text-stone-700 transition-colors">
           ‹ Inicio
         </Link>
-        <h1 className="text-lg font-semibold text-stone-900">Reuniones</h1>
+        <h1 className="text-lg font-semibold text-stone-900">Reuniones/Visitas</h1>
       </header>
 
       <div className="p-8">

@@ -115,10 +115,16 @@ export default async function TenantLayout({
   let userDisplayName: string | null = null;
   let transactions: { id: string; amount: number; claimed_at: string | null }[] = [];
   let pointsBalance = 0;
+  // Fase íconos de staff (Domus): rol de este usuario en esta org — solo
+  // hace falta cuando es Domus (el resto de las orgs no lee esto), pero
+  // se resuelve acá adentro del `if (user)` ya existente en vez de
+  // condicionar también por isDomusOrg, para no adelantar esa variable
+  // (se calcula más abajo) ni duplicar el chequeo de sesión.
+  let domusMemberRole: string | null = null;
 
   if (user) {
     const supabase = createClient();
-    const [{ data: profile }, { data: txs }, balance] = await Promise.all([
+    const [{ data: profile }, { data: txs }, balance, membershipRes] = await Promise.all([
       supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
       supabase
         .from("loyalty_transactions")
@@ -128,11 +134,20 @@ export default async function TenantLayout({
         .eq("status", "claimed")
         .order("claimed_at", { ascending: false }),
       getUserPointsBalance(org.id, user.id),
+      params.slug === "domus"
+        ? supabase
+            .from("loyalty_members")
+            .select("role")
+            .eq("org_id", org.id)
+            .eq("profile_id", user.id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
     ]);
 
     userDisplayName = profile?.full_name || user.email?.split("@")[0] || null;
     transactions = txs ?? [];
     pointsBalance = balance;
+    domusMemberRole = membershipRes.data?.role ?? null;
   }
 
   const primary = org.primary_color ?? "#f59e0b";
@@ -153,6 +168,11 @@ export default async function TenantLayout({
   // siguen exclusivos de Gym2 (showLoginIcon ya es una prop independiente de
   // neonTheme en ClientHeader/LoginModal, no hace falta tocar nada ahí).
   const isDomusOrg = params.slug === "domus";
+  // Fase íconos de staff: agente o gerente de Domus — mismo criterio
+  // admin/agente que dashboard/layout.tsx (isDomusStaff ahí). Un cliente
+  // de Domus, o cualquier usuario de cualquier otra org, queda en false
+  // y el header no cambia en nada (ver showStaffIcons en ClientHeader).
+  const isDomusStaff = isDomusOrg && (domusMemberRole === "admin" || domusMemberRole === "agente");
 
   // Veterinaria (Fase 0, Huellitas): la home es una pantalla bespoke propia
   // (video full-screen + botones huella, ver page.tsx/huellitas-home.tsx),
@@ -199,6 +219,7 @@ export default async function TenantLayout({
       floatingOverlay={isFloatingHeaderOrg}
       showScanIcon={!isFloatingHeaderOrg}
       orgSlug={params.slug}
+      isDomusStaff={isDomusStaff}
       menuProps={{
         slug: params.slug,
         orgName: org.name,

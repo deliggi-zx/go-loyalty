@@ -4,7 +4,10 @@ import { cn, formatPrice } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
 
-const ALLOWED_ROLES = ["admin"];
+// Fase reorganizar panel: antes solo admin, ahora también agente — mismo
+// criterio ya aplicado a Consultas (Fase 1c) y a los demás destinos del
+// panel del agente.
+const ALLOWED_ROLES = ["admin", "agente"];
 
 // Fase 4b: mezcla domus_property_offers (seguimiento) + domus_general_
 // inquiries (contactado, todavía no cerradas) — "para no perderle el

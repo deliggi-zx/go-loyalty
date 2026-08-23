@@ -12,14 +12,26 @@ export interface MorningSummaryContext {
   // Consultas 'nuevo' — mensaje corto (recortado, no todo el texto si es
   // muy largo) para no inflar el prompt de más.
   newInquiries: { message: string }[];
-  meetingsToday: { clientName: string; time: string; kind: "reunion" | "visita" }[];
+  // Fase resumen ampliado: las de kind "visita" ahora traen propertyName
+  // (antes solo tenían clientName+time, sin la propiedad — ver Gate 0).
+  meetingsToday: { clientName: string; time: string; kind: "reunion" | "visita"; propertyName?: string }[];
   staleFollowUps: { clientName: string; daysSince: number }[];
+  // Fase resumen ampliado: reservas domus_property_reservations en
+  // 'pendiente_confirmacion' — mismo status que lee /dashboard/reservas,
+  // ninguna tabla nueva. hoursWaiting en vez de days: a diferencia de
+  // staleFollowUps (que recién importa pasados varios días), una reserva
+  // pendiente es urgente desde el primer día, tiene más sentido en horas.
+  pendingReservations: { propertyName: string; hoursWaiting: number }[];
 }
 
 const MESSAGE_PREVIEW_LENGTH = 160;
 
 function daysSince(iso: string): number {
   return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / (24 * 60 * 60 * 1000)));
+}
+
+function hoursSince(iso: string): number {
+  return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / (60 * 60 * 1000)));
 }
 
 // Junta lo mismo que ya arman domus-badge-counts.ts (consultas nuevas,
@@ -40,6 +52,7 @@ export async function getMorningSummaryContext(orgId: string): Promise<MorningSu
     { data: visitsToday },
     { data: staleOffers },
     { data: staleInquiries },
+    { data: pendingReservationsData },
   ] = await Promise.all([
     supabase
       .from("domus_general_inquiries")
@@ -53,9 +66,12 @@ export async function getMorningSummaryContext(orgId: string): Promise<MorningSu
       .eq("org_id", orgId)
       .eq("status", "reunion_agendada")
       .not("scheduled_at", "is", null),
+    // Fase resumen ampliado: se suma product_id — antes solo se pedía
+    // client_profile_id/visit_time, no alcanzaba para mostrar la
+    // propiedad en el resumen (ver Gate 0).
     supabase
       .from("domus_property_visits")
-      .select("client_profile_id, visit_time")
+      .select("client_profile_id, visit_time, product_id")
       .eq("org_id", orgId)
       .eq("status", "confirmed")
       .eq("visit_date", today),
@@ -71,6 +87,13 @@ export async function getMorningSummaryContext(orgId: string): Promise<MorningSu
       .eq("org_id", orgId)
       .eq("status", "contactado")
       .lt("created_at", staleCutoffIso),
+    // Fase resumen ampliado: reservas pendientes de confirmar — mismo
+    // status que /dashboard/reservas lee para su bandeja.
+    supabase
+      .from("domus_property_reservations")
+      .select("product_id, created_at")
+      .eq("org_id", orgId)
+      .eq("status", "pendiente_confirmacion"),
   ]);
 
   // Mismo criterio que domus-badge-counts.ts: scheduled_at es timestamptz,
@@ -88,12 +111,26 @@ export async function getMorningSummaryContext(orgId: string): Promise<MorningSu
       ...(staleInquiries ?? []).map((i) => i.client_profile_id),
     ])
   );
+  // Fase resumen ampliado: productIds propias (visitas de hoy + reservas
+  // pendientes) — mismo criterio de "solo pedir lo que hace falta" que
+  // profileIds arriba.
+  const productIds = Array.from(
+    new Set([
+      ...(visitsToday ?? []).map((v) => v.product_id),
+      ...(pendingReservationsData ?? []).map((r) => r.product_id),
+    ])
+  );
 
-  const { data: profilesData } =
+  const [{ data: profilesData }, { data: productsData }] = await Promise.all([
     profileIds.length > 0
-      ? await supabase.from("profiles").select("id, full_name").in("id", profileIds)
-      : { data: [] as { id: string; full_name: string | null }[] };
+      ? supabase.from("profiles").select("id, full_name").in("id", profileIds)
+      : Promise.resolve({ data: [] as { id: string; full_name: string | null }[] }),
+    productIds.length > 0
+      ? supabase.from("products").select("id, name").in("id", productIds)
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+  ]);
   const nameById = new Map((profilesData ?? []).map((p) => [p.id, p.full_name]));
+  const productNameById = new Map((productsData ?? []).map((p) => [p.id, p.name]));
 
   const meetingsToday = [
     ...offersTodayFiltered.map((o) => ({
@@ -108,6 +145,7 @@ export async function getMorningSummaryContext(orgId: string): Promise<MorningSu
       clientName: nameById.get(v.client_profile_id) ?? "—",
       time: v.visit_time.slice(0, 5),
       kind: "visita" as const,
+      propertyName: productNameById.get(v.product_id) ?? "una propiedad",
     })),
   ];
 
@@ -122,11 +160,17 @@ export async function getMorningSummaryContext(orgId: string): Promise<MorningSu
     })),
   ];
 
+  const pendingReservations = (pendingReservationsData ?? []).map((r) => ({
+    propertyName: productNameById.get(r.product_id) ?? "una propiedad",
+    hoursWaiting: hoursSince(r.created_at),
+  }));
+
   return {
     newInquiries: (newInquiriesData ?? []).map((i) => ({
       message: i.message.slice(0, MESSAGE_PREVIEW_LENGTH),
     })),
     meetingsToday,
     staleFollowUps,
+    pendingReservations,
   };
 }

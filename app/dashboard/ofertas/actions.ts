@@ -28,6 +28,9 @@ async function updateOfferStatus(id: string, status: string) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/dashboard/ofertas");
+  // Fase reorganizar panel: la misma data también se lee (y se muestra
+  // con las mismas acciones) desde la pantalla combinada del panel.
+  revalidatePath("/dashboard/inicio/ofertas-reservas");
 }
 
 export async function markOfferStock(id: string) {
@@ -50,6 +53,9 @@ export async function markOfferMeeting(id: string, scheduledAt: string) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/dashboard/ofertas");
+  // Fase reorganizar panel: la misma data también se lee (y se muestra
+  // con las mismas acciones) desde la pantalla combinada del panel.
+  revalidatePath("/dashboard/inicio/ofertas-reservas");
 }
 
 export async function markOfferFollowup(id: string) {
