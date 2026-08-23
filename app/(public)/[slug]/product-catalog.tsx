@@ -8,6 +8,12 @@ import { CategoryDrilldown, type CatalogSelection } from "./category-drilldown";
 import type { CatalogCategory, CatalogProduct } from "./data";
 import { hasProductDetail } from "./product-detail-utils";
 import { formatPrice } from "@/lib/utils";
+import {
+  DomusPropertyFilters,
+  DEFAULT_DOMUS_FILTERS,
+  hasActiveDomusFilters,
+  type DomusFilterState,
+} from "./domus-property-filters";
 
 interface ProductCatalogProps {
   slug: string;
@@ -61,6 +67,87 @@ export function ProductCatalog({
     return map;
   }, [categories]);
 
+  // Fase filtros de búsqueda (Domus): reemplaza el pill row de arriba
+  // por un panel de filtros combinables, SOLO para esta org — el resto
+  // sigue con activeSelection/pills/cascada sin ningún cambio.
+  const isDomus = slug === "domus";
+
+  const categoryById = useMemo(() => {
+    const map = new Map<string, CatalogCategory>();
+    for (const cat of categories) map.set(cat.id, cat);
+    return map;
+  }, [categories]);
+
+  // Operación (root) y tipo (nombre de la hoja) de un producto vía
+  // category_id — fuente primaria (Gate 0: el árbol ya tiene 2 raíces
+  // Venta/Alquiler, cada una con las mismas 7 hojas). Fallback a
+  // specs.operación solo si category_id no resuelve (los pocos
+  // productos viejos sin specs sí resuelven bien por acá, así que en la
+  // práctica el fallback casi no se usa) — mismo criterio que
+  // operationFromCategory en domus-chat-actions.ts.
+  const resolveDomusLabels = useCallback(
+    (product: CatalogProduct): { operacion: string | null; tipo: string | null } => {
+      const leaf = product.category_id ? categoryById.get(product.category_id) : undefined;
+      const root = leaf?.parent_id ? categoryById.get(leaf.parent_id) : undefined;
+      return {
+        operacion: root?.name ?? product.specs?.["operación"] ?? null,
+        tipo: leaf?.name ?? null,
+      };
+    },
+    [categoryById]
+  );
+
+  // Tipos y zonas del desplegable: dinámicos a partir de lo que existe
+  // hoy entre los productos activos, no una lista fija — mismo criterio
+  // que ya usa el chatbot para las zonas que menciona (Gate 0).
+  const domusTipos = useMemo(() => {
+    if (!isDomus) return [];
+    return Array.from(
+      new Set(products.map((p) => resolveDomusLabels(p).tipo).filter((t): t is string => !!t))
+    ).sort((a, b) => a.localeCompare(b, "es"));
+  }, [isDomus, products, resolveDomusLabels]);
+
+  const domusZonas = useMemo(() => {
+    if (!isDomus) return [];
+    return Array.from(
+      new Set(products.map((p) => p.specs?.["barrio"]).filter((z): z is string => !!z))
+    ).sort((a, b) => a.localeCompare(b, "es"));
+  }, [isDomus, products]);
+
+  // Deep link desde el drawer (Venta > Departamentos, etc. — ver
+  // side-menu.tsx) sigue funcionando: ?categoria=<hoja> precarga
+  // Operación + Tipo en vez de activeSelection (que ya no se usa acá).
+  const [domusFilters, setDomusFilters] = useState<DomusFilterState>(() => {
+    if (!isDomus || !initialCategoryId) return DEFAULT_DOMUS_FILTERS;
+    const leaf = categories.find((c) => c.id === initialCategoryId);
+    const root = leaf?.parent_id ? categories.find((c) => c.id === leaf.parent_id) : undefined;
+    return { ...DEFAULT_DOMUS_FILTERS, tipo: leaf?.name ?? "", operacion: root?.name ?? "todas" };
+  });
+
+  const domusFilteredProducts = useMemo(() => {
+    if (!isDomus) return [];
+    return products.filter((p) => {
+      const { operacion, tipo } = resolveDomusLabels(p);
+      if (domusFilters.operacion !== "todas" && operacion !== domusFilters.operacion) return false;
+      if (domusFilters.tipo !== "" && tipo !== domusFilters.tipo) return false;
+      if (domusFilters.zona !== "" && p.specs?.["barrio"] !== domusFilters.zona) return false;
+      if (domusFilters.ambientesMin !== "") {
+        const ambientes = Number(p.specs?.["ambientes"]);
+        if (!Number.isFinite(ambientes) || ambientes < Number(domusFilters.ambientesMin)) return false;
+      }
+      // Precio: se filtra dentro de la moneda elegida, sin conversión
+      // (Gate 0 — no hay tasa de cambio confiable en el proyecto, y
+      // convertir sería inventar un dato). Sin Desde/Hasta cargado, la
+      // moneda elegida no filtra nada por sí sola.
+      if (domusFilters.priceMin !== "" || domusFilters.priceMax !== "") {
+        if (p.currency !== domusFilters.priceCurrency) return false;
+        if (domusFilters.priceMin !== "" && p.price < Number(domusFilters.priceMin)) return false;
+        if (domusFilters.priceMax !== "" && p.price > Number(domusFilters.priceMax)) return false;
+      }
+      return true;
+    });
+  }, [isDomus, products, domusFilters, resolveDomusLabels]);
+
   // Todos los ids descendientes de una categoría (recursivo) — para que
   // filtrar por "TV y Audio" también traiga los productos cargados en sus
   // hijas (hoy category_id apunta siempre a una hoja, nunca al grupo).
@@ -107,9 +194,26 @@ export function ProductCatalog({
     setActiveSelection({ type: "category", categoryId: cat.id });
   }
 
+  // Fase filtros de búsqueda (Domus): esta org ya no usa
+  // activeSelection/filteredProducts (pill row) — su propio estado y
+  // filtrado, sin tocar el de arriba.
+  const displayProducts = isDomus ? domusFilteredProducts : filteredProducts;
+  const emptyMessage = isDomus
+    ? "No hay propiedades que coincidan con esos filtros."
+    : "Todavía no hay productos cargados en esta categoría.";
+
   return (
     <div className="max-w-lg mx-auto px-4 py-6 space-y-5">
-      {rootCategories.length > 0 && (
+      {isDomus ? (
+        <DomusPropertyFilters
+          filters={domusFilters}
+          onChange={setDomusFilters}
+          primaryColor={primaryColor}
+          tipos={domusTipos}
+          zonas={domusZonas}
+        />
+      ) : (
+        rootCategories.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
           <button
             onClick={() => setActiveSelection(null)}
@@ -147,15 +251,14 @@ export function ProductCatalog({
             );
           })}
         </div>
+        )
       )}
 
-      {filteredProducts.length === 0 ? (
-        <p className="text-center text-sm text-stone-400 py-16">
-          Todavía no hay productos cargados en esta categoría.
-        </p>
+      {displayProducts.length === 0 ? (
+        <p className="text-center text-sm text-stone-400 py-16">{emptyMessage}</p>
       ) : (
         <div className="grid grid-cols-2 gap-4">
-          {filteredProducts.map((product) => {
+          {displayProducts.map((product) => {
             // Fase video: la card de la grilla renderiza con <img>, así
             // que se salta cualquier item de tipo 'video' al elegir la
             // portada — el video sí aparece en la galería completa (ver
