@@ -354,7 +354,7 @@ export function CarouselManager({ carousels: initialCarousels }: { carousels: Ca
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-stone-200 p-4 flex items-center gap-3">
+      <div className="bg-white rounded-xl border border-stone-200 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
         <input
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
@@ -365,7 +365,7 @@ export function CarouselManager({ carousels: initialCarousels }: { carousels: Ca
         <button
           onClick={handleCreate}
           disabled={!newTitle.trim() || isPending}
-          className="shrink-0 flex items-center gap-1.5 text-xs font-medium text-white bg-amber-500 hover:bg-amber-600 disabled:opacity-50 px-4 py-2 rounded-lg transition-colors"
+          className="shrink-0 flex items-center justify-center gap-1.5 text-xs font-medium text-white bg-amber-500 hover:bg-amber-600 disabled:opacity-50 px-4 py-2 rounded-lg transition-colors"
         >
           <Plus className="w-3.5 h-3.5" />
           Crear carrusel
