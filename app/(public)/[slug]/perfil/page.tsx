@@ -90,9 +90,13 @@ export default async function PerfilPage({
   // Fase perfil agente vs. cliente: reusa getOrgRole (ya importado arriba
   // para vetRole, mismo query que membership.role en dashboard/layout.tsx)
   // en vez de escribir un query nuevo. Solo Domus tiene esta rama — el
-  // resto de las orgs no diferencia agente/cliente en Mi Perfil.
+  // resto de las orgs no diferencia agente/cliente en Mi Perfil. Fase 1c
+  // (rol agente): antes solo "admin" representaba a un agente — ahora
+  // también el role "agente" ve el panel (el gerente sigue viendo TODO
+  // en sus badges, un agente solo lo suyo, ver domusBadgeCounts abajo).
   const domusRole = isDomus ? await getOrgRole(org.id, user.id) : null;
-  const isDomusAgent = isDomus && domusRole === "admin";
+  const isDomusManager = isDomus && domusRole === "admin";
+  const isDomusAgent = isDomus && (domusRole === "admin" || domusRole === "agente");
   const isDomusCustomer = isDomus && !isDomusAgent;
 
   // Fase 5 Domus: "Mis consultas" / "Mis visitas" / "Mis propiedades
@@ -159,7 +163,7 @@ export default async function PerfilPage({
   // solo hace falta pedir los 2 contadores de sus badges (ver
   // domus-badge-counts.ts), no los 6 counts de antes.
   const domusBadgeCounts = isDomusAgent
-    ? await getDomusAgentBadgeCounts(org.id)
+    ? await getDomusAgentBadgeCounts(org.id, isDomusManager ? null : user.id)
     : { consultasNuevoCount: 0, reunionesHoyCount: 0 };
 
   const INQUIRY_STATUS_LABEL: Record<string, string> = {

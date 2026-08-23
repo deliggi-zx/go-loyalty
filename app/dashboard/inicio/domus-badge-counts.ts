@@ -10,25 +10,41 @@ export interface DomusBadgeCounts {
   // Consultas con status='nuevo' únicamente — no leídas de verdad, a
   // diferencia de "Consultas sin responder" (que en /dashboard/inicio/
   // consultas también suma 'contactado'). Pedido explícito: el badge es
-  // más estricto que esa bandeja.
+  // más estricto que esa bandeja. Fase 1c (rol agente): respeta la misma
+  // visibilidad que /dashboard/consultas — ver agentProfileId abajo.
   consultasNuevoCount: number;
   // Ofertas 'reunion_agendada' + visitas 'confirmed' cuya fecha es HOY —
   // a diferencia de "Próximas reuniones" (que no filtraba por fecha, ver
-  // versión previa de /perfil), acá sí importa el día.
+  // versión previa de /perfil), acá sí importa el día. No tiene concepto
+  // de asignación por agente todavía (fuera del alcance de la Fase 1c),
+  // así que sigue siendo el total de la org para cualquier rol.
   reunionesHoyCount: number;
 }
 
-export async function getDomusAgentBadgeCounts(orgId: string): Promise<DomusBadgeCounts> {
+// Fase 1c (rol agente): agentProfileId es el profile_id de quien pide el
+// conteo — undefined/null (gerente, role admin) trae el total de la org
+// sin filtrar, igual que siempre. Un profile_id (agente) filtra
+// consultasNuevoCount a sin asignar + asignadas a él, mismo criterio
+// .or() que la query de /dashboard/consultas.
+export async function getDomusAgentBadgeCounts(
+  orgId: string,
+  agentProfileId?: string | null
+): Promise<DomusBadgeCounts> {
   const supabase = createClient();
   const today = todayLocalYmd();
 
+  let consultasQuery = supabase
+    .from("domus_general_inquiries")
+    .select("id", { count: "exact", head: true })
+    .eq("org_id", orgId)
+    .eq("status", "nuevo");
+  if (agentProfileId) {
+    consultasQuery = consultasQuery.or(`assigned_agent_id.is.null,assigned_agent_id.eq.${agentProfileId}`);
+  }
+
   const [{ count: consultasNuevoCount }, { data: offersToday }, { count: visitsHoyCount }] =
     await Promise.all([
-      supabase
-        .from("domus_general_inquiries")
-        .select("id", { count: "exact", head: true })
-        .eq("org_id", orgId)
-        .eq("status", "nuevo"),
+      consultasQuery,
       // scheduled_at es timestamptz — se filtra por día en JS (mismo
       // criterio de hora local que todayLocalYmd/localYmd), no con un
       // rango de fechas en la query, para no armar límites UTC a mano.

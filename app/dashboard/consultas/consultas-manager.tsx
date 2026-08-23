@@ -8,6 +8,8 @@ import {
   markInquiryClosed,
   setInquiryTopic,
   suggestInquiryReply,
+  takeInquiry,
+  assignInquiryAgent,
 } from "./actions";
 
 export interface InquiryRow {
@@ -20,10 +22,26 @@ export interface InquiryRow {
   // leer la consulta — nunca lo elige el cliente al enviarla.
   topic: "compra" | "alquiler" | "desarrollo" | null;
   createdAt: string;
+  // Fase 1c (rol agente): quién la tiene asignada hoy — null = sin
+  // asignar, visible para cualquier agente con el botón "Lo atiendo yo".
+  assignedAgentId: string | null;
+  assignedAgentName: string | null;
+}
+
+export interface AgentOption {
+  id: string;
+  name: string;
 }
 
 interface ConsultasManagerProps {
   inquiries: InquiryRow[];
+  // Fase 1c (rol agente): el gerente (role admin) ve todo + puede
+  // reasignar cualquier fila con el selector "Asignar a...". Un agente
+  // solo ve lo suyo/sin asignar (ya filtrado server-side en page.tsx) y
+  // en su lugar tiene el botón "Lo atiendo yo" en las sin asignar.
+  isManager: boolean;
+  currentUserId: string;
+  agents: AgentOption[];
 }
 
 const STATUS_LABEL: Record<InquiryRow["status"], string> = {
@@ -68,7 +86,12 @@ function formatDate(iso: string): string {
 // por estado/tema + buscador de texto libre, todo client-side (los datos
 // ya están todos cargados, mismo criterio que categoryFilter en
 // products-list.tsx) y combinables entre sí (AND, no OR).
-export function ConsultasManager({ inquiries: initialInquiries }: ConsultasManagerProps) {
+export function ConsultasManager({
+  inquiries: initialInquiries,
+  isManager,
+  currentUserId,
+  agents,
+}: ConsultasManagerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [inquiries, setInquiries] = useState(initialInquiries);
@@ -96,6 +119,48 @@ export function ConsultasManager({ inquiries: initialInquiries }: ConsultasManag
     setInquiries((prev) => prev.map((i) => (i.id === id ? { ...i, topic } : i)));
     startTransition(async () => {
       await setInquiryTopic(id, topic);
+      setUpdatingId(null);
+      router.refresh();
+    });
+  }
+
+  // Fase 1c (rol agente): "Lo atiendo yo" — self-assign optimista a
+  // currentUserId. Si otro agente ya se la llevó un instante antes, el
+  // .is("assigned_agent_id", null) de takeInquiry en el server no
+  // matchea nada y el router.refresh() de abajo corrige la vista sola
+  // (la fila deja de estar sin asignar, o directo desaparece si quedó
+  // asignada a otro y este agente ya no puede verla).
+  function handleTake(id: string) {
+    setUpdatingId(id);
+    setInquiries((prev) =>
+      prev.map((i) => (i.id === id ? { ...i, assignedAgentId: currentUserId, assignedAgentName: "Vos" } : i))
+    );
+    startTransition(async () => {
+      await takeInquiry(id);
+      setUpdatingId(null);
+      router.refresh();
+    });
+  }
+
+  // Solo el gerente ve este selector — asigna o desasigna
+  // (targetId === "" → null, "Sin asignar") cualquier consulta a
+  // cualquier agente en cualquier momento.
+  function handleAssign(id: string, targetId: string) {
+    const agentId = targetId === "" ? null : targetId;
+    setUpdatingId(id);
+    setInquiries((prev) =>
+      prev.map((i) =>
+        i.id === id
+          ? {
+              ...i,
+              assignedAgentId: agentId,
+              assignedAgentName: agentId ? agents.find((a) => a.id === agentId)?.name ?? "—" : null,
+            }
+          : i
+      )
+    );
+    startTransition(async () => {
+      await assignInquiryAgent(id, agentId);
       setUpdatingId(null);
       router.refresh();
     });
@@ -227,6 +292,50 @@ export function ConsultasManager({ inquiries: initialInquiries }: ConsultasManag
             </div>
 
             <p className="text-sm text-stone-700 whitespace-pre-wrap">{row.message}</p>
+
+            {/* Fase 1c (rol agente): asignación. El gerente ve siempre el
+                selector "Asignar a..." (con "Sin asignar" para
+                desasignar) — puede reasignar cualquier consulta en
+                cualquier momento. Un agente ve solo un texto de quién la
+                tiene, y si está sin asignar, el botón "Lo atiendo yo". */}
+            {isManager ? (
+              <div className="flex items-center gap-2 pt-1">
+                <span className="text-xs text-stone-400">Asignada a:</span>
+                <select
+                  value={row.assignedAgentId ?? ""}
+                  onChange={(e) => handleAssign(row.id, e.target.value)}
+                  disabled={isPending && updatingId === row.id}
+                  className="text-xs rounded-md border border-stone-200 px-2 py-1 bg-white disabled:opacity-50 focus:outline-none focus:border-amber-400 transition-colors"
+                >
+                  <option value="">Sin asignar</option>
+                  {agents.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 pt-1">
+                {row.assignedAgentId ? (
+                  <span className="text-xs text-stone-400">
+                    Asignada a{" "}
+                    <span className="font-medium text-stone-600">
+                      {row.assignedAgentId === currentUserId ? "vos" : row.assignedAgentName}
+                    </span>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={isPending && updatingId === row.id}
+                    onClick={() => handleTake(row.id)}
+                    className="text-xs font-medium text-amber-600 hover:text-amber-800 disabled:opacity-50 transition-colors"
+                  >
+                    Lo atiendo yo
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Selector rápido de tema — solo mientras no tiene uno
                 asignado, opcional, el agente lo hace cuando quiere (no

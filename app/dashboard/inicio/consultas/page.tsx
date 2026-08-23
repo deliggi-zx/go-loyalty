@@ -4,7 +4,10 @@ import { cn, formatPrice } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
 
-const ALLOWED_ROLES = ["admin"];
+// Fase 1c (rol agente): antes solo admin, ahora también agente — mismo
+// criterio ALLOWED_ROLES que /dashboard/consultas (el gerente sigue
+// viendo todo, un agente ve solo lo suyo, ver filtro más abajo).
+const ALLOWED_ROLES = ["admin", "agente"];
 
 // Fase 4b: "recién llegadas, sin resolver todavía" — mezcla
 // domus_general_inquiries (nuevo/contactado, no cerradas) con
@@ -36,12 +39,24 @@ export default async function InicioConsultasPage() {
   if (org?.slug !== "domus") redirect("/dashboard");
   if (!membership || !ALLOWED_ROLES.includes(membership.role)) redirect("/dashboard");
 
+  // Fase 1c (rol agente): mismo filtro de visibilidad que
+  // /dashboard/consultas — el gerente ve todas las consultas generales
+  // sin asignar/asignadas a cualquiera, un agente solo las sin asignar +
+  // las suyas. Las ofertas de propiedad (domus_property_offers) todavía
+  // no tienen concepto de asignación por agente — quedan sin filtrar
+  // para todos, fuera del alcance de esta fase.
+  let inquiriesQuery = supabase
+    .from("domus_general_inquiries")
+    .select("id, client_profile_id, phone, message, status, created_at")
+    .eq("org_id", orgId)
+    .in("status", ["nuevo", "contactado"]);
+
+  if (membership.role !== "admin") {
+    inquiriesQuery = inquiriesQuery.or(`assigned_agent_id.is.null,assigned_agent_id.eq.${user.id}`);
+  }
+
   const [{ data: inquiries }, { data: offers }] = await Promise.all([
-    supabase
-      .from("domus_general_inquiries")
-      .select("id, client_profile_id, phone, message, status, created_at")
-      .eq("org_id", orgId)
-      .in("status", ["nuevo", "contactado"]),
+    inquiriesQuery,
     supabase
       .from("domus_property_offers")
       .select("id, owner_profile_id, phone, operation_type, property_type, address, requested_price, currency, created_at")

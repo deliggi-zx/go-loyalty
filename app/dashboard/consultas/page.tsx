@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
-import { ConsultasManager, type InquiryRow } from "./consultas-manager";
+import { ConsultasManager, type InquiryRow, type AgentOption } from "./consultas-manager";
 
-// Solo Domus, y solo role admin — mismo criterio exacto que
-// dashboard/visitas/page.tsx (ver comentario ahí sobre por qué la lista
-// es de un solo elemento, sin equivalente a 'vet').
-const ALLOWED_ROLES = ["admin"];
+// Solo Domus — role admin (gerente) o agente, ver Fase 1c (rol agente):
+// antes solo admin, ahora el gerente sigue viendo TODO y cada agente ve
+// solo lo suyo (filtro de visibilidad más abajo).
+const ALLOWED_ROLES = ["admin", "agente"];
 
 export default async function ConsultasPage() {
   const supabase = createClient();
@@ -32,36 +32,66 @@ export default async function ConsultasPage() {
   if (org?.slug !== "domus") redirect("/dashboard");
   if (!membership || !ALLOWED_ROLES.includes(membership.role)) redirect("/dashboard");
 
-  // Todas las consultas de la org (no solo las de este agente, a
-  // diferencia de la agenda de Visitas) — el cajón de Consultas es
-  // compartido entre todos los agentes, cualquiera puede tomar una y
-  // contactar al cliente. Sin filtro por status: nuevo/contactado/cerrado
-  // conviven en la misma lista, ordenadas por más reciente primero — es
-  // intencionalmente simple, sin tabs ni filtros todavía.
-  const { data: inquiriesData } = await supabase
+  const isManager = membership.role === "admin";
+
+  // Fase 1c (rol agente): el gerente sigue viendo TODAS las consultas de
+  // la org (comportamiento de siempre, sin filtrar). Un agente ve solo
+  // las sin asignar + las asignadas a él — nunca las de otro agente. Sin
+  // filtro por status: nuevo/contactado/cerrado conviven en la misma
+  // lista, ordenadas por más reciente primero — sigue siendo
+  // intencionalmente simple, sin tabs.
+  let inquiriesQuery = supabase
     .from("domus_general_inquiries")
-    .select("id, client_profile_id, message, phone, status, topic, created_at")
+    .select("id, client_profile_id, message, phone, status, topic, created_at, assigned_agent_id")
     .eq("org_id", orgId)
     .order("created_at", { ascending: false });
 
+  if (!isManager) {
+    inquiriesQuery = inquiriesQuery.or(`assigned_agent_id.is.null,assigned_agent_id.eq.${user.id}`);
+  }
+
+  const [{ data: inquiriesData }, { data: agentsData }] = await Promise.all([
+    inquiriesQuery,
+    // Lista de agentes para el selector "Asignar a..." del gerente — solo
+    // hace falta pedirla si es manager, pero pedirla siempre es más
+    // simple y barato (org chica) que condicionar el Promise.all entero.
+    supabase
+      .from("loyalty_members")
+      .select("profile_id")
+      .eq("org_id", orgId)
+      .eq("role", "agente"),
+  ]);
+
   const inquiries = inquiriesData ?? [];
   const clientIds = Array.from(new Set(inquiries.map((i) => i.client_profile_id)));
+  const agentProfileIds = (agentsData ?? []).map((a) => a.profile_id);
+  const assignedAgentIds = Array.from(
+    new Set(inquiries.map((i) => i.assigned_agent_id).filter((id): id is string => !!id))
+  );
+  const profileIds = Array.from(new Set([...clientIds, ...agentProfileIds, ...assignedAgentIds]));
 
-  const { data: clientsData } =
-    clientIds.length > 0
-      ? await supabase.from("profiles").select("id, full_name").in("id", clientIds)
+  const { data: profilesData } =
+    profileIds.length > 0
+      ? await supabase.from("profiles").select("id, full_name").in("id", profileIds)
       : { data: [] as { id: string; full_name: string | null }[] };
 
-  const clientNameById = new Map((clientsData ?? []).map((c) => [c.id, c.full_name]));
+  const nameById = new Map((profilesData ?? []).map((p) => [p.id, p.full_name]));
 
   const rows: InquiryRow[] = inquiries.map((i) => ({
     id: i.id,
-    clientName: clientNameById.get(i.client_profile_id) ?? "—",
+    clientName: nameById.get(i.client_profile_id) ?? "—",
     message: i.message,
     phone: i.phone,
     status: i.status as InquiryRow["status"],
     topic: i.topic as InquiryRow["topic"],
     createdAt: i.created_at,
+    assignedAgentId: i.assigned_agent_id,
+    assignedAgentName: i.assigned_agent_id ? nameById.get(i.assigned_agent_id) ?? "—" : null,
+  }));
+
+  const agents: AgentOption[] = agentProfileIds.map((id) => ({
+    id,
+    name: nameById.get(id) ?? "—",
   }));
 
   return (
@@ -76,7 +106,12 @@ export default async function ConsultasPage() {
       </header>
 
       <div className="p-8">
-        <ConsultasManager inquiries={rows} />
+        <ConsultasManager
+          inquiries={rows}
+          isManager={isManager}
+          currentUserId={user.id}
+          agents={agents}
+        />
       </div>
     </div>
   );
