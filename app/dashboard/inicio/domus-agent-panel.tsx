@@ -2,17 +2,23 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { MessageSquare, Package, Eye, CalendarClock, Users } from "lucide-react";
+import { MessageSquare, Handshake, Eye, CalendarClock, Users } from "lucide-react";
 import { getMorningSummary } from "./domus-morning-summary-actions";
 
 // Fase Unificar panel del agente (antes "DomusMobileHome", solo para
 // mobile en /dashboard/inicio y /dashboard — ver DashboardShell,
 // hideMobileNav). Ahora es también el panel completo que ve el agente
 // en /domus/perfil, sin distinción de viewport ahí (esa pantalla ya es
-// angosta siempre) — mismos 5 destinos de siempre, sin tabla nueva.
-// Badges rojos: ver domus-badge-counts.ts para el criterio exacto de
-// cada contador; solo Consultas y Reuniones llevan uno, los otros 3
-// botones no tienen badge (no fue pedido).
+// angosta siempre). Badges rojos: ver domus-badge-counts.ts para el
+// criterio exacto de cada contador; Seguimiento y Cartera de clientes no
+// llevan uno (no fue pedido).
+// Fase reorganizar panel: "Catálogo" sale de la grilla (pedido
+// explícito — sigue accesible desde el sidebar de escritorio y, para
+// staff de Domus, desde el ícono nuevo del header público, ver
+// client-header.tsx). "Ofertas/Reservas" nuevo, combina las dos
+// pantallas de siempre en una sola (ver ofertas-reservas-tabs.tsx).
+// "Reuniones" pasa a "Reuniones/Visitas" (ya mezclaba las dos cosas,
+// solo cambia la etiqueta). Orden pedido explícito.
 const DOMUS_AGENT_ITEMS = [
   {
     href: "/dashboard/inicio/consultas",
@@ -20,14 +26,19 @@ const DOMUS_AGENT_ITEMS = [
     icon: MessageSquare,
     badgeKey: "consultasNuevoCount" as const,
   },
-  { href: "/dashboard/catalogo", label: "Catálogo", icon: Package, badgeKey: null },
-  { href: "/dashboard/inicio/seguimiento", label: "Seguimiento", icon: Eye, badgeKey: null },
+  {
+    href: "/dashboard/inicio/ofertas-reservas",
+    label: "Ofertas/Reservas",
+    icon: Handshake,
+    badgeKey: "ofertasReservasCount" as const,
+  },
   {
     href: "/dashboard/inicio/reuniones",
-    label: "Reuniones",
+    label: "Reuniones/Visitas",
     icon: CalendarClock,
     badgeKey: "reunionesHoyCount" as const,
   },
+  { href: "/dashboard/inicio/seguimiento", label: "Seguimiento", icon: Eye, badgeKey: null },
   { href: "/dashboard/inicio/contactos", label: "Cartera de clientes", icon: Users, badgeKey: null },
 ];
 
@@ -39,10 +50,16 @@ interface DomusAgentPanelProps {
   orgId: string;
   consultasNuevoCount: number;
   reunionesHoyCount: number;
+  ofertasReservasCount: number;
 }
 
-export function DomusAgentPanel({ orgId, consultasNuevoCount, reunionesHoyCount }: DomusAgentPanelProps) {
-  const countsByKey = { consultasNuevoCount, reunionesHoyCount };
+export function DomusAgentPanel({
+  orgId,
+  consultasNuevoCount,
+  reunionesHoyCount,
+  ofertasReservasCount,
+}: DomusAgentPanelProps) {
+  const countsByKey = { consultasNuevoCount, reunionesHoyCount, ofertasReservasCount };
 
   // Fase Resumen matutino: se pide al montar (una llamada a Gemini por
   // cada vez que este panel se monta — perfil, inicio, o el mobile de

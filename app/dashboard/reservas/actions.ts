@@ -27,6 +27,10 @@ export async function confirmReservation(id: string) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/dashboard/reservas");
+  // Fase reorganizar panel: mismo motivo que ofertas/actions.ts — la
+  // pantalla combinada del panel lee esta misma tabla con estas mismas
+  // acciones.
+  revalidatePath("/dashboard/inicio/ofertas-reservas");
 }
 
 // Rechaza una reserva pendiente — pasa a 'rechazada'. El índice único
@@ -46,4 +50,8 @@ export async function rejectReservation(id: string) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/dashboard/reservas");
+  // Fase reorganizar panel: mismo motivo que ofertas/actions.ts — la
+  // pantalla combinada del panel lee esta misma tabla con estas mismas
+  // acciones.
+  revalidatePath("/dashboard/inicio/ofertas-reservas");
 }

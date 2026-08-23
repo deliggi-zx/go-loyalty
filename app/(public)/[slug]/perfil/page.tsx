@@ -164,7 +164,7 @@ export default async function PerfilPage({
   // domus-badge-counts.ts), no los 6 counts de antes.
   const domusBadgeCounts = isDomusAgent
     ? await getDomusAgentBadgeCounts(org.id, isDomusManager ? null : user.id)
-    : { consultasNuevoCount: 0, reunionesHoyCount: 0 };
+    : { consultasNuevoCount: 0, reunionesHoyCount: 0, ofertasReservasCount: 0 };
 
   const INQUIRY_STATUS_LABEL: Record<string, string> = {
     nuevo: "Enviada",
@@ -276,6 +276,7 @@ export default async function PerfilPage({
             orgId={org.id}
             consultasNuevoCount={domusBadgeCounts.consultasNuevoCount}
             reunionesHoyCount={domusBadgeCounts.reunionesHoyCount}
+            ofertasReservasCount={domusBadgeCounts.ofertasReservasCount}
           />
         </div>
       )}

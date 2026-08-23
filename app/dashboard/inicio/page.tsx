@@ -44,7 +44,7 @@ export default async function InicioPage() {
 
   // Fase 1c (rol agente): el gerente (admin) sigue viendo el total de la
   // org; un agente solo ve lo que le corresponde (sin asignar + suyas).
-  const { consultasNuevoCount, reunionesHoyCount } = await getDomusAgentBadgeCounts(
+  const { consultasNuevoCount, reunionesHoyCount, ofertasReservasCount } = await getDomusAgentBadgeCounts(
     orgId,
     membership.role === "admin" ? null : user.id
   );
@@ -62,6 +62,7 @@ export default async function InicioPage() {
         orgId={orgId}
         consultasNuevoCount={consultasNuevoCount}
         reunionesHoyCount={reunionesHoyCount}
+        ofertasReservasCount={ofertasReservasCount}
       />
     </div>
   );

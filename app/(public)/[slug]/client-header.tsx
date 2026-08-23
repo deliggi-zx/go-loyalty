@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Menu, ScanLine, ShoppingCart, Star, User } from "lucide-react";
+import Link from "next/link";
+import { Menu, ScanLine, ShoppingCart, Star, User, Building2, Settings } from "lucide-react";
 import { SideMenu, type SideMenuProps } from "./side-menu";
 import { CartPanel } from "./cart-panel";
 import { LoginModal } from "./login-modal";
@@ -41,6 +42,13 @@ interface ClientHeaderProps {
   // para el toggle carrito/favoritos scopeado a Domus acá abajo y en
   // CartPanel. El resto del componente es genérico y no la lee.
   orgSlug?: string;
+  // Fase íconos de staff (Domus): agente o gerente logueado — repurposa
+  // el ícono de escaneo (sin función real hoy, ver Gate 0) a un acceso
+  // directo a Catálogo, y suma un ícono nuevo de Configuración al lado.
+  // false para cualquier cliente y para cualquier otra org: el header no
+  // cambia en nada (default false, mismo criterio que el resto de los
+  // flags opcionales de este componente).
+  isDomusStaff?: boolean;
 }
 
 export function ClientHeader({
@@ -56,6 +64,7 @@ export function ClientHeader({
   floatingOverlay = false,
   showScanIcon = true,
   orgSlug,
+  isDomusStaff = false,
 }: ClientHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
@@ -136,10 +145,24 @@ export function ClientHeader({
               )}
             </button>
           )}
-          {showScanIcon && (
-            <button onClick={handleScan} aria-label="Escanear código" className="p-2">
-              <ScanLine className={`w-5 h-5 ${iconColorClass}`} />
-            </button>
+          {showScanIcon &&
+            (isDomusStaff ? (
+              // Fase íconos de staff: mismo lugar/tamaño que el ícono de
+              // escaneo de siempre, pero para agente/gerente de Domus
+              // cambia de ícono y función — acceso directo a Catálogo en
+              // vez de un escaneo que hoy no hace nada (ver Gate 0).
+              <Link href="/dashboard/catalogo" aria-label="Ir a Catálogo" className="p-2">
+                <Building2 className={`w-5 h-5 ${iconColorClass}`} />
+              </Link>
+            ) : (
+              <button onClick={handleScan} aria-label="Escanear código" className="p-2">
+                <ScanLine className={`w-5 h-5 ${iconColorClass}`} />
+              </button>
+            ))}
+          {isDomusStaff && (
+            <Link href="/dashboard/configuracion" aria-label="Ir a Configuración" className="p-2">
+              <Settings className={`w-5 h-5 ${iconColorClass}`} />
+            </Link>
           )}
           {showLoginIcon && (
             <button
