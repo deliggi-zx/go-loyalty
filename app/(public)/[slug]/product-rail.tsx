@@ -222,6 +222,15 @@ export function ProductRail({
     resetTimer();
   }
 
+  // Fix bug carrusel "En venta"/"En alquiler" (Domus): antes, un producto
+  // sin specs cargadas (8 de 14 hoy) linkeaba acá directo al catálogo
+  // general (catalogHref) en vez de a su propia ficha — reproducido real
+  // clickeando "Departamento en Congreso" desde la home. Mismo criterio
+  // que el fix gemelo en product-catalog.tsx: para Domus la ficha es
+  // donde viven Solicitar visita/Reservar/Requisitos, así que siempre
+  // linkea ahí. El resto de las orgs sigue exactamente igual.
+  const isDomus = slug === "domus";
+
   if (products.length === 0) return null;
 
   // Fase Ecualizador de carruseles: con loop_infinite, el track real es
@@ -253,7 +262,9 @@ export function ProductRail({
             <Link
               key={loopInfinite ? `${product.id}-${i}` : product.id}
               href={
-                hasProductDetail(product.specs) ? `/${slug}/producto/${product.id}` : catalogHref
+                hasProductDetail(product.specs) || isDomus
+                  ? `/${slug}/producto/${product.id}`
+                  : catalogHref
               }
               className="shrink-0 w-36 sm:w-44 snap-start rounded-2xl overflow-hidden bg-white shadow-sm border border-stone-200 hover:shadow-md transition-shadow"
             >

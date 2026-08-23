@@ -78,19 +78,24 @@ export function ProductCatalog({
     return map;
   }, [categories]);
 
-  // Operación (root) y tipo (nombre de la hoja) de un producto vía
-  // category_id — fuente primaria (Gate 0: el árbol ya tiene 2 raíces
-  // Venta/Alquiler, cada una con las mismas 7 hojas). Fallback a
-  // specs.operación solo si category_id no resuelve (los pocos
-  // productos viejos sin specs sí resuelven bien por acá, así que en la
-  // práctica el fallback casi no se usa) — mismo criterio que
-  // operationFromCategory en domus-chat-actions.ts.
+  // Fix bug filtro Alquiler/Venta (Domus): specs.operación primero,
+  // category_id (root) como fallback — al revés que antes. Evidencia
+  // real: "Casa 2 plantas" tenía category_id apuntando a Casas/Alquiler
+  // por un error de carga (era Venta, corregido en la base), y no tenía
+  // specs propias con las que contrastar — la categorización sola no es
+  // confiable del todo (es un simple click al cargar el producto, más
+  // fácil de equivocarse que escribir la operación a mano en la ficha).
+  // specs.operación es el dato más explícito cuando existe, así que gana
+  // — category_id sigue siendo necesario como único dato disponible
+  // para los productos sin specs cargadas. "tipo" no tiene un campo
+  // equivalente en specs para contrastar, sigue dependiendo 100% del
+  // árbol de categorías.
   const resolveDomusLabels = useCallback(
     (product: CatalogProduct): { operacion: string | null; tipo: string | null } => {
       const leaf = product.category_id ? categoryById.get(product.category_id) : undefined;
       const root = leaf?.parent_id ? categoryById.get(leaf.parent_id) : undefined;
       return {
-        operacion: root?.name ?? product.specs?.["operación"] ?? null,
+        operacion: product.specs?.["operación"] ?? root?.name ?? null,
         tipo: leaf?.name ?? null,
       };
     },
@@ -305,7 +310,14 @@ export function ProductCatalog({
             // ficha nueva (/[slug]/producto/[id]) — el resto sigue abriendo
             // el modal rápido de siempre, mismo comportamiento que antes de
             // esta fase. Ver hasProductDetail en data.ts.
-            return hasProductDetail(product.specs) ? (
+            //
+            // Fix bug carrusel/ficha (Domus): para esta org, la ficha es
+            // donde viven Solicitar visita/Reservar/Requisitos — un
+            // producto sin specs cargadas (8 de 14 hoy) igual es una
+            // propiedad real que merece su ficha, nunca el modal rápido
+            // (pensado para un producto simple tipo SKU, no aplica acá).
+            // El resto de las orgs sigue exactamente igual, sin cambios.
+            return hasProductDetail(product.specs) || isDomus ? (
               <Link key={product.id} href={`/${slug}/producto/${product.id}`} className={cardClassName}>
                 {cardContent}
               </Link>
