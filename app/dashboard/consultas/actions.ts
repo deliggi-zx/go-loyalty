@@ -64,6 +64,85 @@ export async function setInquiryTopic(id: string, topic: "compra" | "alquiler" |
   revalidatePath("/dashboard/consultas");
 }
 
+// ── Fase 1c (rol agente): asignación de consultas ───────────────────────────
+
+// El agente toma una consulta SIN asignar — self-assign a su propio
+// profile_id (nunca un id que mande el cliente, sale de la sesión). El
+// .is("assigned_agent_id", null) es el único guard que hace falta: si
+// otro agente se la llevó un instante antes, este update no matchea
+// ninguna fila y no pasa nada (nadie se la "roba" a otro agente). Mismo
+// criterio .eq("org_id", orgId) que el resto de este archivo — la tabla
+// no tiene RLS.
+export async function takeInquiry(id: string) {
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("No autorizado");
+
+  const { error } = await supabase
+    .from("domus_general_inquiries")
+    .update({ assigned_agent_id: user.id })
+    .eq("id", id)
+    .eq("org_id", orgId)
+    .is("assigned_agent_id", null);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/dashboard/consultas");
+  revalidatePath("/dashboard/inicio/consultas");
+}
+
+// El gerente (role admin) asigna o reasigna manualmente cualquier
+// consulta a cualquier agente, en cualquier momento — a diferencia de
+// takeInquiry arriba, no exige que esté sin asignar. targetProfileId
+// null = "Sin asignar" (desasignar). A diferencia del resto de las
+// acciones de este archivo (que solo chequean org_id, la tabla no tiene
+// RLS), acá SÍ se valida el rol de quien llama — reasignar el trabajo de
+// otro agente es más sensible que marcar un estado propio, y se valida
+// que el destino sea un miembro real de la org (agente o admin) para no
+// guardar un profile_id arbitrario.
+export async function assignInquiryAgent(id: string, targetProfileId: string | null) {
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("No autorizado");
+
+  const { data: callerMembership } = await supabase
+    .from("loyalty_members")
+    .select("role")
+    .eq("org_id", orgId)
+    .eq("profile_id", user.id)
+    .maybeSingle();
+  if (callerMembership?.role !== "admin") throw new Error("No autorizado");
+
+  if (targetProfileId) {
+    const { data: target } = await supabase
+      .from("loyalty_members")
+      .select("role")
+      .eq("org_id", orgId)
+      .eq("profile_id", targetProfileId)
+      .maybeSingle();
+    if (!target || (target.role !== "agente" && target.role !== "admin")) {
+      throw new Error("Agente inválido");
+    }
+  }
+
+  const { error } = await supabase
+    .from("domus_general_inquiries")
+    .update({ assigned_agent_id: targetProfileId })
+    .eq("id", id)
+    .eq("org_id", orgId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/dashboard/consultas");
+  revalidatePath("/dashboard/inicio/consultas");
+}
+
 // ── Borrador de respuesta asistido (Fase B) ─────────────────────────────────
 
 export type SuggestInquiryReplyResult =

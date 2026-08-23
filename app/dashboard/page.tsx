@@ -33,7 +33,13 @@ export default async function DashboardPage() {
   // igual que siempre), esta página en sí decide qué mostrar según
   // viewport+role. Requiere org.slug + el role del usuario, que esta
   // página no pedía antes (nadie lo necesitaba).
-  let isDomusAdmin = false;
+  // Fase 1c (rol agente): antes "isDomusAdmin" significaba literalmente
+  // "es el agente de Domus" (único role que existía). Ahora hay dos
+  // roles de staff (admin = gerente, agente) — isDomusStaff decide si se
+  // muestra el panel (a ambos), isDomusManager si es "todo" o "solo lo
+  // suyo" en el badge de abajo.
+  let isDomusStaff = false;
+  let isDomusManager = false;
   let domusConsultasNuevoCount = 0;
   let domusReunionesHoyCount = 0;
 
@@ -72,14 +78,18 @@ export default async function DashboardPage() {
     activeRewardsCount = rewardsRes.count ?? 0;
     totalPoints =
       txRes.data?.reduce((sum, tx) => sum + (tx.points ?? 0), 0) ?? 0;
-    isDomusAdmin = orgRes.data?.slug === "domus" && membershipRes.data?.role === "admin";
+    const isDomusOrg = orgRes.data?.slug === "domus";
+    const domusRole = membershipRes.data?.role;
+    isDomusManager = isDomusOrg && domusRole === "admin";
+    isDomusStaff = isDomusOrg && (domusRole === "admin" || domusRole === "agente");
 
     // Badges del panel (CAMBIO 3): solo tienen sentido si de verdad se va
     // a mostrar el panel más abajo, así que se piden después de resolver
-    // isDomusAdmin en vez de sumarlas al Promise.all de arriba (mismo
-    // criterio que hasGymFeatures/gymClasses en perfil/page.tsx).
-    if (isDomusAdmin) {
-      const counts = await getDomusAgentBadgeCounts(orgId);
+    // isDomusStaff en vez de sumarlas al Promise.all de arriba (mismo
+    // criterio que hasGymFeatures/gymClasses en perfil/page.tsx). Fase 1c
+    // (rol agente): el gerente ve el total, un agente solo lo suyo.
+    if (isDomusStaff) {
+      const counts = await getDomusAgentBadgeCounts(orgId, isDomusManager ? null : user?.id);
       domusConsultasNuevoCount = counts.consultasNuevoCount;
       domusReunionesHoyCount = counts.reunionesHoyCount;
     }
@@ -95,7 +105,7 @@ export default async function DashboardPage() {
   // Fase Home mobile Domus: en mobile, el agente ve la pantalla
   // simplificada acá mismo — no hace falta redirect ni tocar
   // app/login/actions.ts, esta página ya es el destino de siempre.
-  if (isDomusAdmin && orgId) {
+  if (isDomusStaff && orgId) {
     return (
       <div className="flex-1 overflow-y-auto">
         <div className="md:hidden">

@@ -32,6 +32,9 @@ export default async function DashboardLayout({
   let orgName: string | undefined;
   let orgSlug: string | undefined;
   let isDomusAdmin = false;
+  // Fase 1c (rol agente): hoisted junto a isDomusAdmin (mismo motivo:
+  // hace falta también fuera del if de abajo, para hideMobileNav).
+  let isDomusStaff = false;
   if (orgId) {
     const [{ data: org }, { count: gymLocationsCount }, { data: membership }] = await Promise.all([
       // Fase sidebar responsive: se suma "name" — antes no se pedía
@@ -81,17 +84,24 @@ export default async function DashboardLayout({
     showTurnos = isVetOrg && isAdminOrVetRole;
     // Fase 1 Domus: panel de visitas (agenda + disponibilidad propia),
     // mismo criterio de flag local por slug que isVetOrg/isCornerOrg
-    // arriba. Solo role admin (hoy el único role que representa "agente"
-    // en esta org, ver [[domus-test-users]]) — no hay un role 'vet'
-    // equivalente que sumar acá.
+    // arriba. Solo role admin (el gerente/dueño, ver Fase 1c rol agente)
+    // — no hay un role 'vet' equivalente que sumar acá.
     const isDomusOrg = org?.slug === "domus";
     isDomusAdmin = isDomusOrg && membership?.role === "admin";
+    // Fase 1c (rol agente): un segundo role de staff, "agente", que
+    // ahora también puede entrar a Inicio/Consultas (ve solo lo suyo ahí
+    // adentro, ver ALLOWED_ROLES de esas páginas) — pero NO a Visitas/
+    // Ofertas/Reservas, que por ahora siguen siendo solo del gerente
+    // (isDomusAdmin de arriba, sin cambios).
+    const isDomusAgentRole = isDomusOrg && membership?.role === "agente";
+    isDomusStaff = isDomusAdmin || isDomusAgentRole;
     showVisitas = isDomusAdmin;
     // Fase 2b: panel de consultas, mismo gate exacto que Visitas arriba
     // (por ahora coinciden 1 a 1, mismo criterio de flags separados que
     // showMascotas/showTurnos de Huellitas: no tienen por qué seguir
     // coincidiendo si el día de mañana alguno se habilita para otro role).
-    showConsultas = isDomusAdmin;
+    // Fase 1c: ahora sí divergen — Consultas suma el role agente.
+    showConsultas = isDomusStaff;
     // Fase 3: panel de ofertas ("ofrecer mi propiedad"), mismo gate exacto
     // que Visitas/Consultas arriba.
     showOfertas = isDomusAdmin;
@@ -101,8 +111,9 @@ export default async function DashboardLayout({
     // Fase 4b: mini-CRM del agente (Contactos/Consultas/Reuniones/
     // Seguimiento), mismo gate exacto que Visitas/Consultas/Ofertas. No
     // reemplaza el redirect de /login (compartido con todas las orgs,
-    // ver Gate 0 de esta fase) — vive como primer ítem del sidebar.
-    showInicio = isDomusAdmin;
+    // ver Gate 0 de esta fase) — vive como primer ítem del sidebar. Fase
+    // 1c: ahora también role agente, para llegar al panel con su badge.
+    showInicio = isDomusStaff;
   }
 
   return (
@@ -120,7 +131,7 @@ export default async function DashboardLayout({
       showInicio={showInicio}
       orgName={orgName}
       orgLogo={orgSlug ? ORG_LOGO_LOCKUP[orgSlug] ?? null : null}
-      hideMobileNav={isDomusAdmin}
+      hideMobileNav={isDomusStaff}
     >
       {children}
     </DashboardShell>

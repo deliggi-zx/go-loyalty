@@ -4,9 +4,10 @@ import { getOrgId } from "@/lib/supabase/get-org";
 import { DomusAgentPanel } from "./domus-agent-panel";
 import { getDomusAgentBadgeCounts } from "./domus-badge-counts";
 
-// Mismo gate exacto que Visitas/Consultas/Ofertas — slug domus + role
-// admin.
-const ALLOWED_ROLES = ["admin"];
+// Fase 1c (rol agente): antes solo admin (mismo gate que Visitas/
+// Ofertas, que siguen siendo solo gerente) — ahora también agente, para
+// que pueda llegar a este panel y ver su badge de Consultas.
+const ALLOWED_ROLES = ["admin", "agente"];
 
 // Fase 4b (rev. Unificar panel del agente): antes esta pantalla tenía
 // una grilla propia de 4 botones en desktop (sin Catálogo, sin badges)
@@ -41,7 +42,12 @@ export default async function InicioPage() {
   if (org?.slug !== "domus") redirect("/dashboard");
   if (!membership || !ALLOWED_ROLES.includes(membership.role)) redirect("/dashboard");
 
-  const { consultasNuevoCount, reunionesHoyCount } = await getDomusAgentBadgeCounts(orgId);
+  // Fase 1c (rol agente): el gerente (admin) sigue viendo el total de la
+  // org; un agente solo ve lo que le corresponde (sin asignar + suyas).
+  const { consultasNuevoCount, reunionesHoyCount } = await getDomusAgentBadgeCounts(
+    orgId,
+    membership.role === "admin" ? null : user.id
+  );
 
   return (
     <div className="flex-1 overflow-y-auto">
