@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Bike, Users } from "lucide-react";
 import { redirect } from "next/navigation";
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/server";
@@ -56,6 +57,12 @@ export default async function PerfilPage({
   // Fase P4: puntos con estética oscuro+naranja — mismo criterio simple
   // (slug directo) que ya usa el saludo más abajo y page.tsx (isBike).
   const isBike = params.slug === "bike";
+
+  // Fase P5 Bike: "Mundo Bike" — resumen de admin en vez del panel de
+  // cliente. Mismo helper getOrgRole (loyalty_members.role) que ya usan
+  // domusRole/vetRole más abajo, acá recién se suma el gate para bike.
+  const bikeRole = isBike ? await getOrgRole(org.id, user.id) : null;
+  const isBikeAdmin = isBike && bikeRole === "admin";
 
   // Showroom de entrenamiento (Fase 1 + 2): solo para Gym2, mismo criterio
   // hasGymFeatures que layout.tsx y page.tsx (orgs sin filas en
@@ -369,13 +376,40 @@ export default async function PerfilPage({
         </div>
       )}
 
+      {/* Fase P5 Bike: resumen de admin — reemplaza el panel de cliente
+          (puntos/historial no aplican a un admin) por dos accesos
+          directos, mismo lenguaje visual oscuro+naranja que el resto de
+          "bike" en esta página. Consultas/Ventas/Taller quedan afuera a
+          propósito (fases aparte, todavía no existen — nada de
+          placeholders acá). */}
+      {isBikeAdmin && (
+        <div className="space-y-3">
+          {[
+            { href: "/dashboard/catalogo", label: "Bicis", icon: Bike },
+            { href: "/dashboard/clientes", label: "Clientes", icon: Users },
+          ].map(({ href, label, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className="flex items-center gap-4 rounded-2xl px-5 py-5 bg-[#0a0a0b] border border-[#26262a] active:opacity-90 transition-opacity"
+            >
+              <span className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-[#ff6b00]">
+                <Icon className="w-6 h-6 text-[#0a0a0b]" />
+              </span>
+              <span className="text-lg font-semibold text-white">{label}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+
       {/* Fase puntos fuera de Mi Perfil (Domus): ni cliente ni agente ven
           el panel de puntos ni la barra de progreso — Domus no tiene
           mecánica de sellos/puntos real (no hay flujo de "compra"), este
           bloque entero solo tenía sentido genérico heredado. El resto de
           las orgs (SuperElectro, Bike, Gym2, Corner, Huellitas) sigue
-          viéndolo exactamente igual. */}
-      {!isDomus && (
+          viéndolo exactamente igual, salvo el admin de bike (Fase P5,
+          ver bloque de arriba). */}
+      {!isDomus && !isBikeAdmin && (
       <div className="flex justify-center">
         <div className="w-full max-w-sm space-y-4">
           <PointsPanel
@@ -415,7 +449,9 @@ export default async function PerfilPage({
       </div>
       )}
 
-      {/* Historial de consumo */}
+      {/* Historial de consumo — tampoco aplica al admin de bike (Fase P5,
+          mismo criterio que el bloque de puntos de arriba). */}
+      {!isBikeAdmin && (
       <div className="space-y-2">
         <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
           Historial de consumo
@@ -447,6 +483,7 @@ export default async function PerfilPage({
           <p className="text-xs text-stone-400">Todavía no sumaste puntos.</p>
         )}
       </div>
+      )}
     </div>
   );
 }
