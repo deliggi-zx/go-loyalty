@@ -20,16 +20,31 @@ export default async function ClientesPage() {
     if (members && members.length > 0) {
       const profileIds = members.map((m) => m.profile_id);
 
-      // 2. Perfiles (nombre y email)
+      // 2. Perfiles (nombre) — public.profiles NO tiene columna "email"
+      // (solo id, full_name, avatar_url, created_at; confirmado con
+      // information_schema). El mail vive en auth.users, y el server
+      // client de la app usa la anon key (ver lib/supabase/server.ts),
+      // sin acceso a ese schema — no hay forma de traerlo acá sin sumar
+      // infra nueva (service role). Mismo diagnóstico y misma solución
+      // que ya se tomó en dashboard/mascotas/page.tsx para este mismo
+      // bug: se saca "email" del todo en vez de agregar una consulta
+      // aparte para un dato que el resto del código ya decidió no
+      // mostrar.
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, email, full_name")
+        .select("id, full_name")
         .in("id", profileIds);
 
-      // 3. Puntos acumulados por cliente en esta org
+      // 3. Puntos acumulados por cliente en esta org — la columna real es
+      // "balance", no "points" (ver lib/loyalty/transactions.ts y
+      // [slug]/data.ts, que ya la usan bien). "updated_at" tampoco existe
+      // en esta tabla (confirmado con information_schema: id, profile_id,
+      // org_id, balance, total_earned, app — nada de timestamps) — se
+      // saca del select, mismo motivo que el bug de "points": una
+      // columna inválida tira abajo el select entero en silencio.
       const { data: pointsData } = await supabase
         .from("loyalty_user_points")
-        .select("profile_id, points, updated_at")
+        .select("profile_id, balance")
         .eq("org_id", orgId)
         .in("profile_id", profileIds);
 
@@ -39,11 +54,15 @@ export default async function ClientesPage() {
 
         return {
           id: m.profile_id,
-          name: profile?.full_name ?? profile?.email ?? m.profile_id,
-          contact: profile?.email ?? "",
-          stamps: pts?.points ?? 0,
+          name: profile?.full_name ?? "Cliente sin nombre",
+          contact: "",
+          points: pts?.balance ?? 0,
           totalVisits: 0,
-          lastVisit: pts?.updated_at ?? m.created_at ?? "",
+          // Sin timestamp real de "última visita" en loyalty_user_points
+          // (ver nota arriba), se usa la fecha en que se hizo miembro
+          // como aproximación — mismo dato que ya se usaba como fallback
+          // antes, ahora es la única fuente.
+          lastVisit: m.created_at ?? "",
           status: "activo" as const,
         };
       });

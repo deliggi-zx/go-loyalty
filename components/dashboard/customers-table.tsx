@@ -1,22 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Search, SlidersHorizontal, ChevronRight, Stamp } from "lucide-react";
+import { Search, SlidersHorizontal, ChevronRight, Coins } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface Customer {
   id: string;
   name: string;
   contact: string;
-  stamps: number;
+  points: number;
   totalVisits: number;
   lastVisit: string;
   status: "activo" | "inactivo";
 }
 
-const STAMPS_TOTAL = 10;
-
-type Filter = "todos" | "activo" | "inactivo" | "completa";
+type Filter = "todos" | "activo" | "inactivo";
 
 function initials(name: string) {
   return name
@@ -36,31 +34,6 @@ function formatDate(iso: string) {
   });
 }
 
-function StampBar({ stamps }: { stamps: number }) {
-  const pct = Math.round((stamps / STAMPS_TOTAL) * 100);
-  return (
-    <div className="flex items-center gap-2">
-      <div className="w-20 h-1.5 bg-stone-100 rounded-full overflow-hidden">
-        <div
-          className={cn(
-            "h-full rounded-full",
-            stamps >= STAMPS_TOTAL ? "bg-emerald-400" : "bg-amber-400"
-          )}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <span
-        className={cn(
-          "text-xs font-medium tabular-nums",
-          stamps >= STAMPS_TOTAL ? "text-emerald-600" : "text-stone-500"
-        )}
-      >
-        {stamps}/{STAMPS_TOTAL}
-      </span>
-    </div>
-  );
-}
-
 interface CustomersTableProps {
   customers: Customer[];
 }
@@ -78,8 +51,7 @@ export function CustomersTable({ customers }: CustomersTableProps) {
     const matchFilter =
       filter === "todos" ||
       (filter === "activo" && c.status === "activo") ||
-      (filter === "inactivo" && c.status === "inactivo") ||
-      (filter === "completa" && c.stamps >= STAMPS_TOTAL);
+      (filter === "inactivo" && c.status === "inactivo");
 
     return matchSearch && matchFilter;
   });
@@ -88,14 +60,17 @@ export function CustomersTable({ customers }: CustomersTableProps) {
     todos:    customers.length,
     activo:   customers.filter((c) => c.status === "activo").length,
     inactivo: customers.filter((c) => c.status === "inactivo").length,
-    completa: customers.filter((c) => c.stamps >= STAMPS_TOTAL).length,
   };
 
+  // Fase fix genérico (sellos → puntos): "Tarjeta completa" salía del
+  // viejo sistema de sellos (stamps >= 10, un tope fijo). Puntos no
+  // tiene un tope fijo — cada org define su propio next_reward_threshold
+  // — así que ese filtro no tiene un equivalente directo acá sin sumar
+  // ese dato a esta pantalla. Se saca en vez de inventar un umbral.
   const filterTabs: { key: Filter; label: string }[] = [
     { key: "todos",    label: `Todos (${totals.todos})`                    },
     { key: "activo",   label: `Activos (${totals.activo})`                 },
     { key: "inactivo", label: `Inactivos (${totals.inactivo})`             },
-    { key: "completa", label: `Tarjeta completa (${totals.completa})`      },
   ];
 
   return (
@@ -148,7 +123,7 @@ export function CustomersTable({ customers }: CustomersTableProps) {
             <thead>
               <tr className="border-b border-stone-100 bg-stone-50">
                 <th className="text-left px-5 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Cliente</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Sellos</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Puntos</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide hidden md:table-cell">Visitas</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide hidden lg:table-cell">Última visita</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Estado</th>
@@ -171,8 +146,10 @@ export function CustomersTable({ customers }: CustomersTableProps) {
                   </td>
                   <td className="px-4 py-3.5">
                     <div className="flex items-center gap-1.5">
-                      <Stamp className="w-3.5 h-3.5 text-stone-300 shrink-0" />
-                      <StampBar stamps={c.stamps} />
+                      <Coins className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span className="text-xs font-medium tabular-nums text-stone-700">
+                        {c.points.toLocaleString("es-AR")} pts
+                      </span>
                     </div>
                   </td>
                   <td className="px-4 py-3.5 text-stone-600 hidden md:table-cell">
