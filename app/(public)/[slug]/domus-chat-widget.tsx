@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { MessageCircleQuestion, X, Send } from "lucide-react";
 import { askDomusChat, type ChatMessage } from "./domus-chat-actions";
 
@@ -46,12 +47,12 @@ export function DomusChatWidget({ slug, orgId, whatsappNumber }: DomusChatWidget
 
     setMessages((prev) => [
       ...prev,
-      {
-        role: "model",
-        text: result.ok
-          ? result.reply
-          : "Uy, tuvimos un problema para responder. Probá de nuevo en un momento, o escribinos directo.",
-      },
+      result.ok
+        ? { role: "model", text: result.reply, mentionedProperties: result.mentionedProperties }
+        : {
+            role: "model",
+            text: "Uy, tuvimos un problema para responder. Probá de nuevo en un momento, o escribinos directo.",
+          },
     ]);
     setSending(false);
   }
@@ -105,6 +106,20 @@ export function DomusChatWidget({ slug, orgId, whatsappNumber }: DomusChatWidget
                 style={m.role === "user" ? { backgroundColor: DOMUS_NAVY } : undefined}
               >
                 {m.text}
+                {m.role === "model" && m.mentionedProperties && m.mentionedProperties.length > 0 && (
+                  <div className="mt-2.5 space-y-1.5">
+                    {m.mentionedProperties.map((p) => (
+                      <Link
+                        key={p.id}
+                        href={`/${slug}/producto/${p.id}`}
+                        className="block text-xs font-medium rounded-lg px-3 py-2 text-center text-white hover:opacity-90 transition-opacity"
+                        style={{ backgroundColor: DOMUS_NAVY }}
+                      >
+                        Ver {p.name} →
+                      </Link>
+                    ))}
+                  </div>
+                )}
                 {m.role === "model" && (
                   <div className="mt-2 pt-2 border-t border-stone-200">
                     <a

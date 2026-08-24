@@ -4,14 +4,26 @@ import { createClient } from "@/lib/supabase/server";
 import { getGeminiClient, GEMINI_MODEL } from "@/lib/gemini";
 import { formatPrice } from "@/lib/utils";
 
+export interface MentionedProperty {
+  id: string;
+  name: string;
+}
+
 export interface ChatMessage {
   role: "user" | "model";
   text: string;
+  mentionedProperties?: MentionedProperty[];
 }
 
 export type AskDomusChatResult =
-  | { ok: true; reply: string }
+  | { ok: true; reply: string; mentionedProperties: MentionedProperty[] }
   | { ok: false; error: string };
+
+// Marca técnica que le pedimos a Gemini al final de la respuesta cuando
+// menciona propiedades puntuales del contexto — se parsea y se saca del
+// texto visible, nunca llega a mostrarse tal cual. Formato elegido para
+// que no colisione con texto natural en español.
+const MENTIONED_IDS_MARKER = /\n?\|\|IDS:([^|]*)\|\|\s*$/;
 
 // Fase chatbot Domus: no hay columna de "zonas que cubre" ni "horario de
 // atención" en loyalty_organizations (confirmado en el Gate 0), y Domus
@@ -51,7 +63,7 @@ export async function askDomusChat(
       .maybeSingle(),
     supabase
       .from("products")
-      .select("name, price, currency, specs, category_id")
+      .select("id, name, price, currency, specs, category_id")
       .eq("org_id", orgId)
       .eq("active", true),
     supabase.from("product_categories").select("id, name, parent_id").eq("org_id", orgId),
@@ -80,7 +92,7 @@ export async function askDomusChat(
             const ambientes = specString(specs, "ambientes");
             const operacion = specString(specs, "operación") ?? operationFromCategory(p.category_id) ?? "—";
             const precio = formatPrice(Number(p.price), p.currency);
-            return `- ${p.name} — ${operacion}, zona ${zona}${ambientes ? `, ${ambientes} ambientes` : ""}, ${precio}`;
+            return `- [${p.id}] ${p.name} — ${operacion}, zona ${zona}${ambientes ? `, ${ambientes} ambientes` : ""}, ${precio}`;
           })
           .join("\n")
       : "No hay propiedades activas cargadas en este momento.";
@@ -104,6 +116,12 @@ REGLAS ESTRICTAS (nunca las rompas):
 - No prometas nada que no puedas cumplir vos (agendar una visita, cerrar una operación, confirmar disponibilidad exacta) — para eso está el equipo humano.
 - No dés información de ninguna otra inmobiliaria ni de ningún otro tema que no sea este negocio.
 
+FORMATO TÉCNICO (para el sistema, nunca lo menciones ni lo expliques al usuario):
+- Cada propiedad de la lista de abajo empieza con su id interno entre corchetes, ej. "[abc-123] Depto en Nordelta — ...".
+- Si en tu respuesta mencionás una o más propiedades PUNTUALES de esa lista (alguien podría identificar de cuál hablás — por nombre, o por zona+ambientes+precio combinados), agregá como última línea de tu respuesta, sola en su propia línea, exactamente este formato: ||IDS:id1,id2|| — usando los ids reales entre corchetes de las propiedades que mencionaste, separados por coma, sin espacios ni texto extra en esa línea.
+- Si tu respuesta es general (zonas, requisitos, horarios, o no señala ninguna propiedad puntual), NO agregues esa línea.
+- Nunca inventes un id que no esté en la lista de abajo.
+
 Datos de la inmobiliaria:
 ${org?.about_text ? `- Sobre nosotros: ${org.about_text}` : ""}
 - Horario de atención: ${FALLBACK_HOURS_TEXT}
@@ -126,10 +144,26 @@ ${propertiesSummary}
       config: { systemInstruction },
     });
 
-    const reply = response.text?.trim();
+    const rawReply = response.text?.trim();
+    if (!rawReply) return { ok: false, error: "empty" };
+
+    // Separar el texto visible del bloque técnico de ids mencionados, y
+    // validar cada id contra las propiedades REALES que se le pasaron al
+    // modelo en este mismo request — nunca confiar en lo que Gemini
+    // devuelva sin chequearlo contra la fuente de verdad (mismo espíritu
+    // que la regla de "nunca inventar propiedades").
+    const idsMatch = rawReply.match(MENTIONED_IDS_MARKER);
+    const reply = idsMatch ? rawReply.slice(0, idsMatch.index).trim() : rawReply;
     if (!reply) return { ok: false, error: "empty" };
 
-    return { ok: true, reply };
+    const propertyById = new Map(properties.map((p) => [p.id, p]));
+    const requestedIds = idsMatch ? idsMatch[1].split(",").map((id) => id.trim()).filter(Boolean) : [];
+    const mentionedProperties: MentionedProperty[] = Array.from(new Set(requestedIds))
+      .map((id) => propertyById.get(id))
+      .filter((p): p is NonNullable<typeof p> => !!p)
+      .map((p) => ({ id: p.id, name: p.name }));
+
+    return { ok: true, reply, mentionedProperties };
   } catch (err) {
     console.error("Error al llamar a Gemini:", err instanceof Error ? err.message : err);
     return { ok: false, error: "gemini_error" };
