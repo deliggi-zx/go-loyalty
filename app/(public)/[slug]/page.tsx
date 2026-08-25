@@ -172,6 +172,26 @@ export default async function TenantPage({
   // directo, no un mapa) porque es un único flag booleano en este archivo.
   const isBike = params.slug === "bike";
 
+  // Fase 6 "Mundo Bike": mini galería de 3 fotos propias en "Nosotros",
+  // en vez de reusar el banner principal ahí adentro (ver galleryUrls
+  // en GymAboutSection). Solo se pide para bike — el resto de las orgs
+  // no tiene filas type='nosotros_gallery', así que no hace falta ni
+  // el gate para evitarles una query de más, pero se hace igual por
+  // prolijidad (mismo criterio que featuredProducts/productCarousels
+  // de acá arriba, scoped por condición).
+  const { data: nosotrosGalleryData } = isBike
+    ? await supabase
+        .from("loyalty_content")
+        .select("image_url")
+        .eq("org_id", org.id)
+        .eq("type", "nosotros_gallery")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+    : { data: null };
+  const nosotrosGalleryUrls = (nosotrosGalleryData ?? [])
+    .map((r) => r.image_url)
+    .filter((u): u is string => !!u);
+
   // Fase 2b Domus: mismo criterio simple (slug directo, un único flag en
   // este archivo) que isBike arriba — botón "Consultas" en la home
   // pública, scoped a esta org, no genérico.
@@ -273,6 +293,7 @@ export default async function TenantPage({
             bannerUrl={org.banner_url}
             orgName={org.name}
             title={isBike ? "Nosotros" : undefined}
+            galleryUrls={isBike ? nosotrosGalleryUrls : undefined}
           />
         </div>
       )}
