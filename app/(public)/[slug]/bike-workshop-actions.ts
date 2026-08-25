@@ -71,3 +71,28 @@ export async function createWorkshopAppointment(
 
   return { ok: true };
 }
+
+// Fase T3: cancelación del lado del CLIENTE — mismo UPDATE
+// status='cancelled' exacto que cancelVisitAsClient en domus-visits-
+// actions.ts (nunca DELETE), ownership check con .eq("profile_id", ...).
+// El conteo de capacidad (isWorkshopSlotAvailable/getAvailableWorkshopDays
+// en bike-workshop-data.ts) ya solo cuenta pending+confirmed, así que el
+// horario queda libre automáticamente, sin tocar bike_workshop_
+// availability.
+export async function cancelWorkshopAppointmentAsClient(slug: string, appointmentId: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("No autorizado");
+
+  const { error } = await supabase
+    .from("bike_workshop_appointments")
+    .update({ status: "cancelled" })
+    .eq("id", appointmentId)
+    .eq("profile_id", user.id);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/${slug}/taller`);
+  revalidatePath("/dashboard/taller");
+}
