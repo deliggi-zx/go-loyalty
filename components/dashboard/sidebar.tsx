@@ -14,6 +14,7 @@ import {
   PawPrint,
   CalendarClock,
   Home,
+  Wrench,
   MessageSquare,
   FileText,
   BookmarkCheck,
@@ -65,6 +66,11 @@ const turnosNavItem = { href: "/dashboard/turnos", label: "Turnos", icon: Calend
 // vez de una pestaña dentro de Catálogo, son datos y acciones separados.
 const visitasNavItem = { href: "/dashboard/visitas", label: "Visitas", icon: Home };
 
+// Solo bike (Fase T1), y solo role admin — mismo criterio de gate que
+// visitasNavItem (Domus). Disponibilidad del taller de service, ver
+// showTaller en dashboard/layout.tsx.
+const tallerNavItem = { href: "/dashboard/taller", label: "Taller", icon: Wrench };
+
 // Solo Domus (Fase 2b), mismo gate que visitasNavItem (slug domus + role
 // admin) — ver showConsultas en dashboard/layout.tsx.
 const consultasNavItem = { href: "/dashboard/consultas", label: "Consultas", icon: MessageSquare };
@@ -98,6 +104,7 @@ interface SidebarProps {
   showMascotas?: boolean;
   showTurnos?: boolean;
   showVisitas?: boolean;
+  showTaller?: boolean;
   showConsultas?: boolean;
   showOfertas?: boolean;
   showReservas?: boolean;
@@ -128,6 +135,7 @@ export function Sidebar({
   showMascotas = false,
   showTurnos = false,
   showVisitas = false,
+  showTaller = false,
   showConsultas = false,
   showOfertas = false,
   showReservas = false,
@@ -146,6 +154,7 @@ export function Sidebar({
     ...(showMascotas ? [mascotasNavItem] : []),
     ...(showTurnos ? [turnosNavItem] : []),
     ...(showVisitas ? [visitasNavItem] : []),
+    ...(showTaller ? [tallerNavItem] : []),
     ...(showConsultas ? [consultasNavItem] : []),
     ...(showOfertas ? [ofertasNavItem] : []),
     ...(showReservas ? [reservasNavItem] : []),
