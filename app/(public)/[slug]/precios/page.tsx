@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getTenantOrg, getProductCatalog, getProductCategories } from "../data";
 import { PriceFlyers } from "../price-flyers";
 import { ProductCatalog } from "../product-catalog";
+import { BikeChatWidget } from "../bike-chat-widget";
 
 export default async function PreciosPage({
   params,
@@ -38,6 +39,12 @@ export default async function PreciosPage({
           primaryColor={org.primary_color ?? "#f59e0b"}
           initialCategoryId={searchParams.categoria ?? null}
         />
+
+        {/* Fase 5 "Mundo Bike": el chat también vive acá, a diferencia
+            del de Domus que solo está en la home — ver Gate 0/2. */}
+        {params.slug === "bike" && (
+          <BikeChatWidget slug={params.slug} orgId={org.id} whatsappNumber={org.whatsapp_number} />
+        )}
       </div>
     );
   }

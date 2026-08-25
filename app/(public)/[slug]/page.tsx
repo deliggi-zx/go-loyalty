@@ -5,6 +5,7 @@ import { getGymLocations, getGymClasses, getGymTestimonials } from "./gym-data";
 import { LoginForm } from "./login-form";
 import { GeneralInquiryForm } from "./general-inquiry-form";
 import { DomusChatWidget } from "./domus-chat-widget";
+import { BikeChatWidget } from "./bike-chat-widget";
 import { Carousel } from "./carousel";
 import { SocialLinks } from "./social-links";
 import { GymAboutSection } from "./gym-about-section";
@@ -224,6 +225,15 @@ export default async function TenantPage({
           el fallback "hablar con un agente" del chat. */}
       {isDomus && (
         <DomusChatWidget slug={params.slug} orgId={org.id} whatsappNumber={org.whatsapp_number} />
+      )}
+
+      {/* Fase 5 "Mundo Bike": mismo mecanismo que el chat de Domus de
+          arriba (botón flotante propio, apilado sobre WhatsAppButton de
+          layout.tsx), acento naranja en vez de navy/sand — ver Gate 0.
+          A diferencia de Domus, también vive en /precios (ver ese
+          archivo), no solo acá. */}
+      {isBike && (
+        <BikeChatWidget slug={params.slug} orgId={org.id} whatsappNumber={org.whatsapp_number} />
       )}
 
       {/* Fase Home: carruseles configurables — debajo de la card de
