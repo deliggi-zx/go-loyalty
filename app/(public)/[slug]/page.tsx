@@ -191,12 +191,13 @@ export default async function TenantPage({
   return (
     <>
       {/* Login (solo si no hay sesión; si hay sesión, el badge de puntos ya se muestra en el layout).
-          Gym2 y Domus no usan este recuadro: en esas dos el login se abre
-          desde el ícono de usuario del header (ver hasGymFeatures/isDomus
-          + showLoginIcon en layout.tsx — Ajuste 1). */}
-      {!user && !hasGymFeatures && !isDomus && (
+          Gym2, Domus y bike no usan este recuadro: en esas tres el login
+          se abre desde el ícono de usuario del header (ver
+          hasGymFeatures/isDomus/isBike + showLoginIcon en layout.tsx —
+          Ajuste 1, extendido a bike en Fase 3j). */}
+      {!user && !hasGymFeatures && !isDomus && !isBike && (
         <div className="max-w-lg mx-auto px-4 pt-4">
-          <LoginForm primaryColor={primary} bikeTheme={isBike} orgId={org.id} />
+          <LoginForm primaryColor={primary} orgId={org.id} />
         </div>
       )}
 
