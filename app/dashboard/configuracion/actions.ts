@@ -181,3 +181,26 @@ export async function updateOrgRequirements(data: {
 
   revalidatePath("/dashboard/configuracion");
 }
+
+// ── Capacidad del taller (bike) ──────────────────────────────────────────────
+
+// Fase T1 "Mundo Bike" Taller: workshop_capacity_per_slot es una columna
+// genérica en loyalty_organizations (mismo criterio que rental_
+// requirements_text arriba — cualquier org podría tener un valor acá),
+// pero el form que llama a esto solo se renderiza para orgSlug === 'bike'
+// (ver WorkshopCapacityForm/page.tsx).
+export async function updateWorkshopCapacity(capacity: number) {
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+
+  if (!Number.isInteger(capacity) || capacity < 1) {
+    throw new Error("Capacidad inválida");
+  }
+
+  await supabase
+    .from("loyalty_organizations")
+    .update({ workshop_capacity_per_slot: capacity })
+    .eq("id", orgId);
+
+  revalidatePath("/dashboard/configuracion");
+}

@@ -12,6 +12,7 @@ interface DashboardShellProps {
   showMascotas?: boolean;
   showTurnos?: boolean;
   showVisitas?: boolean;
+  showTaller?: boolean;
   showConsultas?: boolean;
   showOfertas?: boolean;
   showReservas?: boolean;
@@ -42,6 +43,7 @@ export function DashboardShell({
   showMascotas,
   showTurnos,
   showVisitas,
+  showTaller,
   showConsultas,
   showOfertas,
   showReservas,
@@ -62,6 +64,7 @@ export function DashboardShell({
       showMascotas={showMascotas}
       showTurnos={showTurnos}
       showVisitas={showVisitas}
+      showTaller={showTaller}
       showConsultas={showConsultas}
       showOfertas={showOfertas}
       showReservas={showReservas}

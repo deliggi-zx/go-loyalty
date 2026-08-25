@@ -7,6 +7,7 @@ import { PromoManager } from "./promo-manager";
 import { PriceListManager } from "./price-list-manager";
 import { ContactForm } from "./contact-form";
 import { RequirementsForm } from "./requirements-form";
+import { WorkshopCapacityForm } from "./workshop-capacity-form";
 
 export default async function ConfiguracionPage() {
   const supabase = createClient();
@@ -18,7 +19,7 @@ export default async function ConfiguracionPage() {
     supabase
       .from("loyalty_organizations")
       .select(
-        "id, slug, name, banner_url, background_url, background_color, primary_color, secondary_color, accent_color, member_tier_label, next_reward_threshold, about_text, whatsapp_number, phone_number, facebook_url, instagram_url, twitter_url, youtube_url, terms_text, rental_requirements_text, purchase_requirements_text"
+        "id, slug, name, banner_url, background_url, background_color, primary_color, secondary_color, accent_color, member_tier_label, next_reward_threshold, about_text, whatsapp_number, phone_number, facebook_url, instagram_url, twitter_url, youtube_url, terms_text, rental_requirements_text, purchase_requirements_text, workshop_capacity_per_slot"
       )
       .eq("id", orgId)
       .single(),
@@ -70,6 +71,9 @@ export default async function ConfiguracionPage() {
         {/* Fase Requisitos: solo Domus tiene "venta"/"alquiler" como
             concepto — el resto de las orgs no ve este bloque. */}
         {org.slug === "domus" && <RequirementsForm org={org} />}
+        {/* Fase T1 "Mundo Bike" Taller: solo bike tiene taller de service —
+            el resto de las orgs no ve este bloque. */}
+        {org.slug === "bike" && <WorkshopCapacityForm org={org} />}
       </div>
     </div>
   );

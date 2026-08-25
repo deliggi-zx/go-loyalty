@@ -25,6 +25,7 @@ export default async function DashboardLayout({
   let showMascotas = false;
   let showTurnos = false;
   let showVisitas = false;
+  let showTaller = false;
   let showConsultas = false;
   let showOfertas = false;
   let showReservas = false;
@@ -96,6 +97,12 @@ export default async function DashboardLayout({
     const isDomusAgentRole = isDomusOrg && membership?.role === "agente";
     isDomusStaff = isDomusAdmin || isDomusAgentRole;
     showVisitas = isDomusAdmin;
+    // Fase T1 "Mundo Bike" Taller: panel de disponibilidad, mismo criterio
+    // de flag local por slug que isDomusOrg arriba. Solo role admin —
+    // mismo criterio isBikeAdmin ya usado en /perfil (Fase P5) y
+    // layout.tsx del sitio público (Fase 3j).
+    const isBikeOrg = org?.slug === "bike";
+    showTaller = isBikeOrg && membership?.role === "admin";
     // Fase 2b: panel de consultas, mismo gate exacto que Visitas arriba
     // (por ahora coinciden 1 a 1, mismo criterio de flags separados que
     // showMascotas/showTurnos de Huellitas: no tienen por qué seguir
@@ -125,6 +132,7 @@ export default async function DashboardLayout({
       showMascotas={showMascotas}
       showTurnos={showTurnos}
       showVisitas={showVisitas}
+      showTaller={showTaller}
       showConsultas={showConsultas}
       showOfertas={showOfertas}
       showReservas={showReservas}
