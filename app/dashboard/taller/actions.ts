@@ -114,3 +114,59 @@ export async function removeAvailability(id: string): Promise<{ ok: boolean; err
   revalidatePath("/dashboard/taller");
   return { ok: true };
 }
+
+// Fase T3: acciones sobre turnos. Bike es un solo local (no hay
+// agent_profile_id como en Domus) — el ownership check real es
+// .eq("org_id", orgId), cualquier admin de bike puede confirmar/rechazar/
+// cancelar cualquier turno de su org, no hay noción de "mi turno" del
+// lado admin. UPDATE, nunca DELETE — mismo criterio que confirmVisit/
+// rejectVisit/cancelVisit en dashboard/visitas/actions.ts (Domus). El
+// conteo de capacidad (getAvailableWorkshopDays/isWorkshopSlotAvailable
+// en bike-workshop-data.ts) ya solo cuenta pending+confirmed, así que
+// mover a rejected/cancelled libera el cupo automáticamente, sin tocar
+// nada más acá.
+export async function confirmAppointment(id: string) {
+  const { supabase, orgId } = await requireOrgContext();
+
+  const { error } = await supabase
+    .from("bike_workshop_appointments")
+    .update({ status: "confirmed" })
+    .eq("id", id)
+    .eq("org_id", orgId)
+    .eq("status", "pending");
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/dashboard/taller");
+}
+
+export async function rejectAppointment(id: string) {
+  const { supabase, orgId } = await requireOrgContext();
+
+  const { error } = await supabase
+    .from("bike_workshop_appointments")
+    .update({ status: "rejected" })
+    .eq("id", id)
+    .eq("org_id", orgId)
+    .eq("status", "pending");
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/dashboard/taller");
+}
+
+// Cancelar un turno ya confirmado, del lado admin — trivial de sumar
+// (mismo shape exacto que confirmAppointment/rejectAppointment de
+// arriba), útil para cuando el taller no puede cumplir un turno que ya
+// había confirmado.
+export async function cancelAppointmentAsAdmin(id: string) {
+  const { supabase, orgId } = await requireOrgContext();
+
+  const { error } = await supabase
+    .from("bike_workshop_appointments")
+    .update({ status: "cancelled" })
+    .eq("id", id)
+    .eq("org_id", orgId)
+    .eq("status", "confirmed");
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/dashboard/taller");
+}

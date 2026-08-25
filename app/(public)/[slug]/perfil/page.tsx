@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bike, Users } from "lucide-react";
+import { Bike, Users, Wrench } from "lucide-react";
 import { redirect } from "next/navigation";
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/server";
@@ -374,6 +374,23 @@ export default async function PerfilPage({
             <p className="text-xs text-stone-400">Todavía no ofreciste ninguna propiedad.</p>
           )}
         </div>
+      )}
+
+      {/* Fase T2 Bike: acceso a Taller del lado CLIENTE — mismo lenguaje
+          visual que las cards de admin (Bicis/Clientes, Fase P5) de acá
+          abajo, pero es un bloque ADICIONAL (el cliente sigue viendo su
+          PointsPanel normal después, a diferencia del admin que lo
+          reemplaza por completo). */}
+      {isBike && !isBikeAdmin && (
+        <Link
+          href={`/${params.slug}/taller`}
+          className="flex items-center gap-4 rounded-2xl px-5 py-5 bg-[#0a0a0b] border border-[#26262a] active:opacity-90 transition-opacity"
+        >
+          <span className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-[#ff6b00]">
+            <Wrench className="w-6 h-6 text-[#0a0a0b]" />
+          </span>
+          <span className="text-lg font-semibold text-white">Taller</span>
+        </Link>
       )}
 
       {/* Fase P5 Bike: resumen de admin — reemplaza el panel de cliente

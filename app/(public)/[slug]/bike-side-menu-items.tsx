@@ -9,6 +9,7 @@ import {
   Star,
   ShoppingBag,
   Users,
+  Wrench,
   Phone,
   MessageCircle,
   ChevronDown,
@@ -206,6 +207,22 @@ export function BikeSideMenuItems({
             youtubeUrl={youtubeUrl}
           />
         </div>
+      )}
+
+      {/* 7° ítem (Fase T2 Taller): reserva de turno de service — mismo
+          patrón que Mi Perfil (Link real, gateado por isLoggedIn: la
+          página exige login, no tiene sentido ofrecer el link sin
+          sesión), mismo ícono llave inglesa que el nav de admin
+          (dashboard/taller). */}
+      {isLoggedIn && (
+        <Link
+          href={`/${slug}/taller`}
+          onClick={onClose}
+          className="flex items-center gap-2 text-sm font-medium transition-colors bike-menu-link"
+        >
+          <Wrench className="w-4 h-4 bike-icon shrink-0" />
+          Taller
+        </Link>
       )}
 
       {termsText && (
