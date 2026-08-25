@@ -197,6 +197,11 @@ export function ClientHeader({
           onClose={() => setLoginOpen(false)}
           primaryColor={primaryColor}
           neonTheme={neonTheme}
+          // Fase 3j: floatingOverlay ya es exclusivo de "bike" (ver
+          // layout.tsx) — LoginModal/LoginForm ya tenían el theming
+          // bikeTheme completo de un borrador anterior de esta fase,
+          // solo faltaba reenviarlo desde acá.
+          bikeTheme={floatingOverlay}
           requireInviteCode={requireInviteCode}
           orgId={orgId}
           orgSlug={orgSlug}

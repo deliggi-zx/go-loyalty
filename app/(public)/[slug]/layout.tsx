@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getTenantOrg, getTenantUser, getUserPointsBalance, getProductCategories, isVetOrgSlug, isCornerOrgSlug } from "./data";
+import { getTenantOrg, getTenantUser, getUserPointsBalance, getProductCategories, getOrgRole, isVetOrgSlug, isCornerOrgSlug } from "./data";
 import { VetChromeGate } from "./vet-chrome-gate";
 import { CornerChromeGate } from "./corner-chrome-gate";
 import { CornerBottomNav } from "./corner-bottom-nav";
@@ -121,10 +121,17 @@ export default async function TenantLayout({
   // condicionar también por isDomusOrg, para no adelantar esa variable
   // (se calcula más abajo) ni duplicar el chequeo de sesión.
   let domusMemberRole: string | null = null;
+  // Fase 3j: rol de este usuario para "bike" — mismo criterio isBikeAdmin
+  // ya usado en /perfil (Fase P5), acá se resuelve aparte porque
+  // layout.tsx no comparte estado con esa página. Se pide con getOrgRole
+  // (mismo helper cache()-wrapped que ya usa perfil/page.tsx) en vez de
+  // escribir un query nuevo a mano, como ya hace domusMemberRole acá
+  // arriba con su propio query directo.
+  let bikeMemberRole: string | null = null;
 
   if (user) {
     const supabase = createClient();
-    const [{ data: profile }, { data: txs }, balance, membershipRes] = await Promise.all([
+    const [{ data: profile }, { data: txs }, balance, membershipRes, bikeRoleResult] = await Promise.all([
       supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
       supabase
         .from("loyalty_transactions")
@@ -142,12 +149,14 @@ export default async function TenantLayout({
             .eq("profile_id", user.id)
             .maybeSingle()
         : Promise.resolve({ data: null }),
+      params.slug === "bike" ? getOrgRole(org.id, user.id) : Promise.resolve(null),
     ]);
 
     userDisplayName = profile?.full_name || user.email?.split("@")[0] || null;
     transactions = txs ?? [];
     pointsBalance = balance;
     domusMemberRole = membershipRes.data?.role ?? null;
+    bikeMemberRole = bikeRoleResult;
   }
 
   const primary = org.primary_color ?? "#f59e0b";
@@ -173,6 +182,12 @@ export default async function TenantLayout({
   // de Domus, o cualquier usuario de cualquier otra org, queda en false
   // y el header no cambia en nada (ver showStaffIcons en ClientHeader).
   const isDomusStaff = isDomusOrg && (domusMemberRole === "admin" || domusMemberRole === "agente");
+
+  // Fase 3j: mismo criterio simple (slug directo) que isDomusOrg arriba —
+  // isBikeAdmin gatea tanto el ícono de login (GATE 2, ver showLoginIcon
+  // más abajo) como el PointsBadge (GATE 1, ver pointsBadge más abajo).
+  const isBikeOrg = params.slug === "bike";
+  const isBikeAdmin = isBikeOrg && bikeMemberRole === "admin";
 
   // Veterinaria (Fase 0, Huellitas): la home es una pantalla bespoke propia
   // (video full-screen + botones huella, ver page.tsx/huellitas-home.tsx),
@@ -212,7 +227,7 @@ export default async function TenantLayout({
       primaryColor={primary}
       userDisplayName={user ? userDisplayName : null}
       catalogType={org.catalog_type}
-      showLoginIcon={(hasGymFeatures || isDomusOrg) && !user}
+      showLoginIcon={(hasGymFeatures || isDomusOrg || isBikeOrg) && !user}
       neonTheme={hasGymFeatures}
       requireInviteCode={hasGymFeatures}
       orgId={org.id}
@@ -248,8 +263,9 @@ export default async function TenantLayout({
   // esta org, no solo en /perfil (mismo criterio que showLoginIcon un
   // poco más arriba: chrome compartido por layout.tsx, no algo que se
   // pueda scopear por página sin lógica nueva de ruta). El resto de las
-  // orgs sigue viéndolo exactamente igual.
-  const pointsBadge = user && !isDomusOrg && (
+  // orgs sigue viéndolo exactamente igual, salvo el admin de bike (Fase
+  // 3j, mismo criterio que Domus: un admin no tiene puntos propios).
+  const pointsBadge = user && !isDomusOrg && !isBikeAdmin && (
     <PointsBadge
       tierLabel={org.member_tier_label ?? "Socio Frecuente"}
       balance={pointsBalance}
