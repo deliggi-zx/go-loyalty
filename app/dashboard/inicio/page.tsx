@@ -39,7 +39,7 @@ export default async function InicioPage() {
       .maybeSingle(),
   ]);
 
-  if (org?.slug !== "domus") redirect("/dashboard");
+  if (org?.slug !== "domus" && org?.slug !== "kapusta") redirect("/dashboard");
   if (!membership || !ALLOWED_ROLES.includes(membership.role)) redirect("/dashboard");
 
   // Fase 1c (rol agente): el gerente (admin) sigue viendo el total de la

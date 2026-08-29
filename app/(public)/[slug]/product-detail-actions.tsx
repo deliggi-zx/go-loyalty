@@ -40,7 +40,7 @@ export function ProductDetailActions({
   orgSlug,
   requirementsText,
 }: ProductDetailActionsProps) {
-  const isDomus = orgSlug === "domus";
+  const isDomus = orgSlug === "domus" || orgSlug === "kapusta";
   const [added, setAdded] = useState(false);
   const [requirementsOpen, setRequirementsOpen] = useState(false);
   const { addItem } = useCart();

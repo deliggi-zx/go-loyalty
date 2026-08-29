@@ -65,7 +65,7 @@ export function LoginForm({
 }: LoginFormProps) {
   const supabase = createClient();
   const router = useRouter();
-  const isDomus = orgSlug === "domus";
+  const isDomus = orgSlug === "domus" || orgSlug === "kapusta";
   const [mode, setMode] = useState<"login" | "register">("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");

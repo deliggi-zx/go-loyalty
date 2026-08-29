@@ -43,7 +43,7 @@ export default async function ProductoPage({
   // patrón orgSlug === "domus" que ProductDetailActions/CartPanel más
   // abajo. getTenantUser() está cache()-ado (ver data.ts), así que no
   // duplica la llamada que ya hace layout.tsx en el mismo request.
-  const isDomus = params.slug === "domus";
+  const isDomus = params.slug === "domus" || params.slug === "kapusta";
   const user = isDomus ? await getTenantUser() : null;
 
   // Fase Reservas (Domus): ver Gate 0 — no hay columna de disponibilidad

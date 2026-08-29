@@ -141,7 +141,7 @@ export default async function TenantLayout({
         .eq("status", "claimed")
         .order("claimed_at", { ascending: false }),
       getUserPointsBalance(org.id, user.id),
-      params.slug === "domus"
+      params.slug === "domus" || params.slug === "kapusta"
         ? supabase
             .from("loyalty_members")
             .select("role")
@@ -171,12 +171,8 @@ export default async function TenantLayout({
   const isFloatingHeaderOrg = FLOATING_HEADER_SLUGS.has(params.slug);
 
   // Ajuste 1 Domus: mismo criterio simple (slug directo) que ORG_LOGO_LOCKUP/
-  // isVetOrgSlug de este archivo — Domus también abre el login desde el
-  // ícono del header en vez del recuadro inline de la home (ver showLoginIcon
-  // más abajo), pero SIN heredar neonTheme ni requireInviteCode: esos dos
-  // siguen exclusivos de Gym2 (showLoginIcon ya es una prop independiente de
-  // neonTheme en ClientHeader/LoginModal, no hace falta tocar nada ahí).
-  const isDomusOrg = params.slug === "domus";
+  // isVetOrgSlug de este archivo.
+  const isDomusOrg = params.slug === "domus" || params.slug === "kapusta";
   // Fase íconos de staff: agente o gerente de Domus — mismo criterio
   // admin/agente que dashboard/layout.tsx (isDomusStaff ahí). Un cliente
   // de Domus, o cualquier usuario de cualquier otra org, queda en false
@@ -184,8 +180,7 @@ export default async function TenantLayout({
   const isDomusStaff = isDomusOrg && (domusMemberRole === "admin" || domusMemberRole === "agente");
 
   // Fase 3j: mismo criterio simple (slug directo) que isDomusOrg arriba —
-  // isBikeAdmin gatea tanto el ícono de login (GATE 2, ver showLoginIcon
-  // más abajo) como el PointsBadge (GATE 1, ver pointsBadge más abajo).
+  // isBikeAdmin gatea el PointsBadge (GATE 1, ver pointsBadge más abajo).
   const isBikeOrg = params.slug === "bike";
   const isBikeAdmin = isBikeOrg && bikeMemberRole === "admin";
 
@@ -227,7 +222,7 @@ export default async function TenantLayout({
       primaryColor={primary}
       userDisplayName={user ? userDisplayName : null}
       catalogType={org.catalog_type}
-      showLoginIcon={(hasGymFeatures || isDomusOrg || isBikeOrg) && !user}
+      isLoggedIn={!!user}
       neonTheme={hasGymFeatures}
       requireInviteCode={hasGymFeatures}
       orgId={org.id}

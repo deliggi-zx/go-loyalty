@@ -17,7 +17,7 @@ interface CartPanelProps {
 export function CartPanel({ isOpen, onClose, primaryColor, orgSlug }: CartPanelProps) {
   const { items, setQuantity, clear } = useCart();
   const [confirmed, setConfirmed] = useState(false);
-  const isDomus = orgSlug === "domus";
+  const isDomus = orgSlug === "domus" || orgSlug === "kapusta";
 
   const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 

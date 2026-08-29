@@ -28,7 +28,7 @@ export default async function OfertasPage() {
       .maybeSingle(),
   ]);
 
-  if (org?.slug !== "domus") redirect("/dashboard");
+  if (org?.slug !== "domus" && org?.slug !== "kapusta") redirect("/dashboard");
   if (!membership || !ALLOWED_ROLES.includes(membership.role)) redirect("/dashboard");
 
   // Todas las ofertas de la org (mismo criterio que Consultas: no está

@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { getTenantOrg, getTenantUser, getFeaturedProducts, getActiveCarousels, getUserPointsBalance, isVetOrgSlug, isCornerOrgSlug } from "./data";
 import { getVetReviews } from "./vet-reviews-data";
 import { getGymLocations, getGymClasses, getGymTestimonials } from "./gym-data";
-import { LoginForm } from "./login-form";
 import { GeneralInquiryForm } from "./general-inquiry-form";
 import { DomusChatWidget } from "./domus-chat-widget";
 import { BikeChatWidget } from "./bike-chat-widget";
@@ -195,7 +194,7 @@ export default async function TenantPage({
   // Fase 2b Domus: mismo criterio simple (slug directo, un único flag en
   // este archivo) que isBike arriba — botón "Consultas" en la home
   // pública, scoped a esta org, no genérico.
-  const isDomus = params.slug === "domus";
+  const isDomus = params.slug === "domus" || params.slug === "kapusta";
 
   // Funcionalidad de gimnasio (Sedes, Clases, Comentarios): solo se muestra si
   // esta organización tiene datos cargados en las tablas gym_*. Ninguna otra
@@ -211,16 +210,12 @@ export default async function TenantPage({
 
   return (
     <>
-      {/* Login (solo si no hay sesión; si hay sesión, el badge de puntos ya se muestra en el layout).
-          Gym2, Domus y bike no usan este recuadro: en esas tres el login
-          se abre desde el ícono de usuario del header (ver
-          hasGymFeatures/isDomus/isBike + showLoginIcon en layout.tsx —
-          Ajuste 1, extendido a bike en Fase 3j). */}
-      {!user && !hasGymFeatures && !isDomus && !isBike && (
-        <div className="max-w-lg mx-auto px-4 pt-4">
-          <LoginForm primaryColor={primary} orgId={org.id} />
-        </div>
-      )}
+      {/* Ajuste login-como-ícono (genérico, ver DOMUS_VISION.md pendiente
+          del 21/08, completado ahora): el recuadro <LoginForm> inline que
+          vivía acá se sacó para TODAS las orgs — el login se abre desde
+          el ícono de usuario del header (ClientHeader/LoginModal), y con
+          sesión ese mismo ícono lleva a /perfil (ver isLoggedIn en
+          layout.tsx/client-header.tsx). */}
 
       {/* Fase 2b Domus: mismo criterio de login-gating que "Solicitar
           visita" en la ficha de producto (Fase 1) — sin sesión, mensaje
@@ -257,10 +252,9 @@ export default async function TenantPage({
       )}
 
       {/* Fase Home: carruseles configurables — debajo de la card de
-          puntos (login o badge, ambos viven arriba: LoginForm acá mismo,
-          PointsBadge en layout.tsx) y arriba del carrusel principal de
-          loyalty_content de más abajo. [] para cualquier org sin
-          carruseles activos, así que no agrega nada para Bike/Gym2/
+          puntos (PointsBadge, en layout.tsx) y arriba del carrusel
+          principal de loyalty_content de más abajo. [] para cualquier org
+          sin carruseles activos, así que no agrega nada para Bike/Gym2/
           Corner/Huellitas/Cafetería/Bicicletería hoy. */}
       {productCarousels.length > 0 && (
         <div className="max-w-lg mx-auto px-4 pt-4 space-y-8">

@@ -36,7 +36,7 @@ export default async function InicioSeguimientoPage() {
       .maybeSingle(),
   ]);
 
-  if (org?.slug !== "domus") redirect("/dashboard");
+  if (org?.slug !== "domus" && org?.slug !== "kapusta") redirect("/dashboard");
   if (!membership || !ALLOWED_ROLES.includes(membership.role)) redirect("/dashboard");
 
   const [{ data: offers }, { data: inquiries }] = await Promise.all([

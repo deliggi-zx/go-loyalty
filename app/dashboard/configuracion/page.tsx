@@ -70,7 +70,7 @@ export default async function ConfiguracionPage() {
         <ContactForm org={org} />
         {/* Fase Requisitos: solo Domus tiene "venta"/"alquiler" como
             concepto — el resto de las orgs no ve este bloque. */}
-        {org.slug === "domus" && <RequirementsForm org={org} />}
+        {(org.slug === "domus" || org.slug === "kapusta") && <RequirementsForm org={org} />}
         {/* Fase T1 "Mundo Bike" Taller: solo bike tiene taller de service —
             el resto de las orgs no ve este bloque. */}
         {org.slug === "bike" && <WorkshopCapacityForm org={org} />}

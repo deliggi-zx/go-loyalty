@@ -39,7 +39,7 @@ export default async function ContactosPage() {
       .maybeSingle(),
   ]);
 
-  if (org?.slug !== "domus") redirect("/dashboard");
+  if (org?.slug !== "domus" && org?.slug !== "kapusta") redirect("/dashboard");
   if (!membership || !ALLOWED_ROLES.includes(membership.role)) redirect("/dashboard");
 
   const [{ data: inquiries }, { data: offers }, { data: visits }] = await Promise.all([
