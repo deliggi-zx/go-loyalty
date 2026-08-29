@@ -38,3 +38,14 @@ next-env.d.ts
 # local one-off assets/scripts (not part of the app)
 *.mp4
 upload-hero-video-gym2-temp.js
+nosotros-sourse/
+
+# claude code: settings.local.json es config personal por máquina (y ha
+# llegado a tener secrets en texto plano pegados en comandos aprobados
+# viejos — nunca debe commitearse). skills/ es contenido regenerable del
+# instalador de skills (fuente de verdad real: skills-lock.json, que sí
+# se commitea). .agents/ es la misma skills content, convención genérica
+# compartida por otras herramientas además de Claude Code.
+.claude/settings.local.json
+.claude/skills/
+.agents/
