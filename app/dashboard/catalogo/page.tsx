@@ -22,7 +22,7 @@ export default async function CatalogoPage() {
   // Fase catálogo Domus: categorías colapsadas + "Agregar propiedad" en
   // vez de "Nuevo producto" — mismo criterio simple de slug directo que
   // el resto de las fases Domus (ProductForm, ProductImagesManager).
-  const isDomus = org?.slug === "domus";
+  const isDomus = org?.slug === "domus" || org?.slug === "kapusta";
 
   const [categoriesRes, productsRes] = await Promise.all([
     supabase

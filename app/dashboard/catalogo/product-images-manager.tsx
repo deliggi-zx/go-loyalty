@@ -44,7 +44,7 @@ export function ProductImagesManager({
   const [error, setError] = useState<string | null>(null);
 
   const supabase = createClient();
-  const isDomus = orgSlug === "domus";
+  const isDomus = orgSlug === "domus" || orgSlug === "kapusta";
   const hasVideo = images.some((i) => i.media_type === "video");
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {

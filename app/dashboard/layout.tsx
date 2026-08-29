@@ -87,7 +87,7 @@ export default async function DashboardLayout({
     // mismo criterio de flag local por slug que isVetOrg/isCornerOrg
     // arriba. Solo role admin (el gerente/dueño, ver Fase 1c rol agente)
     // — no hay un role 'vet' equivalente que sumar acá.
-    const isDomusOrg = org?.slug === "domus";
+    const isDomusOrg = org?.slug === "domus" || org?.slug === "kapusta";
     isDomusAdmin = isDomusOrg && membership?.role === "admin";
     // Fase 1c (rol agente): un segundo role de staff, "agente", que
     // ahora también puede entrar a Inicio/Consultas (ve solo lo suyo ahí

@@ -118,7 +118,7 @@ export function ProductForm({ categories, product, orgSlug }: ProductFormProps) 
   // orgSlug === 'domus' — cualquier otra org que llame "Venta"/"Alquiler"
   // a una categoría raíz no dispara esto.
   useEffect(() => {
-    if (orgSlug !== "domus" || currencyTouched || !categoryId) return;
+    if ((orgSlug !== "domus" && orgSlug !== "kapusta") || currencyTouched || !categoryId) return;
     const root = findRootAncestor(categories, categoryId);
     const inferred = root ? DOMUS_CURRENCY_BY_ROOT_NAME[root.name] : undefined;
     if (inferred) setCurrency(inferred);
@@ -242,7 +242,7 @@ export function ProductForm({ categories, product, orgSlug }: ProductFormProps) 
             criterio de slug directo (no catalog_type) que ya usa "Texto
             de cuotas" más abajo. SuperElectro y el resto siguen viendo
             estos dos campos exactamente igual que antes. */}
-        {orgSlug !== "domus" && (
+        {orgSlug !== "domus" && orgSlug !== "kapusta" && (
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-stone-600">Marca</label>
@@ -280,7 +280,7 @@ export function ProductForm({ categories, product, orgSlug }: ProductFormProps) 
             Fase campos Domus: "Precio de lista" (tachado tipo oferta) y
             "Texto de cuotas" tampoco tienen sentido acá — se oculta el
             grid entero para Domus en vez de dejar una columna vacía. */}
-        {orgSlug !== "domus" && (
+        {orgSlug !== "domus" && orgSlug !== "kapusta" && (
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-stone-600">Precio de lista</label>
@@ -308,7 +308,7 @@ export function ProductForm({ categories, product, orgSlug }: ProductFormProps) 
 
         {/* Fase campos Domus: "Badge de envío" ("Envío gratis", etc.) no
             aplica a inmuebles. */}
-        {orgSlug !== "domus" && (
+        {orgSlug !== "domus" && orgSlug !== "kapusta" && (
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-stone-600">Badge de envío</label>
             <input

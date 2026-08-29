@@ -14,10 +14,12 @@ interface ClientHeaderProps {
   userDisplayName: string | null;
   menuProps: Omit<SideMenuProps, "isOpen" | "onClose">;
   catalogType?: string | null;
-  // Ícono de login en el header en vez del recuadro en el cuerpo — hoy
-  // solo para Gym2 (ver layout.tsx), el resto de las orgs sigue con el
-  // recuadro de siempre y este prop queda en false.
-  showLoginIcon?: boolean;
+  // Ajuste login-como-ícono (genérico, ver DOMUS_VISION.md pendiente del
+  // 21/08): el ícono de usuario arriba a la derecha ya no es un flag por
+  // org — vive para TODAS, siempre. Sin sesión abre el LoginModal; con
+  // sesión (este prop en true) es un link directo a /perfil. Reemplaza
+  // el recuadro <LoginForm> que antes vivía inline en page.tsx.
+  isLoggedIn?: boolean;
   // Estilo neón oscuro de los 4 íconos del header — hoy solo Gym2 (ver
   // hasGymFeatures en layout.tsx). Independiente de showLoginIcon: este
   // controla color/tamaño, no si el ícono existe.
@@ -57,7 +59,7 @@ export function ClientHeader({
   userDisplayName,
   menuProps,
   catalogType,
-  showLoginIcon = false,
+  isLoggedIn = false,
   neonTheme = false,
   requireInviteCode = false,
   orgId,
@@ -74,7 +76,7 @@ export function ClientHeader({
   // Fase Carrito→Favoritos: mismo mecanismo (useCart, cartOpen, badge de
   // totalQuantity) para todas las orgs — acá solo cambia qué ícono/texto
   // se muestra, nunca la lógica. Ver mismo criterio en CartPanel.
-  const isDomus = orgSlug === "domus";
+  const isDomus = orgSlug === "domus" || orgSlug === "kapusta";
 
   const iconColorClass = neonTheme ? "neon-icon" : floatingOverlay ? "bike-icon" : "text-white";
   const iconActiveClass = neonTheme ? "neon-icon-active" : floatingOverlay ? "bike-icon-active" : "";
@@ -164,7 +166,11 @@ export function ClientHeader({
               <Settings className={`w-5 h-5 ${iconColorClass}`} />
             </Link>
           )}
-          {showLoginIcon && (
+          {isLoggedIn ? (
+            <Link href={`/${orgSlug ?? ""}/perfil`} aria-label="Ir a mi perfil" className="p-2">
+              <User className={`w-5 h-5 ${iconColorClass}`} />
+            </Link>
+          ) : (
             <button
               onClick={() => setLoginOpen(true)}
               aria-label="Iniciar sesión"
@@ -191,7 +197,7 @@ export function ClientHeader({
           orgSlug={orgSlug}
         />
       )}
-      {showLoginIcon && (
+      {!isLoggedIn && (
         <LoginModal
           isOpen={loginOpen}
           onClose={() => setLoginOpen(false)}

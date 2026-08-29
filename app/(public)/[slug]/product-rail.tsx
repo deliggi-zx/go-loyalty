@@ -229,7 +229,7 @@ export function ProductRail({
   // que el fix gemelo en product-catalog.tsx: para Domus la ficha es
   // donde viven Solicitar visita/Reservar/Requisitos, así que siempre
   // linkea ahí. El resto de las orgs sigue exactamente igual.
-  const isDomus = slug === "domus";
+  const isDomus = slug === "domus" || slug === "kapusta";
 
   if (products.length === 0) return null;
 

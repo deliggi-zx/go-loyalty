@@ -12,6 +12,12 @@ interface GymAboutSectionProps {
   // ancla sigue siendo "quienes-somos" para las dos, no hace falta que
   // coincida con el label visible.
   title?: string;
+  // Fase 6 "Mundo Bike": mini galería propia de 3 fotos en vez de
+  // reusar el banner principal de la org (bannerUrl) en esta franja —
+  // hoy solo "bike" la pasa (ver page.tsx). Cuando está presente, gana
+  // sobre bannerUrl acá adentro; Gym2 (la otra única org con about_text
+  // hoy) no la pasa, así que sigue exactamente igual que antes.
+  galleryUrls?: string[];
 }
 
 // Destino de la pestaña "Quiénes Somos"/"Nosotros" según la org. Mismo
@@ -28,6 +34,7 @@ export function GymAboutSection({
   bannerUrl,
   orgName,
   title = "Quiénes Somos",
+  galleryUrls,
 }: GymAboutSectionProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -41,7 +48,24 @@ export function GymAboutSection({
         aria-expanded={expanded}
         className="block w-full text-left"
       >
-        {bannerUrl ? (
+        {galleryUrls && galleryUrls.length > 0 ? (
+          <div className="relative h-28 sm:h-36 rounded-2xl overflow-hidden grid grid-cols-3 gap-0.5">
+            {galleryUrls.map((url, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={url} src={url} alt={`${orgName} ${i + 1}`} className="w-full h-full object-cover" />
+            ))}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+            <h2 className="absolute bottom-3 left-4 text-xl font-bold text-white drop-shadow">
+              {title}
+            </h2>
+            <span className="absolute bottom-3 right-4 flex items-center gap-1 text-xs font-medium text-white/90 drop-shadow">
+              {expanded ? "Leer menos" : "Leer más"}
+              <ChevronDown
+                className={`w-3.5 h-3.5 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+              />
+            </span>
+          </div>
+        ) : bannerUrl ? (
           <div className="relative h-28 sm:h-36 rounded-2xl overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={bannerUrl} alt={orgName} className="w-full h-full object-cover" />

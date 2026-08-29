@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Kapusta">
+  <!--
+    Placeholder de isotipo de Kapusta (clon de marca de Domus, ver
+    lib/org-logo-lockup.ts). El isotipo real todavía no está vectorizado
+    — círculo simple con el degradé de marca como placeholder temporal,
+    SIN wordmark bakeado (a diferencia de Domus): el nombre ya se
+    muestra aparte en el header/login. Reemplazar este archivo por el
+    SVG final el día que llegue, sin tocar ORG_LOGO_LOCKUP ni el resto
+    del código.
+  -->
+  <defs>
+    <linearGradient id="kapustaCircleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#005F77" />
+      <stop offset="100%" stop-color="#0180AB" />
+    </linearGradient>
+  </defs>
+
+  <circle cx="80" cy="80" r="72" fill="url(#kapustaCircleGrad)" />
+</svg>

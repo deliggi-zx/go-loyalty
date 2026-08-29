@@ -79,7 +79,7 @@ export default async function DashboardPage() {
     activeRewardsCount = rewardsRes.count ?? 0;
     totalPoints =
       txRes.data?.reduce((sum, tx) => sum + (tx.points ?? 0), 0) ?? 0;
-    const isDomusOrg = orgRes.data?.slug === "domus";
+    const isDomusOrg = orgRes.data?.slug === "domus" || orgRes.data?.slug === "kapusta";
     const domusRole = membershipRes.data?.role;
     isDomusManager = isDomusOrg && domusRole === "admin";
     isDomusStaff = isDomusOrg && (domusRole === "admin" || domusRole === "agente");

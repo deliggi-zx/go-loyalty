@@ -29,7 +29,7 @@ export default async function ConsultasPage() {
       .maybeSingle(),
   ]);
 
-  if (org?.slug !== "domus") redirect("/dashboard");
+  if (org?.slug !== "domus" && org?.slug !== "kapusta") redirect("/dashboard");
   if (!membership || !ALLOWED_ROLES.includes(membership.role)) redirect("/dashboard");
 
   const isManager = membership.role === "admin";

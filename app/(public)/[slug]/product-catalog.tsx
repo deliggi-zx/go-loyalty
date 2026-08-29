@@ -70,7 +70,7 @@ export function ProductCatalog({
   // Fase filtros de búsqueda (Domus): reemplaza el pill row de arriba
   // por un panel de filtros combinables, SOLO para esta org — el resto
   // sigue con activeSelection/pills/cascada sin ningún cambio.
-  const isDomus = slug === "domus";
+  const isDomus = slug === "domus" || slug === "kapusta";
 
   const categoryById = useMemo(() => {
     const map = new Map<string, CatalogCategory>();

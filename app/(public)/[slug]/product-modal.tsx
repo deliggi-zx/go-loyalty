@@ -18,7 +18,7 @@ interface ProductModalProps {
 }
 
 export function ProductModal({ product, primaryColor, onClose, orgSlug }: ProductModalProps) {
-  const isDomus = orgSlug === "domus";
+  const isDomus = orgSlug === "domus" || orgSlug === "kapusta";
   const images = [...product.images].sort((a, b) => a.display_order - b.display_order);
   const [added, setAdded] = useState(false);
   const { addItem } = useCart();

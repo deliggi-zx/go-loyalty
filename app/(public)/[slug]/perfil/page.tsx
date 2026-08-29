@@ -92,7 +92,7 @@ export default async function PerfilPage({
   // redirige arriba si !user, así que no hace falta gating adicional acá
   // (a diferencia de Visitas/Consultas, que viven en páginas públicas sin
   // login obligatorio).
-  const isDomus = params.slug === "domus";
+  const isDomus = params.slug === "domus" || params.slug === "kapusta";
 
   // Fase perfil agente vs. cliente: reusa getOrgRole (ya importado arriba
   // para vetRole, mismo query que membership.role en dashboard/layout.tsx)

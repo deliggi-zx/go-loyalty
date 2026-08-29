@@ -2,9 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getTenantOrg, getTenantUser, getFeaturedProducts, getActiveCarousels, getUserPointsBalance, isVetOrgSlug, isCornerOrgSlug } from "./data";
 import { getVetReviews } from "./vet-reviews-data";
 import { getGymLocations, getGymClasses, getGymTestimonials } from "./gym-data";
-import { LoginForm } from "./login-form";
 import { GeneralInquiryForm } from "./general-inquiry-form";
 import { DomusChatWidget } from "./domus-chat-widget";
+import { BikeChatWidget } from "./bike-chat-widget";
 import { Carousel } from "./carousel";
 import { SocialLinks } from "./social-links";
 import { GymAboutSection } from "./gym-about-section";
@@ -171,10 +171,30 @@ export default async function TenantPage({
   // directo, no un mapa) porque es un único flag booleano en este archivo.
   const isBike = params.slug === "bike";
 
+  // Fase 6 "Mundo Bike": mini galería de 3 fotos propias en "Nosotros",
+  // en vez de reusar el banner principal ahí adentro (ver galleryUrls
+  // en GymAboutSection). Solo se pide para bike — el resto de las orgs
+  // no tiene filas type='nosotros_gallery', así que no hace falta ni
+  // el gate para evitarles una query de más, pero se hace igual por
+  // prolijidad (mismo criterio que featuredProducts/productCarousels
+  // de acá arriba, scoped por condición).
+  const { data: nosotrosGalleryData } = isBike
+    ? await supabase
+        .from("loyalty_content")
+        .select("image_url")
+        .eq("org_id", org.id)
+        .eq("type", "nosotros_gallery")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+    : { data: null };
+  const nosotrosGalleryUrls = (nosotrosGalleryData ?? [])
+    .map((r) => r.image_url)
+    .filter((u): u is string => !!u);
+
   // Fase 2b Domus: mismo criterio simple (slug directo, un único flag en
   // este archivo) que isBike arriba — botón "Consultas" en la home
   // pública, scoped a esta org, no genérico.
-  const isDomus = params.slug === "domus";
+  const isDomus = params.slug === "domus" || params.slug === "kapusta";
 
   // Funcionalidad de gimnasio (Sedes, Clases, Comentarios): solo se muestra si
   // esta organización tiene datos cargados en las tablas gym_*. Ninguna otra
@@ -190,16 +210,12 @@ export default async function TenantPage({
 
   return (
     <>
-      {/* Login (solo si no hay sesión; si hay sesión, el badge de puntos ya se muestra en el layout).
-          Gym2, Domus y bike no usan este recuadro: en esas tres el login
-          se abre desde el ícono de usuario del header (ver
-          hasGymFeatures/isDomus/isBike + showLoginIcon en layout.tsx —
-          Ajuste 1, extendido a bike en Fase 3j). */}
-      {!user && !hasGymFeatures && !isDomus && !isBike && (
-        <div className="max-w-lg mx-auto px-4 pt-4">
-          <LoginForm primaryColor={primary} orgId={org.id} />
-        </div>
-      )}
+      {/* Ajuste login-como-ícono (genérico, ver DOMUS_VISION.md pendiente
+          del 21/08, completado ahora): el recuadro <LoginForm> inline que
+          vivía acá se sacó para TODAS las orgs — el login se abre desde
+          el ícono de usuario del header (ClientHeader/LoginModal), y con
+          sesión ese mismo ícono lleva a /perfil (ver isLoggedIn en
+          layout.tsx/client-header.tsx). */}
 
       {/* Fase 2b Domus: mismo criterio de login-gating que "Solicitar
           visita" en la ficha de producto (Fase 1) — sin sesión, mensaje
@@ -226,11 +242,19 @@ export default async function TenantPage({
         <DomusChatWidget slug={params.slug} orgId={org.id} whatsappNumber={org.whatsapp_number} />
       )}
 
+      {/* Fase 5 "Mundo Bike": mismo mecanismo que el chat de Domus de
+          arriba (botón flotante propio, apilado sobre WhatsAppButton de
+          layout.tsx), acento naranja en vez de navy/sand — ver Gate 0.
+          A diferencia de Domus, también vive en /precios (ver ese
+          archivo), no solo acá. */}
+      {isBike && (
+        <BikeChatWidget slug={params.slug} orgId={org.id} whatsappNumber={org.whatsapp_number} />
+      )}
+
       {/* Fase Home: carruseles configurables — debajo de la card de
-          puntos (login o badge, ambos viven arriba: LoginForm acá mismo,
-          PointsBadge en layout.tsx) y arriba del carrusel principal de
-          loyalty_content de más abajo. [] para cualquier org sin
-          carruseles activos, así que no agrega nada para Bike/Gym2/
+          puntos (PointsBadge, en layout.tsx) y arriba del carrusel
+          principal de loyalty_content de más abajo. [] para cualquier org
+          sin carruseles activos, así que no agrega nada para Bike/Gym2/
           Corner/Huellitas/Cafetería/Bicicletería hoy. */}
       {productCarousels.length > 0 && (
         <div className="max-w-lg mx-auto px-4 pt-4 space-y-8">
@@ -263,6 +287,7 @@ export default async function TenantPage({
             bannerUrl={org.banner_url}
             orgName={org.name}
             title={isBike ? "Nosotros" : undefined}
+            galleryUrls={isBike ? nosotrosGalleryUrls : undefined}
           />
         </div>
       )}

@@ -93,7 +93,7 @@ export function SideMenu({
   // Ajuste 1/2 Domus: mismo criterio simple (slug directo) que isBike en
   // page.tsx/perfil — sin ícono/prop nueva, esta rama (neonTheme/bikeTheme
   // ambos false) es la que ya usa Domus.
-  const isDomusOrg = slug === "domus";
+  const isDomusOrg = slug === "domus" || slug === "kapusta";
   // Ajuste 2: categorías raíz (parent_id null) y sus hijas, para agrupar
   // Venta/Alquiler con sus subcategorías debajo — mismo criterio de
   // filtrado por parent_id que category-drilldown.tsx. Solo se arma/usa
