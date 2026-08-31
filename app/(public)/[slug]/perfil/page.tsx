@@ -23,6 +23,7 @@ import { todayLocalYmd } from "../vet-appointments-config";
 import { formatPrice } from "@/lib/utils";
 import { DomusAgentPanel } from "@/app/dashboard/inicio/domus-agent-panel";
 import { getDomusAgentBadgeCounts } from "@/app/dashboard/inicio/domus-badge-counts";
+import { getKapustaPanelData } from "@/app/dashboard/inicio/kapusta-panel-data";
 
 export default async function PerfilPage({
   params,
@@ -93,6 +94,7 @@ export default async function PerfilPage({
   // (a diferencia de Visitas/Consultas, que viven en páginas públicas sin
   // login obligatorio).
   const isDomus = params.slug === "domus" || params.slug === "kapusta";
+  const isKapusta = params.slug === "kapusta";
 
   // Fase perfil agente vs. cliente: reusa getOrgRole (ya importado arriba
   // para vetRole, mismo query que membership.role en dashboard/layout.tsx)
@@ -172,6 +174,14 @@ export default async function PerfilPage({
   const domusBadgeCounts = isDomusAgent
     ? await getDomusAgentBadgeCounts(org.id, isDomusManager ? null : user.id)
     : { consultasNuevoCount: 0, reunionesHoyCount: 0, ofertasReservasCount: 0 };
+
+  // Rediseño del panel de Kapusta (handoff/KAPUSTA_PANEL_SPEC.md) — solo
+  // esta org, solo para staff. El resto de las inmobiliarias sigue con el
+  // panel de 5 botones (domusBadgeCounts de arriba).
+  const kapustaPanelData =
+    isKapusta && isDomusAgent
+      ? await getKapustaPanelData(org.id, isDomusManager ? null : user.id)
+      : undefined;
 
   const INQUIRY_STATUS_LABEL: Record<string, string> = {
     nuevo: "Enviada",
@@ -270,11 +280,27 @@ export default async function PerfilPage({
         <GeneralInquiryForm slug={params.slug} orgId={org.id} primaryColor={primary} startOpen />
       )}
 
-      {/* Panel del agente (CAMBIO 1) — reemplaza las secciones de cliente
-          de acá abajo (Ofrecer propiedad / Mis consultas/visitas/ofertas
-          no tienen sentido para su propio perfil). Mismo componente que
-          /dashboard/inicio, con los mismos badges rojos. */}
-      {isDomusAgent && (
+      {/* Panel del equipo (CAMBIO 1) — reemplaza las secciones de cliente
+          de acá abajo. Mismo componente que /dashboard/inicio. Para
+          Kapusta es el panel rediseñado (con su propio header, sin el
+          título "Panel del agente" — ver KAPUSTA_PANEL_SPEC §3.1 y el
+          glosario); el resto sigue con el de 5 botones y su encabezado. */}
+      {isDomusAgent && kapustaPanelData ? (
+        <div className="-mx-4">
+          <DomusAgentPanel
+            orgId={org.id}
+            consultasNuevoCount={domusBadgeCounts.consultasNuevoCount}
+            reunionesHoyCount={domusBadgeCounts.reunionesHoyCount}
+            ofertasReservasCount={domusBadgeCounts.ofertasReservasCount}
+            slug={params.slug}
+            userName={profile?.full_name ?? user.email?.split("@")[0] ?? null}
+            kapustaData={kapustaPanelData}
+            primaryColor={org.primary_color ?? "#005F77"}
+            secondaryColor={org.secondary_color ?? "#0180AB"}
+            backgroundColor={org.background_color ?? "#69BDE1"}
+          />
+        </div>
+      ) : isDomusAgent ? (
         <div className="space-y-2 -mx-4">
           <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide px-4">
             Panel del agente
@@ -286,7 +312,7 @@ export default async function PerfilPage({
             ofertasReservasCount={domusBadgeCounts.ofertasReservasCount}
           />
         </div>
-      )}
+      ) : null}
 
       {/* Ofrecer mi propiedad (Fase 3 Domus) — bloque propio, mismo
           criterio de "un bloque más" que Mis Mascotas/Comentarios arriba. */}
@@ -467,8 +493,11 @@ export default async function PerfilPage({
       )}
 
       {/* Historial de consumo — tampoco aplica al admin de bike (Fase P5,
-          mismo criterio que el bloque de puntos de arriba). */}
-      {!isBikeAdmin && (
+          mismo criterio que el bloque de puntos de arriba) ni al staff de
+          Kapusta con el panel rediseñado (KAPUSTA_PANEL_SPEC §1.4: "sin
+          bloques vacíos", herencia de SuperElectro que no aplica a
+          inmobiliaria). Domus lo sigue mostrando igual que siempre. */}
+      {!isBikeAdmin && !(isKapusta && isDomusAgent) && (
       <div className="space-y-2">
         <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
           Historial de consumo

@@ -24,13 +24,16 @@ const TABS: { id: TabId; label: string; icon: typeof Calculator }[] = [
   { id: "alquiler", label: "Ajuste de alquiler", icon: TrendingUp },
 ];
 
-export function KapustaCalculadoras({
+// Selector de calculadora + la calc activa. Extraído del contenedor de
+// página para poder reusarlo tal cual dentro del modal del botón flotante
+// (kapusta-calc-modal.tsx) sin duplicar la lógica de las 3 calculadoras.
+export function KapustaCalcTabs({
   tipos,
   zonas,
   primaryColor,
   secondaryColor,
   accentColor,
-}: KapustaCalculadorasProps) {
+}: Omit<KapustaCalculadorasProps, "backgroundColor">) {
   const [active, setActive] = useState<TabId>("credito");
 
   const theme: KapustaTheme = {
@@ -40,17 +43,7 @@ export function KapustaCalculadoras({
   };
 
   return (
-    <div className="mt-4 space-y-4">
-      <header className="space-y-1">
-        <h1 className="text-xl font-bold" style={{ color: primaryColor }}>
-          Calculadoras
-        </h1>
-        <p className="text-sm text-stone-600">
-          Herramientas para estimar una cuota, un valor de referencia o la
-          actualización de un alquiler. Todos los resultados son estimativos.
-        </p>
-      </header>
-
+    <div className="space-y-4">
       {/* Selector de calculadora — fila scrolleable en mobile */}
       <nav className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" aria-label="Calculadoras">
         {TABS.map((tab) => {
@@ -82,6 +75,36 @@ export function KapustaCalculadoras({
         )}
         {active === "alquiler" && <KapustaCalcAlquiler theme={theme} />}
       </div>
+    </div>
+  );
+}
+
+export function KapustaCalculadoras({
+  tipos,
+  zonas,
+  primaryColor,
+  secondaryColor,
+  accentColor,
+}: KapustaCalculadorasProps) {
+  return (
+    <div className="mt-4 space-y-4">
+      <header className="space-y-1">
+        <h1 className="text-xl font-bold" style={{ color: primaryColor }}>
+          Calculadoras
+        </h1>
+        <p className="text-sm text-stone-600">
+          Herramientas para estimar una cuota, un valor de referencia o la
+          actualización de un alquiler. Todos los resultados son estimativos.
+        </p>
+      </header>
+
+      <KapustaCalcTabs
+        tipos={tipos}
+        zonas={zonas}
+        primaryColor={primaryColor}
+        secondaryColor={secondaryColor}
+        accentColor={accentColor}
+      />
     </div>
   );
 }

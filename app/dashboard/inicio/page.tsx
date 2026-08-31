@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
 import { DomusAgentPanel } from "./domus-agent-panel";
 import { getDomusAgentBadgeCounts } from "./domus-badge-counts";
+import { getKapustaPanelData } from "./kapusta-panel-data";
 
 // Fase 1c (rol agente): antes solo admin (mismo gate que Visitas/
 // Ofertas, que siguen siendo solo gerente) — ahora también agente, para
@@ -29,40 +30,60 @@ export default async function InicioPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: org }, { data: membership }] = await Promise.all([
-    supabase.from("loyalty_organizations").select("slug").eq("id", orgId).maybeSingle(),
+  const [{ data: org }, { data: membership }, { data: profile }] = await Promise.all([
+    supabase
+      .from("loyalty_organizations")
+      .select("slug, primary_color, secondary_color, background_color")
+      .eq("id", orgId)
+      .maybeSingle(),
     supabase
       .from("loyalty_members")
       .select("role")
       .eq("org_id", orgId)
       .eq("profile_id", user.id)
       .maybeSingle(),
+    supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
   ]);
 
-  if (org?.slug !== "domus" && org?.slug !== "kapusta") redirect("/dashboard");
+  if (!org || (org.slug !== "domus" && org.slug !== "kapusta")) redirect("/dashboard");
   if (!membership || !ALLOWED_ROLES.includes(membership.role)) redirect("/dashboard");
+
+  const isKapusta = org.slug === "kapusta";
+  const agentProfileId = membership.role === "admin" ? null : user.id;
 
   // Fase 1c (rol agente): el gerente (admin) sigue viendo el total de la
   // org; un agente solo ve lo que le corresponde (sin asignar + suyas).
   const { consultasNuevoCount, reunionesHoyCount, ofertasReservasCount } = await getDomusAgentBadgeCounts(
     orgId,
-    membership.role === "admin" ? null : user.id
+    agentProfileId
   );
+
+  // Rediseño del panel de Kapusta (KAPUSTA_PANEL_SPEC): trae los conteos
+  // extra (seguimiento, cartera, próxima visita). Domus no lo llama.
+  const kapustaData = isKapusta ? await getKapustaPanelData(orgId, agentProfileId) : undefined;
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <header className="bg-white border-b border-stone-200 px-8 h-16 flex items-center shrink-0">
-        <div>
-          <h1 className="text-lg font-semibold text-stone-900">Inicio</h1>
-          <p className="text-xs text-stone-400">No perderle el hilo a nada</p>
-        </div>
-      </header>
+      {!isKapusta && (
+        <header className="bg-white border-b border-stone-200 px-8 h-16 flex items-center shrink-0">
+          <div>
+            <h1 className="text-lg font-semibold text-stone-900">Inicio</h1>
+            <p className="text-xs text-stone-400">No perderle el hilo a nada</p>
+          </div>
+        </header>
+      )}
 
       <DomusAgentPanel
         orgId={orgId}
         consultasNuevoCount={consultasNuevoCount}
         reunionesHoyCount={reunionesHoyCount}
         ofertasReservasCount={ofertasReservasCount}
+        slug={org.slug}
+        userName={profile?.full_name ?? user.email?.split("@")[0] ?? null}
+        kapustaData={kapustaData}
+        primaryColor={org.primary_color ?? "#005F77"}
+        secondaryColor={org.secondary_color ?? "#0180AB"}
+        backgroundColor={org.background_color ?? "#69BDE1"}
       />
     </div>
   );

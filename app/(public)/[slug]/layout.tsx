@@ -12,6 +12,7 @@ import { CartProvider } from "./cart-context";
 import { WhatsAppButton } from "./whatsapp-button";
 import { HeroVideo } from "./hero-video";
 import { SectionNavTabs, type SectionNavTabItem } from "./section-nav-tabs";
+import { KapustaFloatingDock } from "./kapusta-floating-dock";
 import { getGymLocations } from "./gym-data";
 import { ORG_LOGO_LOCKUP } from "@/lib/org-logo-lockup";
 
@@ -173,6 +174,9 @@ export default async function TenantLayout({
   // Ajuste 1 Domus: mismo criterio simple (slug directo) que ORG_LOGO_LOCKUP/
   // isVetOrgSlug de este archivo.
   const isDomusOrg = params.slug === "domus" || params.slug === "kapusta";
+  // Kapusta (marca propia): botones flotantes arrastrables (calculadoras +
+  // chat) en todo el sitio público. Domus y el resto no los tienen.
+  const isKapusta = params.slug === "kapusta";
   // Fase íconos de staff: agente o gerente de Domus — mismo criterio
   // admin/agente que dashboard/layout.tsx (isDomusStaff ahí). Un cliente
   // de Domus, o cualquier usuario de cualquier otra org, queda en false
@@ -372,6 +376,17 @@ export default async function TenantLayout({
           </CornerReserveProvider>
         ) : (
           children
+        )}
+
+        {isKapusta && (
+          <KapustaFloatingDock
+            slug={params.slug}
+            orgId={org.id}
+            whatsappNumber={org.whatsapp_number}
+            primaryColor={primary}
+            secondaryColor={org.secondary_color ?? "#0180AB"}
+            accentColor={org.accent_color ?? org.secondary_color ?? "#0180AB"}
+          />
         )}
       </div>
     </CartProvider>

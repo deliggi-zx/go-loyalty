@@ -9,6 +9,46 @@ import { createClient } from "@/lib/supabase/server";
 const KAPUSTA_SLUG = "kapusta";
 
 // ─────────────────────────────────────────────────────────────────────────
+// Opciones de los selectores (tipo de propiedad + zona/barrio) — derivadas
+// del catálogo real de Kapusta. Las usa tanto la página /kapusta/calculadoras
+// como el modal del botón flotante (kapusta-calc-modal.tsx), que no tiene
+// un server component arriba de donde recibirlas.
+// ─────────────────────────────────────────────────────────────────────────
+
+export async function getKapustaCalcOptions(): Promise<{ tipos: string[]; zonas: string[] }> {
+  const supabase = createClient();
+
+  const { data: org } = await supabase
+    .from("loyalty_organizations")
+    .select("id")
+    .eq("slug", KAPUSTA_SLUG)
+    .maybeSingle();
+  if (!org) return { tipos: [], zonas: [] };
+
+  const [{ data: categories }, { data: products }] = await Promise.all([
+    supabase.from("product_categories").select("name, parent_id").eq("org_id", org.id),
+    supabase.from("products").select("specs").eq("org_id", org.id).eq("active", true),
+  ]);
+
+  const tipos = Array.from(
+    new Set((categories ?? []).filter((c) => c.parent_id).map((c) => c.name))
+  ).sort((a, b) => a.localeCompare(b, "es"));
+
+  const zonas = Array.from(
+    new Set(
+      (products ?? [])
+        .map((p) => {
+          const barrio = (p.specs as Record<string, unknown> | null)?.["barrio"];
+          return typeof barrio === "string" && barrio.trim() ? barrio.trim() : null;
+        })
+        .filter((z): z is string => !!z)
+    )
+  ).sort((a, b) => a.localeCompare(b, "es"));
+
+  return { tipos, zonas };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Calc 2 — Precio por m² / tasación rápida sobre el stock propio de Kapusta
 // ─────────────────────────────────────────────────────────────────────────
 

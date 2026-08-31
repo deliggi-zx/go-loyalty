@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { getTenantOrg, getProductCategories } from "../data";
+import { getTenantOrg } from "../data";
+import { getKapustaCalcOptions } from "../kapusta-calculadoras-actions";
 import { KapustaCalculadoras } from "../kapusta-calculadoras";
 
 // Calculadoras inmobiliarias — SOLO Kapusta (slug "kapusta"). Cualquier
@@ -15,29 +15,10 @@ export default async function CalculadorasPage({ params }: { params: { slug: str
   const org = await getTenantOrg(params.slug);
   if (!org) notFound();
 
-  // Tipos de propiedad reales del catálogo (categorías hoja) y barrios
-  // reales cargados — la calc de tasación se apoya en el stock propio, así
-  // que las opciones salen de la base, no de una lista fija.
-  const supabase = createClient();
-  const [categories, { data: productsData }] = await Promise.all([
-    getProductCategories(org.id),
-    supabase.from("products").select("specs").eq("org_id", org.id).eq("active", true),
-  ]);
-
-  const tipos = Array.from(
-    new Set(categories.filter((c) => c.parent_id).map((c) => c.name))
-  ).sort((a, b) => a.localeCompare(b, "es"));
-
-  const zonas = Array.from(
-    new Set(
-      (productsData ?? [])
-        .map((p) => {
-          const barrio = (p.specs as Record<string, unknown> | null)?.["barrio"];
-          return typeof barrio === "string" && barrio.trim() ? barrio.trim() : null;
-        })
-        .filter((z): z is string => !!z)
-    )
-  ).sort((a, b) => a.localeCompare(b, "es"));
+  // Tipos de propiedad (categorías hoja) y barrios reales del catálogo —
+  // la calc de tasación se apoya en el stock propio, así que las opciones
+  // salen de la base. Mismo helper que usa el modal del botón flotante.
+  const { tipos, zonas } = await getKapustaCalcOptions();
 
   const primary = org.primary_color ?? "#005F77";
   const secondary = org.secondary_color ?? "#0180AB";

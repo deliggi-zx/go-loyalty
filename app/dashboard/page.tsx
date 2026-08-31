@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
 import { DomusAgentPanel } from "./inicio/domus-agent-panel";
 import { getDomusAgentBadgeCounts } from "./inicio/domus-badge-counts";
+import { getKapustaPanelData, type KapustaPanelData } from "./inicio/kapusta-panel-data";
 
 const recentActivity = [
   { id: 1, type: "sello",    customer: "María González", detail: "2 sellos emitidos",          time: "hace 5 min",  avatar: "MG" },
@@ -43,6 +44,11 @@ export default async function DashboardPage() {
   let domusConsultasNuevoCount = 0;
   let domusReunionesHoyCount = 0;
   let domusOfertasReservasCount = 0;
+  // Rediseño del panel de Kapusta (KAPUSTA_PANEL_SPEC) — solo esta org.
+  let isKapusta = false;
+  let kapustaPanelData: KapustaPanelData | undefined;
+  let kapustaUserName: string | null = null;
+  let kapustaColors = { primary: "#005F77", secondary: "#0180AB", background: "#69BDE1" };
 
   if (orgId) {
     const {
@@ -64,7 +70,11 @@ export default async function DashboardPage() {
         .from("loyalty_transactions")
         .select("points")
         .eq("org_id", orgId),
-      supabase.from("loyalty_organizations").select("slug").eq("id", orgId).maybeSingle(),
+      supabase
+        .from("loyalty_organizations")
+        .select("slug, primary_color, secondary_color, background_color")
+        .eq("id", orgId)
+        .maybeSingle(),
       user
         ? supabase
             .from("loyalty_members")
@@ -83,6 +93,14 @@ export default async function DashboardPage() {
     const domusRole = membershipRes.data?.role;
     isDomusManager = isDomusOrg && domusRole === "admin";
     isDomusStaff = isDomusOrg && (domusRole === "admin" || domusRole === "agente");
+    isKapusta = orgRes.data?.slug === "kapusta";
+    if (isKapusta) {
+      kapustaColors = {
+        primary: orgRes.data?.primary_color ?? "#005F77",
+        secondary: orgRes.data?.secondary_color ?? "#0180AB",
+        background: orgRes.data?.background_color ?? "#69BDE1",
+      };
+    }
 
     // Badges del panel (CAMBIO 3): solo tienen sentido si de verdad se va
     // a mostrar el panel más abajo, así que se piden después de resolver
@@ -94,6 +112,14 @@ export default async function DashboardPage() {
       domusConsultasNuevoCount = counts.consultasNuevoCount;
       domusReunionesHoyCount = counts.reunionesHoyCount;
       domusOfertasReservasCount = counts.ofertasReservasCount;
+
+      if (isKapusta) {
+        kapustaPanelData = await getKapustaPanelData(orgId, isDomusManager ? null : user?.id);
+        const { data: profile } = user
+          ? await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle()
+          : { data: null };
+        kapustaUserName = profile?.full_name ?? user?.email?.split("@")[0] ?? null;
+      }
     }
   }
 
@@ -116,6 +142,12 @@ export default async function DashboardPage() {
             consultasNuevoCount={domusConsultasNuevoCount}
             reunionesHoyCount={domusReunionesHoyCount}
             ofertasReservasCount={domusOfertasReservasCount}
+            slug={isKapusta ? "kapusta" : undefined}
+            userName={kapustaUserName}
+            kapustaData={kapustaPanelData}
+            primaryColor={kapustaColors.primary}
+            secondaryColor={kapustaColors.secondary}
+            backgroundColor={kapustaColors.background}
           />
         </div>
         <div className="hidden md:block">

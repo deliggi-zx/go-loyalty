@@ -265,12 +265,13 @@ export default async function TenantPage({
         </div>
       )}
 
-      {/* Fase chatbot Domus: solo esta org, botón flotante propio (no
+      {/* Fase chatbot Domus: botón flotante propio en la home (no
           reemplaza ni convive mal con WhatsAppButton de layout.tsx —
           este vive apilado arriba, bottom-24 en vez de bottom-5, ver
-          domus-chat-widget.tsx). whatsappNumber ya viaja acá abajo para
-          el fallback "hablar con un agente" del chat. */}
-      {isDomus && (
+          domus-chat-widget.tsx). Kapusta NO usa este launcher fijo: su
+          chat vive en el dock flotante arrastrable de layout.tsx
+          (KapustaFloatingDock), presente en todas las rutas. */}
+      {isDomus && !isKapusta && (
         <DomusChatWidget slug={params.slug} orgId={org.id} whatsappNumber={org.whatsapp_number} />
       )}
 

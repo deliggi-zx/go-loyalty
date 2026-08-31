@@ -5,13 +5,13 @@ import { getMorningSummaryContext, SEGUIMIENTO_STALE_DAYS } from "./domus-mornin
 
 // Fase Resumen matutino (Domus): si no hay nada relevante, ni vale la
 // pena llamar a Gemini (pedido explícito, ahorra una llamada
-// innecesaria) — mismo texto fijo que el caso "todo en cero".
-const NOTHING_PENDING_TEXT = "Todo tranquilo por ahora, sin pendientes urgentes.";
-
-// Si Gemini falla (sin key, error de red, respuesta vacía), no tiene
-// sentido romper el panel entero por esto — se cae a un texto neutro,
-// nunca a un mensaje de error técnico visible para el agente.
-const FALLBACK_TEXT = "No pudimos armar el resumen del día, pero tu panel sigue al día más abajo.";
+// innecesaria) — mismo texto fijo que el caso "todo en cero". Los textos
+// viven en morning-summary-constants.ts (este archivo es "use server", no
+// puede exportar constantes) para que también los lea el panel de Kapusta.
+import {
+  NOTHING_PENDING_TEXT,
+  MORNING_SUMMARY_FALLBACK_TEXT as FALLBACK_TEXT,
+} from "./morning-summary-constants";
 
 function formatMeeting(m: {
   clientName: string;

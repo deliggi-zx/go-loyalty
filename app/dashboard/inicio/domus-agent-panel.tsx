@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MessageSquare, Handshake, Eye, CalendarClock, Users } from "lucide-react";
 import { getMorningSummary } from "./domus-morning-summary-actions";
+import { KapustaTeamPanel } from "./kapusta-team-panel";
+import type { KapustaPanelData } from "./kapusta-panel-data";
 
 // Fase Unificar panel del agente (antes "DomusMobileHome", solo para
 // mobile en /dashboard/inicio y /dashboard — ver DashboardShell,
@@ -51,9 +53,39 @@ interface DomusAgentPanelProps {
   consultasNuevoCount: number;
   reunionesHoyCount: number;
   ofertasReservasCount: number;
+  // Rediseño Kapusta (handoff/KAPUSTA_PANEL_SPEC.md): cuando slug ===
+  // "kapusta" y llega kapustaData, se muestra el panel rediseñado en vez
+  // del de 5 botones. Domus y el resto no pasan estos props y siguen
+  // igual que siempre.
+  slug?: string;
+  userName?: string | null;
+  kapustaData?: KapustaPanelData;
+  primaryColor?: string;
+  secondaryColor?: string;
+  backgroundColor?: string;
 }
 
-export function DomusAgentPanel({
+// Switch sin hooks: Kapusta con datos → panel rediseñado; todo lo demás →
+// el panel clásico de 5 botones (Domus, y Kapusta si por algún motivo no
+// llegan los datos rediseñados). Se separa así para no romper las reglas
+// de hooks con un return temprano en un componente que los usa.
+export function DomusAgentPanel(props: DomusAgentPanelProps) {
+  if (props.slug === "kapusta" && props.kapustaData) {
+    return (
+      <KapustaTeamPanel
+        orgId={props.orgId}
+        userName={props.userName ?? null}
+        data={props.kapustaData}
+        primaryColor={props.primaryColor ?? "#005F77"}
+        secondaryColor={props.secondaryColor ?? "#0180AB"}
+        backgroundColor={props.backgroundColor ?? "#69BDE1"}
+      />
+    );
+  }
+  return <DomusAgentPanelClassic {...props} />;
+}
+
+function DomusAgentPanelClassic({
   orgId,
   consultasNuevoCount,
   reunionesHoyCount,
