@@ -273,14 +273,6 @@ export default async function TenantLayout({
   );
 
   const logoLockup = ORG_LOGO_LOCKUP[params.slug];
-  // El PNG del lockup de Kapusta viene con su propio fondo celeste
-  // (#5EAEEF, más saturado que el background_color #69BDE1 de la org) —
-  // se pinta la franja del banner con ESE color para que el logo se
-  // funda sin recuadro, en vez del background_color genérico. Solo
-  // Kapusta; el resto de las orgs con lockup (SuperElectro) sigue con su
-  // fondo de siempre.
-  const lockupBg =
-    params.slug === "kapusta" ? "#5EAEEF" : org.background_color ?? "#ffffff";
 
   const banner = org.banner_url ? (
     <div className="w-full h-48 sm:h-64 overflow-hidden">
@@ -291,10 +283,12 @@ export default async function TenantLayout({
     // Fase logo (SuperElectro): el lockup (isotipo + wordmark) ya trae su
     // propio texto — fondo claro de la org en vez del bloque de color
     // primario con <h1>, porque el logo está pensado para verse sobre
-    // fondo claro, no sobre el azul de acento.
+    // fondo claro, no sobre el azul de acento. El lockup de Kapusta es un
+    // PNG con fondo transparente, así que se apoya sobre el
+    // background_color celeste de la org igual que el resto.
     <div
       className="w-full h-48 sm:h-64 flex items-center justify-center px-10"
-      style={{ backgroundColor: lockupBg }}
+      style={{ backgroundColor: org.background_color ?? "#ffffff" }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={logoLockup} alt={org.name} className="max-w-full max-h-full object-contain" />

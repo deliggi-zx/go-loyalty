@@ -95,9 +95,8 @@ export function KapustaTeamPanel({
 
   return (
     <div className="min-h-full flex flex-col" style={{ backgroundColor }}>
-      {/* Header: wordmark en fuente del sistema (spec §3.1). El lockup PNG
-          real trae su propio fondo celeste distinto al del panel y acá,
-          sobre /kapusta/perfil, ya aparece completo en el banner del
+      {/* Header: wordmark en fuente del sistema (spec §3.1). Sobre
+          /kapusta/perfil el lockup completo ya aparece en el banner del
           sitio justo arriba — repetirlo daría dos logos pegados. En
           /dashboard/inicio y /dashboard mobile, donde el panel es toda la
           pantalla, el wordmark alcanza como encabezado. */}
