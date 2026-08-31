@@ -30,14 +30,17 @@ const TABS: { id: TabId; label: string; icon: typeof Calculator }[] = [
 
 // Selector de calculadora + la calc activa. Extraído del contenedor de
 // página para poder reusarlo tal cual dentro del modal del botón flotante
-// (kapusta-calc-modal.tsx) sin duplicar la lógica de las 3 calculadoras.
+// (kapusta-calc-modal.tsx) sin duplicar la lógica de las calculadoras.
+// `optionsLoading`: true mientras el modal todavía trae tipos/zonas del
+// catálogo en segundo plano (solo lo usa la pestaña de tasación).
 export function KapustaCalcTabs({
   tipos,
   zonas,
+  optionsLoading = false,
   primaryColor,
   secondaryColor,
   accentColor,
-}: Omit<KapustaCalculadorasProps, "backgroundColor">) {
+}: Omit<KapustaCalculadorasProps, "backgroundColor"> & { optionsLoading?: boolean }) {
   const [active, setActive] = useState<TabId>("basica");
 
   const theme: KapustaTheme = {
@@ -77,7 +80,12 @@ export function KapustaCalcTabs({
         {active === "credito" && <KapustaCalcCredito theme={theme} />}
         {active === "alquiler" && <KapustaCalcAlquiler theme={theme} />}
         {active === "tasacion" && (
-          <KapustaCalcTasacion theme={theme} tipos={tipos} zonas={zonas} />
+          <KapustaCalcTasacion
+            theme={theme}
+            tipos={tipos}
+            zonas={zonas}
+            optionsLoading={optionsLoading}
+          />
         )}
       </div>
     </div>

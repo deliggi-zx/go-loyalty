@@ -13,10 +13,15 @@ interface KapustaCalcModalProps {
   accentColor: string;
 }
 
-// Modal con las 3 calculadoras, disparado desde el botón flotante
+// Modal con las 4 calculadoras, disparado desde el botón flotante
 // (kapusta-floating-dock.tsx). Reusa KapustaCalcTabs — la misma UI y
-// lógica que /kapusta/calculadoras, sin duplicar nada. Las opciones de
-// los selectores (tipo/zona) se piden al abrir por primera vez.
+// lógica que /kapusta/calculadoras, sin duplicar nada.
+//
+// El contenido se muestra apenas se abre: la calculadora tradicional, el
+// crédito y el ajuste de alquiler no necesitan datos del servidor. Solo
+// la tasación usa tipos/zonas del catálogo — se piden en segundo plano y,
+// hasta que llegan, esa pestaña muestra sus selectores vacíos con un
+// aviso (no bloquea el resto del modal).
 export function KapustaCalcModal({
   open,
   onClose,
@@ -24,23 +29,31 @@ export function KapustaCalcModal({
   secondaryColor,
   accentColor,
 }: KapustaCalcModalProps) {
-  const [options, setOptions] = useState<{ tipos: string[]; zonas: string[] } | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const [options, setOptions] = useState<{ tipos: string[]; zonas: string[] }>({
+    tipos: [],
+    zonas: [],
+  });
+  const [optionsLoaded, setOptionsLoaded] = useState(false);
 
   useEffect(() => {
-    if (!open || options) return;
+    if (!open || optionsLoaded) return;
     let cancelled = false;
     getKapustaCalcOptions()
       .then((res) => {
-        if (!cancelled) setOptions(res);
+        if (!cancelled) {
+          setOptions(res);
+          setOptionsLoaded(true);
+        }
       })
       .catch(() => {
-        if (!cancelled) setLoadFailed(true);
+        // Si falla, la tasación queda con sus opciones vacías y su propio
+        // mensaje de "sin datos"; el resto del modal funciona igual.
+        if (!cancelled) setOptionsLoaded(true);
       });
     return () => {
       cancelled = true;
     };
-  }, [open, options]);
+  }, [open, optionsLoaded]);
 
   // Cerrar con Escape mientras está abierto.
   useEffect(() => {
@@ -79,21 +92,14 @@ export function KapustaCalcModal({
         </div>
 
         <div className="overflow-y-auto p-4">
-          {options ? (
-            <KapustaCalcTabs
-              tipos={options.tipos}
-              zonas={options.zonas}
-              primaryColor={primaryColor}
-              secondaryColor={secondaryColor}
-              accentColor={accentColor}
-            />
-          ) : loadFailed ? (
-            <p className="text-sm text-stone-500 py-8 text-center">
-              No pudimos cargar las calculadoras. Probá de nuevo en un momento.
-            </p>
-          ) : (
-            <p className="text-sm text-stone-400 py-8 text-center">Cargando…</p>
-          )}
+          <KapustaCalcTabs
+            tipos={options.tipos}
+            zonas={options.zonas}
+            optionsLoading={!optionsLoaded}
+            primaryColor={primaryColor}
+            secondaryColor={secondaryColor}
+            accentColor={accentColor}
+          />
         </div>
       </div>
     </div>

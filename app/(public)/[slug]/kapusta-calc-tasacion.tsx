@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { formatPrice } from "@/lib/utils";
 import {
   estimarTasacionKapusta,
@@ -28,9 +28,12 @@ interface Props {
   theme: KapustaTheme;
   tipos: string[];
   zonas: string[];
+  // true mientras el modal del botón flotante todavía trae tipos/zonas del
+  // catálogo (en la página /kapusta/calculadoras llegan ya resueltos).
+  optionsLoading?: boolean;
 }
 
-export function KapustaCalcTasacion({ theme, tipos, zonas }: Props) {
+export function KapustaCalcTasacion({ theme, tipos, zonas, optionsLoading = false }: Props) {
   const [superficie, setSuperficie] = useState("");
   const [tipo, setTipo] = useState(tipos[0] ?? "");
   const [operacion, setOperacion] = useState("Venta");
@@ -40,8 +43,16 @@ export function KapustaCalcTasacion({ theme, tipos, zonas }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<TasacionResult | null>(null);
 
+  // Si los tipos llegan después (modal), engancharse al primero apenas
+  // aparezcan o si el elegido dejó de existir.
+  useEffect(() => {
+    if (tipos.length > 0 && !tipos.includes(tipo)) setTipo(tipos[0]);
+  }, [tipos, tipo]);
+
+  const optionsPending = optionsLoading && tipos.length === 0;
   const superficieNum = Number(superficie);
-  const canSubmit = Number.isFinite(superficieNum) && superficieNum > 0 && !!tipo && !loading;
+  const canSubmit =
+    Number.isFinite(superficieNum) && superficieNum > 0 && !!tipo && !loading && !optionsPending;
 
   async function handleSubmit() {
     setLoading(true);
@@ -93,12 +104,17 @@ export function KapustaCalcTasacion({ theme, tipos, zonas }: Props) {
           </CalcField>
         </div>
 
-        <CalcField label="Tipo de propiedad">
+        <CalcField
+          label="Tipo de propiedad"
+          hint={optionsPending ? "Cargando tipos del catálogo…" : undefined}
+        >
           <select
             value={tipo}
             onChange={(e) => setTipo(e.target.value)}
+            disabled={optionsPending}
             className={calcFieldClass}
           >
+            {optionsPending && <option value="">Cargando…</option>}
             {tipos.map((t) => (
               <option key={t} value={t}>
                 {t}
