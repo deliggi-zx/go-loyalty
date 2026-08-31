@@ -197,28 +197,50 @@ export async function estimarTasacionKapusta(input: TasacionInput): Promise<Tasa
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Calc 3 — Ajuste de alquiler por ICL (BCRA v4.0, idVariable 40)
+// Calc 3 — Ajuste de alquiler por ICL o por IPC
 // ─────────────────────────────────────────────────────────────────────────
+//
+// Dos índices, a elección del usuario antes de calcular:
+//
+// - ICL (Índice para Contratos de Locación, Ley 27.551): lo publica el
+//   BCRA, valor DIARIO. El endpoint v3.0/monetarias/7988 quedó deprecado
+//   (410 Gone); hoy vive en v4.0 bajo idVariable 40. Respuesta:
+//     { results: [ { idVariable: 40, detalle: [ { fecha, valor }, ... ] } ] }
+//
+// - IPC Nivel General Nacional: lo publica el INDEC, valor MENSUAL (base
+//   diciembre 2016 = 100). Se consume como serie de índice ya encadenado
+//   vía apis.datos.gob.ar (serie 148.3_INIVELNAL_DICI_M_26), así que se
+//   aplica la misma fórmula que el ICL (valor en mes A vs mes B) sin tener
+//   que encadenar variaciones a mano. Como es mensual, para una fecha a
+//   mitad de mes se usa el índice del último mes cerrado publicado, sin
+//   interpolar — y se aclara en el resultado.
+//
+// En los dos casos: alquiler_actualizado = original * (valor_B / valor_A).
 
-// El endpoint v3.0/monetarias/7988 que inspiró esta calc quedó deprecado
-// (410 Gone). La serie ICL ("Índice para Contratos de Locación") vive hoy
-// en v4.0 bajo idVariable 40. Respuesta:
-//   { results: [ { idVariable: 40, detalle: [ { fecha: "YYYY-MM-DD", valor: number }, ... ] } ] }
-// `detalle` viene ordenado descendente por fecha; el ICL tiene valor
-// diario (interpola findes y feriados).
 const BCRA_ICL_URL = "https://api.bcra.gob.ar/estadisticas/v4.0/monetarias/40";
-const ICL_MIN_DATE = "2020-06-30"; // base de la serie (30.6.20 = 1)
+const ICL_MIN_DATE = "2020-06-30"; // base de la serie ICL (30.6.20 = 1)
 
-export type IclAdjustmentResult =
+const IPC_API_URL = "https://apis.datos.gob.ar/series/api/series/";
+const IPC_SERIES_ID = "148.3_INIVELNAL_DICI_M_26"; // IPC Nivel General Nacional, base dic 2016
+const IPC_MIN_DATE = "2016-12-01"; // base de la serie IPC
+
+export type IndiceAlquiler = "ICL" | "IPC";
+
+export type AjusteAlquilerResult =
   | {
       ok: true;
-      iclInicio: number;
-      iclDestino: number;
-      fechaIclInicio: string;
-      fechaIclDestino: string;
+      indice: IndiceAlquiler;
+      valorInicio: number;
+      valorDestino: number;
+      // Fecha real del dato usado (para ICL, el día <= fecha pedida; para
+      // IPC, el primer día del mes cerrado usado).
+      fechaValorInicio: string;
+      fechaValorDestino: string;
       factor: number;
+      // true para IPC: el dato es mensual y puede no cubrir el mes en curso.
+      mensual: boolean;
     }
-  | { ok: false; reason: "invalid" | "bcra_unreachable" | "no_data" };
+  | { ok: false; reason: "invalid" | "source_unreachable" | "no_data" };
 
 function isYmd(s: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s));
@@ -244,6 +266,28 @@ function addDays(ymd: string, days: number): string {
 
 function minYmd(a: string, b: string): string {
   return Date.parse(a) <= Date.parse(b) ? a : b;
+}
+
+// Primer día del mes de `ymd`, en "YYYY-MM-01".
+function firstOfMonth(ymd: string): string {
+  return `${ymd.slice(0, 7)}-01`;
+}
+
+function addMonths(monthStart: string, delta: number): string {
+  const [y, m] = monthStart.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function currentMonthStart(): string {
+  return firstOfMonth(todayYmd());
+}
+
+// Cantidad de meses de diferencia entre dos "YYYY-MM-01" (b - a).
+function monthsBetween(a: string, b: string): number {
+  const [ya, ma] = a.split("-").map(Number);
+  const [yb, mb] = b.split("-").map(Number);
+  return (yb - ya) * 12 + (mb - ma);
 }
 
 // Valor cacheado utilizable para `target`: el punto más reciente con
@@ -315,21 +359,115 @@ function pickOnOrBefore(
   return null;
 }
 
-export async function getAjusteIclKapusta(
+// ── IPC (INDEC vía apis.datos.gob.ar) ────────────────────────────────────
+
+// Valor mensual cacheado utilizable para `monthStart` (primer día del
+// mes): el mes más reciente con fecha <= monthStart. Se sirve del cache
+// si ese mes ya está "cerrado" (2+ meses atrás → el INDEC ya no lo
+// revisa en la práctica) o si se trajo hace menos de un día.
+async function ipcFromCache(
+  supabase: ReturnType<typeof createClient>,
+  monthStart: string
+): Promise<{ fecha: string; valor: number } | null> {
+  const { data } = await supabase
+    .from("indec_ipc_cache")
+    .select("valor, fecha, fetched_at")
+    .lte("fecha", monthStart)
+    .order("fecha", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  const closedMonths = monthsBetween(data.fecha as string, currentMonthStart());
+  const freshHours = (Date.now() - Date.parse(data.fetched_at as string)) / 3600000;
+  if (closedMonths >= 2 || freshHours < 24) {
+    return { fecha: data.fecha as string, valor: Number(data.valor) };
+  }
+  return null;
+}
+
+// Un solo fetch a apis.datos.gob.ar por el rango pedido; devuelve la serie
+// ordenada descendente y de paso upsertea todos los meses al cache.
+// Respuesta: { data: [ ["YYYY-MM-DD", number], ... ] } ascendente.
+async function fetchIpcRange(
+  supabase: ReturnType<typeof createClient>,
+  desdeMonth: string,
+  hastaMonth: string
+): Promise<{ fecha: string; valor: number }[]> {
+  const url = `${IPC_API_URL}?ids=${IPC_SERIES_ID}&start_date=${desdeMonth}&end_date=${hastaMonth}&format=json&limit=5000`;
+  const res = await fetch(url, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(8000),
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) throw new Error(`INDEC/datos.gob.ar HTTP ${res.status}`);
+  const json = (await res.json()) as { data?: [string, number][] };
+  const clean = (json.data ?? [])
+    .filter(([fecha, valor]) => isYmd(fecha) && Number.isFinite(valor) && valor > 0)
+    .map(([fecha, valor]) => ({ fecha: firstOfMonth(fecha), valor: Number(valor) }));
+
+  if (clean.length > 0) {
+    await supabase
+      .from("indec_ipc_cache")
+      .upsert(
+        clean.map((d) => ({ fecha: d.fecha, valor: d.valor, fetched_at: new Date().toISOString() })),
+        { onConflict: "fecha" }
+      );
+  }
+
+  return clean.sort((a, b) => Date.parse(b.fecha) - Date.parse(a.fecha));
+}
+
+// ── Entrada única de la calculadora de ajuste ────────────────────────────
+
+export async function getAjusteAlquilerKapusta(
+  indice: IndiceAlquiler,
   fechaInicio: string,
   fechaDestino: string
-): Promise<IclAdjustmentResult> {
+): Promise<AjusteAlquilerResult> {
   if (!isYmd(fechaInicio) || !isYmd(fechaDestino)) return { ok: false, reason: "invalid" };
   if (Date.parse(fechaInicio) >= Date.parse(fechaDestino)) return { ok: false, reason: "invalid" };
-  if (Date.parse(fechaInicio) < Date.parse(ICL_MIN_DATE)) return { ok: false, reason: "invalid" };
+  const minDate = indice === "IPC" ? IPC_MIN_DATE : ICL_MIN_DATE;
+  if (Date.parse(fechaInicio) < Date.parse(minDate)) return { ok: false, reason: "invalid" };
 
   const supabase = createClient();
 
   try {
+    if (indice === "IPC") {
+      const mInicio = firstOfMonth(fechaInicio);
+      const mDestino = firstOfMonth(fechaDestino);
+
+      let a = await ipcFromCache(supabase, mInicio);
+      let b = await ipcFromCache(supabase, mDestino);
+
+      if (!a || !b) {
+        const dataset = await fetchIpcRange(
+          supabase,
+          addMonths(mInicio, -2),
+          currentMonthStart()
+        );
+        a = a ?? pickOnOrBefore(dataset, mInicio);
+        b = b ?? pickOnOrBefore(dataset, mDestino);
+      }
+
+      if (!a || !b || a.valor <= 0) return { ok: false, reason: "no_data" };
+
+      return {
+        ok: true,
+        indice: "IPC",
+        valorInicio: a.valor,
+        valorDestino: b.valor,
+        fechaValorInicio: a.fecha,
+        fechaValorDestino: b.fecha,
+        factor: b.valor / a.valor,
+        mensual: true,
+      };
+    }
+
+    // ICL (diario)
     let inicio = await iclFromCache(supabase, fechaInicio);
     let destino = await iclFromCache(supabase, fechaDestino);
-    let fechaIclInicio = fechaInicio;
-    let fechaIclDestino = minYmd(fechaDestino, todayYmd());
+    let fechaValorInicio = fechaInicio;
+    let fechaValorDestino = minYmd(fechaDestino, todayYmd());
 
     if (inicio == null || destino == null) {
       const dataset = await fetchBcraRange(
@@ -341,11 +479,11 @@ export async function getAjusteIclKapusta(
       const b = pickOnOrBefore(dataset, fechaDestino);
       if (a) {
         inicio = a.valor;
-        fechaIclInicio = a.fecha;
+        fechaValorInicio = a.fecha;
       }
       if (b) {
         destino = b.valor;
-        fechaIclDestino = b.fecha;
+        fechaValorDestino = b.fecha;
       }
     }
 
@@ -355,14 +493,16 @@ export async function getAjusteIclKapusta(
 
     return {
       ok: true,
-      iclInicio: inicio,
-      iclDestino: destino,
-      fechaIclInicio,
-      fechaIclDestino,
+      indice: "ICL",
+      valorInicio: inicio,
+      valorDestino: destino,
+      fechaValorInicio,
+      fechaValorDestino,
       factor: destino / inicio,
+      mensual: false,
     };
   } catch (err) {
-    console.error("BCRA ICL fetch falló:", err instanceof Error ? err.message : err);
-    return { ok: false, reason: "bcra_unreachable" };
+    console.error(`Ajuste alquiler (${indice}) falló:`, err instanceof Error ? err.message : err);
+    return { ok: false, reason: "source_unreachable" };
   }
 }

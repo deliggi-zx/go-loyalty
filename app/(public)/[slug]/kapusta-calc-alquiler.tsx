@@ -2,7 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { formatPrice } from "@/lib/utils";
-import { getAjusteIclKapusta } from "./kapusta-calculadoras-actions";
+import {
+  getAjusteAlquilerKapusta,
+  type IndiceAlquiler,
+} from "./kapusta-calculadoras-actions";
 import {
   CalcButton,
   CalcError,
@@ -13,21 +16,40 @@ import {
   type KapustaTheme,
 } from "./kapusta-calc-shared";
 
-// Calc 3 — Ajuste de alquiler por inflación (ICL), inspirada en la
-// calculadora oficial del GCBA. Fuente de datos: serie ICL del BCRA
-// ("Índice para Contratos de Locación", Ley 27.551), vía server action con
-// cache de un día (ver getAjusteIclKapusta en kapusta-calculadoras-actions.ts).
+// Calc — Ajuste de alquiler por inflación. Inspirada en la calculadora
+// oficial del GCBA. El usuario elige el índice antes de calcular:
 //
-//   alquiler_actualizado = alquiler_original * (ICL_fecha_destino / ICL_fecha_inicio)
+// - ICL (Índice para Contratos de Locación, Ley 27.551): lo publica el
+//   BCRA, valor diario.
+// - IPC (Nivel General Nacional): lo publica el INDEC, valor mensual.
 //
-// Si el BCRA no responde, la calc no se rompe: ofrece cargar los dos
-// valores de ICL a mano, con link a la página del BCRA.
+// En los dos casos: alquiler_actualizado = original * (valor_B / valor_A).
+// Toda la lógica de fuente/cache/fallback vive en
+// getAjusteAlquilerKapusta (kapusta-calculadoras-actions.ts). Si la fuente
+// no responde, se ofrece cargar los dos valores del índice a mano, con
+// link a la página oficial correspondiente.
 
 interface Props {
   theme: KapustaTheme;
 }
 
-const BCRA_ICL_PAGE = "https://www.bcra.gob.ar/estadisticas-indicadores/";
+const SOURCE_BY_INDICE: Record<IndiceAlquiler, { label: string; url: string; serieHint: string }> = {
+  ICL: {
+    label: "BCRA",
+    url: "https://www.bcra.gob.ar/estadisticas-indicadores/",
+    serieHint: "Índice para Contratos de Locación (ICL)",
+  },
+  IPC: {
+    label: "INDEC",
+    url: "https://www.indec.gob.ar/indec/web/Nivel4-Tema-3-5-31",
+    serieHint: "IPC Nivel General Nacional",
+  },
+};
+
+const MONTHS = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
 
 function todayYmd(): string {
   const d = new Date();
@@ -36,15 +58,23 @@ function todayYmd(): string {
   ).padStart(2, "0")}`;
 }
 
+function monthLabel(ymd: string): string {
+  const [y, m] = ymd.split("-").map(Number);
+  return `${MONTHS[(m || 1) - 1]} ${y}`;
+}
+
 interface OkData {
-  iclInicio: number;
-  iclDestino: number;
-  fechaIclInicio: string;
-  fechaIclDestino: string;
+  indice: IndiceAlquiler;
+  valorInicio: number;
+  valorDestino: number;
+  fechaValorInicio: string;
+  fechaValorDestino: string;
   factor: number;
+  mensual: boolean;
 }
 
 export function KapustaCalcAlquiler({ theme }: Props) {
+  const [indice, setIndice] = useState<IndiceAlquiler>("ICL");
   const [monto, setMonto] = useState("");
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaDestino, setFechaDestino] = useState(todayYmd());
@@ -53,53 +83,68 @@ export function KapustaCalcAlquiler({ theme }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<OkData | null>(null);
 
-  // Modo manual: se activa solo si el BCRA falla, o si el usuario lo pide.
+  // Modo manual: se activa solo si la fuente falla, o si el usuario lo pide.
   const [manual, setManual] = useState(false);
-  const [iclInicioManual, setIclInicioManual] = useState("");
-  const [iclDestinoManual, setIclDestinoManual] = useState("");
+  const [valorInicioManual, setValorInicioManual] = useState("");
+  const [valorDestinoManual, setValorDestinoManual] = useState("");
+
+  const source = SOURCE_BY_INDICE[indice];
 
   const montoNum = Number(monto);
   const montoValido = Number.isFinite(montoNum) && montoNum > 0;
 
   const manualResult = useMemo(() => {
-    const a = Number(iclInicioManual);
-    const b = Number(iclDestinoManual);
+    const a = Number(valorInicioManual);
+    const b = Number(valorDestinoManual);
     if (!montoValido || !Number.isFinite(a) || a <= 0 || !Number.isFinite(b) || b <= 0) return null;
     const factor = b / a;
     return { factor, actualizado: montoNum * factor };
-  }, [iclInicioManual, iclDestinoManual, montoNum, montoValido]);
+  }, [valorInicioManual, valorDestinoManual, montoNum, montoValido]);
+
+  function switchIndice(next: IndiceAlquiler) {
+    setIndice(next);
+    setData(null);
+    setError(null);
+    setManual(false);
+    setValorInicioManual("");
+    setValorDestinoManual("");
+  }
 
   async function handleSubmit() {
     setLoading(true);
     setError(null);
     setData(null);
     try {
-      const res = await getAjusteIclKapusta(fechaInicio, fechaDestino);
+      const res = await getAjusteAlquilerKapusta(indice, fechaInicio, fechaDestino);
       if (res.ok) {
         setData({
-          iclInicio: res.iclInicio,
-          iclDestino: res.iclDestino,
-          fechaIclInicio: res.fechaIclInicio,
-          fechaIclDestino: res.fechaIclDestino,
+          indice: res.indice,
+          valorInicio: res.valorInicio,
+          valorDestino: res.valorDestino,
+          fechaValorInicio: res.fechaValorInicio,
+          fechaValorDestino: res.fechaValorDestino,
           factor: res.factor,
+          mensual: res.mensual,
         });
         return;
       }
       if (res.reason === "invalid") {
         setError(
-          "Revisá las fechas: la de inicio tiene que ser anterior a la de actualización y posterior a junio de 2020."
+          `Revisá las fechas: la de inicio tiene que ser anterior a la de actualización y posterior a ${
+            indice === "IPC" ? "diciembre de 2016" : "junio de 2020"
+          }.`
         );
         return;
       }
-      // bcra_unreachable | no_data → fallback a carga manual
+      // source_unreachable | no_data → fallback a carga manual
       setManual(true);
       setError(
-        "No pudimos consultar el índice del BCRA en este momento. Podés cargar los dos valores de ICL a mano."
+        `No pudimos consultar el índice ${indice} (${source.label}) en este momento. Podés cargar los dos valores a mano.`
       );
     } catch {
       setManual(true);
       setError(
-        "No pudimos consultar el índice del BCRA en este momento. Podés cargar los dos valores de ICL a mano."
+        `No pudimos consultar el índice ${indice} (${source.label}) en este momento. Podés cargar los dos valores a mano.`
       );
     } finally {
       setLoading(false);
@@ -108,9 +153,32 @@ export function KapustaCalcAlquiler({ theme }: Props) {
 
   const actualizado = data ? montoNum * data.factor : 0;
   const aumentoPct = data ? (data.factor - 1) * 100 : 0;
+  const valueDecimals = indice === "IPC" ? 2 : 4;
+
+  const segBtn = "flex-1 h-9 text-sm font-medium rounded-lg transition-colors";
 
   return (
     <div className="space-y-4">
+      <CalcField label="Índice de ajuste">
+        <div className="flex gap-2 rounded-xl bg-stone-100 p-1">
+          {(["ICL", "IPC"] as const).map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => switchIndice(opt)}
+              className={segBtn}
+              style={
+                indice === opt
+                  ? { backgroundColor: "#fff", color: theme.primary, boxShadow: "0 1px 2px rgba(0,0,0,0.06)" }
+                  : { color: "#78716c" }
+              }
+            >
+              {opt === "ICL" ? "ICL · BCRA" : "IPC · INDEC"}
+            </button>
+          ))}
+        </div>
+      </CalcField>
+
       <div className="space-y-3">
         <CalcField label="Monto original del alquiler">
           <input
@@ -152,7 +220,7 @@ export function KapustaCalcAlquiler({ theme }: Props) {
           disabled={!montoValido || !fechaInicio || !fechaDestino || loading}
           onClick={handleSubmit}
         >
-          {loading ? "Consultando el BCRA…" : "Calcular actualización"}
+          {loading ? `Consultando ${source.label}…` : "Calcular actualización"}
         </CalcButton>
       )}
 
@@ -177,22 +245,30 @@ export function KapustaCalcAlquiler({ theme }: Props) {
           />
           <CalcResultRow
             theme={theme}
-            label={`ICL ${data.fechaIclInicio}`}
-            value={data.iclInicio.toLocaleString("es-AR", { maximumFractionDigits: 4 })}
+            label={`${data.indice} ${data.mensual ? monthLabel(data.fechaValorInicio) : data.fechaValorInicio}`}
+            value={data.valorInicio.toLocaleString("es-AR", { maximumFractionDigits: valueDecimals })}
           />
           <CalcResultRow
             theme={theme}
-            label={`ICL ${data.fechaIclDestino}`}
-            value={data.iclDestino.toLocaleString("es-AR", { maximumFractionDigits: 4 })}
+            label={`${data.indice} ${data.mensual ? monthLabel(data.fechaValorDestino) : data.fechaValorDestino}`}
+            value={data.valorDestino.toLocaleString("es-AR", { maximumFractionDigits: valueDecimals })}
           />
+
+          {data.mensual && (
+            <p className="text-[11px] leading-relaxed text-stone-500 pt-1">
+              El IPC es mensual: el ajuste se calculó con el índice de{" "}
+              {monthLabel(data.fechaValorInicio)} y {monthLabel(data.fechaValorDestino)} (último
+              mes cerrado publicado), sin interpolar dentro del mes.
+            </p>
+          )}
         </div>
       )}
 
-      {/* Carga manual de ICL — fallback si el BCRA no responde, o a pedido */}
+      {/* Carga manual — fallback si la fuente no responde, o a pedido */}
       {manual ? (
         <div className="rounded-xl border border-stone-200 bg-stone-50 p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-stone-800">Cargar ICL manualmente</p>
+            <p className="text-sm font-semibold text-stone-800">Cargar {indice} manualmente</p>
             <button
               type="button"
               onClick={() => {
@@ -205,41 +281,40 @@ export function KapustaCalcAlquiler({ theme }: Props) {
             </button>
           </div>
           <p className="text-[11px] leading-relaxed text-stone-500">
-            Buscá el valor del ICL para cada fecha en la{" "}
+            Buscá el valor del {indice} para cada fecha en la{" "}
             <a
-              href={BCRA_ICL_PAGE}
+              href={source.url}
               target="_blank"
               rel="noopener noreferrer"
               className="underline"
               style={{ color: theme.secondary }}
             >
-              página de estadísticas del BCRA
+              página oficial del {source.label}
             </a>{" "}
-            (serie &ldquo;Índice para Contratos de Locación (ICL)&rdquo;) y
-            cargalos acá.
+            (serie &ldquo;{source.serieHint}&rdquo;) y cargalos acá.
           </p>
           <div className="grid grid-cols-2 gap-2.5">
-            <CalcField label="ICL al inicio">
+            <CalcField label={`${indice} al inicio`}>
               <input
                 type="number"
                 inputMode="decimal"
                 min={0}
                 step="0.01"
-                placeholder="Ej. 21.54"
-                value={iclInicioManual}
-                onChange={(e) => setIclInicioManual(e.target.value)}
+                placeholder={indice === "IPC" ? "Ej. 4261.53" : "Ej. 21.54"}
+                value={valorInicioManual}
+                onChange={(e) => setValorInicioManual(e.target.value)}
                 className={calcFieldClass}
               />
             </CalcField>
-            <CalcField label="ICL a la fecha">
+            <CalcField label={`${indice} a la fecha`}>
               <input
                 type="number"
                 inputMode="decimal"
                 min={0}
                 step="0.01"
-                placeholder="Ej. 36.18"
-                value={iclDestinoManual}
-                onChange={(e) => setIclDestinoManual(e.target.value)}
+                placeholder={indice === "IPC" ? "Ej. 8500.00" : "Ej. 36.18"}
+                value={valorDestinoManual}
+                onChange={(e) => setValorDestinoManual(e.target.value)}
                 className={calcFieldClass}
               />
             </CalcField>
@@ -275,14 +350,14 @@ export function KapustaCalcAlquiler({ theme }: Props) {
           className="text-xs font-medium transition-colors"
           style={{ color: theme.secondary }}
         >
-          Cargar los valores de ICL manualmente
+          Cargar los valores de {indice} manualmente
         </button>
       )}
 
       <CalcNote>
-        Cálculo estimativo según la fórmula de ajuste por ICL (Ley 27.551).
-        Verificá siempre las condiciones de actualización que figuran en tu
-        contrato. El ICL lo publica el BCRA.
+        Cálculo estimativo según la fórmula de ajuste por índice. El ICL lo
+        publica el BCRA (Ley 27.551); el IPC Nivel General, el INDEC. Verificá
+        siempre las condiciones de actualización que figuran en tu contrato.
       </CalcNote>
     </div>
   );

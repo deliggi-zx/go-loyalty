@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { Calculator } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantOrg, getTenantUser, getFeaturedProducts, getActiveCarousels, getUserPointsBalance, isVetOrgSlug, isCornerOrgSlug } from "./data";
 import { getVetReviews } from "./vet-reviews-data";
@@ -239,31 +237,10 @@ export default async function TenantPage({
           </p>
         ))}
 
-      {/* Calculadoras inmobiliarias — solo Kapusta. Entrada visible en la
-          home a la sección /kapusta/calculadoras (la otra entrada es el
-          drawer, ver side-menu.tsx). Mismo patrón de tarjeta-link que usan
-          otras orgs para secciones que viven en otra ruta. */}
-      {isKapusta && (
-        <div className="max-w-lg mx-auto px-4 pt-4">
-          <Link
-            href={`/${params.slug}/calculadoras`}
-            className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
-          >
-            <span
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-              style={{ backgroundColor: `${primary}14`, color: primary }}
-            >
-              <Calculator className="h-5 w-5" />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold text-stone-900">Calculadoras</span>
-              <span className="block text-xs text-stone-500">
-                Crédito hipotecario, precio por m² y ajuste de alquiler por ICL
-              </span>
-            </span>
-          </Link>
-        </div>
-      )}
+      {/* Las calculadoras de Kapusta se acceden desde el botón flotante
+          (KapustaFloatingDock, layout.tsx) y el link del drawer
+          (side-menu.tsx). La tarjeta que vivía acá se sacó — quedaba
+          duplicada con el botón flotante. */}
 
       {/* Fase chatbot Domus: botón flotante propio en la home (no
           reemplaza ni convive mal con WhatsAppButton de layout.tsx —

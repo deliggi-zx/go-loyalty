@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Calculator, Home, TrendingUp } from "lucide-react";
+import { Calculator, Home, Landmark, TrendingUp } from "lucide-react";
 import type { KapustaTheme } from "./kapusta-calc-shared";
+import { KapustaCalcBasica } from "./kapusta-calc-basica";
 import { KapustaCalcCredito } from "./kapusta-calc-credito";
 import { KapustaCalcTasacion } from "./kapusta-calc-tasacion";
 import { KapustaCalcAlquiler } from "./kapusta-calc-alquiler";
@@ -16,12 +17,15 @@ interface KapustaCalculadorasProps {
   backgroundColor: string;
 }
 
-type TabId = "credito" | "tasacion" | "alquiler";
+type TabId = "basica" | "credito" | "alquiler" | "tasacion";
 
+// Orden de las pestañas (izquierda a derecha) — "basica" primero: es la
+// que se ve al abrir el modal del botón flotante.
 const TABS: { id: TabId; label: string; icon: typeof Calculator }[] = [
-  { id: "credito", label: "Crédito hipotecario", icon: Calculator },
-  { id: "tasacion", label: "Precio por m²", icon: Home },
+  { id: "basica", label: "Calculadora", icon: Calculator },
+  { id: "credito", label: "Crédito hipotecario", icon: Landmark },
   { id: "alquiler", label: "Ajuste de alquiler", icon: TrendingUp },
+  { id: "tasacion", label: "Precio por m²", icon: Home },
 ];
 
 // Selector de calculadora + la calc activa. Extraído del contenedor de
@@ -34,7 +38,7 @@ export function KapustaCalcTabs({
   secondaryColor,
   accentColor,
 }: Omit<KapustaCalculadorasProps, "backgroundColor">) {
-  const [active, setActive] = useState<TabId>("credito");
+  const [active, setActive] = useState<TabId>("basica");
 
   const theme: KapustaTheme = {
     primary: primaryColor,
@@ -69,11 +73,12 @@ export function KapustaCalcTabs({
       </nav>
 
       <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+        {active === "basica" && <KapustaCalcBasica theme={theme} />}
         {active === "credito" && <KapustaCalcCredito theme={theme} />}
+        {active === "alquiler" && <KapustaCalcAlquiler theme={theme} />}
         {active === "tasacion" && (
           <KapustaCalcTasacion theme={theme} tipos={tipos} zonas={zonas} />
         )}
-        {active === "alquiler" && <KapustaCalcAlquiler theme={theme} />}
       </div>
     </div>
   );
