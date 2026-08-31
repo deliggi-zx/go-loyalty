@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { X, Phone, MessageCircle, LogOut, FileText, Receipt, User, Tag } from "lucide-react";
+import { X, Phone, MessageCircle, LogOut, FileText, Receipt, User, Tag, Calculator } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { SocialLinks } from "./social-links";
 import { GymSideMenuItems } from "./gym-side-menu-items";
@@ -94,6 +94,10 @@ export function SideMenu({
   // page.tsx/perfil — sin ícono/prop nueva, esta rama (neonTheme/bikeTheme
   // ambos false) es la que ya usa Domus.
   const isDomusOrg = slug === "domus" || slug === "kapusta";
+  // Calculadoras inmobiliarias: solo Kapusta (marca propia) — Domus y el
+  // resto de las inmobiliarias no las tienen. Mismo criterio de slug
+  // directo que isDomusOrg.
+  const isKapusta = slug === "kapusta";
   // Ajuste 2: categorías raíz (parent_id null) y sus hijas, para agrupar
   // Venta/Alquiler con sus subcategorías debajo — mismo criterio de
   // filtrado por parent_id que category-drilldown.tsx. Solo se arma/usa
@@ -217,6 +221,17 @@ export function SideMenu({
             >
               <Receipt className={`w-4 h-4 ${leadIcon}`} />
               {priceListLabel}
+            </Link>
+          )}
+
+          {isKapusta && (
+            <Link
+              href={`/${slug}/calculadoras`}
+              onClick={onClose}
+              className={`flex items-center gap-2 text-sm font-medium transition-colors ${linkText}`}
+            >
+              <Calculator className={`w-4 h-4 ${leadIcon}`} />
+              Calculadoras
             </Link>
           )}
 

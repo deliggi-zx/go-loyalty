@@ -48,4 +48,5 @@ nosotros-sourse/
 # compartida por otras herramientas además de Claude Code.
 .claude/settings.local.json
 .claude/skills/
+.claude/launch.json
 .agents/
