@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ORG_LOGO_LOCKUP } from "@/lib/org-logo-lockup";
 import { getMorningSummary } from "./domus-morning-summary-actions";
 import { GENERIC_SUMMARY_TEXTS } from "./morning-summary-constants";
 import type { KapustaPanelData } from "./kapusta-panel-data";
@@ -92,19 +91,19 @@ export function KapustaTeamPanel({
     summary && !GENERIC_SUMMARY_TEXTS.includes(summary) ? summary : fallbackLine();
   const resumenLoading = summary === null;
 
-  const logo = ORG_LOGO_LOCKUP["kapusta"];
   const firstName = userName?.trim().split(/\s+/)[0] ?? null;
 
   return (
     <div className="min-h-full flex flex-col" style={{ backgroundColor }}>
-      {/* Header: logo real (isotipo) + wordmark en fuente del sistema */}
-      <div className="flex items-center gap-2.5 px-5 pt-5 pb-1">
-        {logo && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={logo} alt="Kapusta Propiedades" className="h-8 w-8 rounded-full" />
-        )}
+      {/* Header: wordmark en fuente del sistema (spec §3.1). El lockup PNG
+          real trae su propio fondo celeste distinto al del panel y acá,
+          sobre /kapusta/perfil, ya aparece completo en el banner del
+          sitio justo arriba — repetirlo daría dos logos pegados. En
+          /dashboard/inicio y /dashboard mobile, donde el panel es toda la
+          pantalla, el wordmark alcanza como encabezado. */}
+      <div className="px-5 pt-5 pb-1">
         <span
-          className="text-[15px] font-extrabold tracking-tight"
+          className="text-base font-extrabold"
           style={{ color: NEGRO, letterSpacing: "-0.02em" }}
         >
           Kapusta <span className="font-semibold">Propiedades</span>

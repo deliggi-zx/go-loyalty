@@ -12,8 +12,10 @@ export const ORG_LOGO_LOCKUP: Record<string, string> = {
   // org, mismo criterio que el resto de este mapa.
   domus: "/domus/domus-logo-completo.png",
   // Kapusta (clon de Domus, mismas funciones de Inmo Pro, marca propia):
-  // isotipo todavía no vectorizado — placeholder simple (pin + wordmark)
-  // en SVG hasta que llegue el archivo final, mismo criterio que el resto
-  // de este mapa (solo cambia el path del asset).
-  kapusta: "/kapusta/kapusta-logo-completo.svg",
+  // lockup horizontal definitivo (wordmark KAPUSTA + isotipo + "Propiedades").
+  // El PNG viene con fondo celeste de marca (#69BDE1), que coincide con
+  // background_color de la org — se funde con el banner del home y con el
+  // header del panel de equipo, ambos celeste. Reemplazó al placeholder
+  // circular en SVG.
+  kapusta: "/kapusta/kapusta-logo-completo.png",
 };
