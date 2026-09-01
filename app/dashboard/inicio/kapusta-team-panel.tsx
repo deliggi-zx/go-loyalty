@@ -18,11 +18,28 @@ import type { KapustaPanelData } from "./kapusta-panel-data";
 // paleta del spec §2). Los de marca (celeste, petróleo, petróleo claro)
 // llegan por props, leídos como org.primary_color ?? "#005F77" etc.
 const NEGRO = "#0B1417";
-const CELESTE_CLARO = "#BFE6F3";
-const SUPERFICIE = "#F8FAFB";
-const TXT_SECUNDARIO = "#55666D";
-const TXT_TERCIARIO = "#7A888D";
-const LINEA = "#E4EAEC";
+const TXT_SOBRE_VIDRIO = "rgba(11, 20, 23, 0.62)"; // secundario sobre el vidrio celeste
+
+// Estilo "simil vidrio" (glassmorphism) celeste para los botones/tarjetas
+// del panel (pedido de Die, opción C). La hoja inferior pasó de casi
+// blanca a un degradé celeste, así el blur y la profundidad se notan de
+// verdad. Fondo celeste translúcido —no muy transparente—, blur del
+// fondo, borde blanco sutil, sombra suave hacia abajo + brillo interno
+// arriba. Texto en el negro de marca, que sobre el celeste da la mejor
+// legibilidad.
+const GLASS: React.CSSProperties = {
+  backgroundColor: "rgba(1, 128, 171, 0.30)", // #0180AB @ 30%
+  backdropFilter: "blur(14px)",
+  WebkitBackdropFilter: "blur(14px)",
+  border: "1px solid rgba(255, 255, 255, 0.6)",
+  boxShadow:
+    "0 14px 30px -12px rgba(11, 20, 23, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.4)",
+};
+
+// Degradé celeste de la hoja inferior — arranca cerca del celeste de
+// marca del saludo y se profundiza hacia abajo, para dar textura detrás
+// del vidrio.
+const SHEET_BG = "linear-gradient(180deg, #6FC1E4 0%, #4CA4D2 100%)";
 
 const UNIDADES = ["cero", "una", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"];
 
@@ -47,7 +64,6 @@ export function KapustaTeamPanel({
   orgId,
   userName,
   data,
-  primaryColor,
   backgroundColor,
 }: KapustaTeamPanelProps) {
   const [summary, setSummary] = useState<string | null>(null);
@@ -144,28 +160,24 @@ export function KapustaTeamPanel({
         </div>
       </div>
 
-      {/* Hoja inferior */}
+      {/* Hoja inferior — degradé celeste (opción C): da textura detrás del
+          vidrio de los botones. */}
       <div
         className="flex-1 px-5 pt-6 pb-8 space-y-3"
-        style={{ backgroundColor: SUPERFICIE, borderRadius: "28px 28px 0 0" }}
+        style={{ background: SHEET_BG, borderRadius: "28px 28px 0 0" }}
       >
-        {/* a) dos tarjetas métricas */}
+        {/* a) dos tarjetas métricas — mismo vidrio celeste que el resto,
+            para que quede consistente (pedido de Die). */}
         <div className="flex gap-3">
           <MetricCard
             href="/dashboard/inicio/consultas"
             value={data.consultasSinAsignar}
             label="Consultas"
-            valueColor={backgroundColor}
-            labelColor="#FFFFFF"
-            bg={NEGRO}
           />
           <MetricCard
             href="/dashboard/inicio/reuniones"
             value={data.visitasHoy}
             label="Visitas hoy"
-            valueColor="#FFFFFF"
-            labelColor={CELESTE_CLARO}
-            bg={primaryColor}
           />
         </div>
 
@@ -178,44 +190,42 @@ export function KapustaTeamPanel({
             data.ofertasReservasNuevas === 1 ? "nueva" : "nuevas"
           }`}
           restLabel="Sin novedades"
-          chipBg={backgroundColor}
         />
         <PanelRow
           href="/dashboard/inicio/seguimiento"
           title="Seguimiento"
           count={0}
           restLabel={`${data.seguimientosEnCurso} en curso`}
-          chipBg={backgroundColor}
         />
         <PanelRow
           href="/dashboard/inicio/contactos"
           title="Cartera de clientes"
           count={0}
           restLabel={`${data.fichasCartera} ${data.fichasCartera === 1 ? "ficha" : "fichas"}`}
-          chipBg={backgroundColor}
         />
 
-        {/* c) próxima visita — solo si hay */}
+        {/* c) próxima visita — solo si hay. Bloque de vidrio también, para
+            no quedar como texto suelto sobre el celeste. */}
         {data.proximaVisita && (
           <div
-            className="mt-1 flex items-center justify-between"
-            style={{ borderTop: `1px solid ${LINEA}`, paddingTop: "14px" }}
+            className="mt-1 flex items-center justify-between rounded-[18px] px-[18px] py-4"
+            style={GLASS}
           >
             <div className="flex flex-col gap-0.5 min-w-0">
               <span
                 className="text-[11px] font-bold uppercase"
-                style={{ color: TXT_TERCIARIO, letterSpacing: "0.14em" }}
+                style={{ color: TXT_SOBRE_VIDRIO, letterSpacing: "0.14em" }}
               >
                 Próxima visita
               </span>
-              <span className="text-[15px] font-semibold truncate" style={{ color: "#10262E" }}>
+              <span className="text-[15px] font-semibold truncate" style={{ color: NEGRO }}>
                 {data.proximaVisita.titulo}
                 {data.proximaVisita.zona ? ` · ${data.proximaVisita.zona}` : ""}
               </span>
             </div>
             <span
               className="text-[18px] font-extrabold shrink-0 pl-3"
-              style={{ color: primaryColor, letterSpacing: "-0.02em" }}
+              style={{ color: NEGRO, letterSpacing: "-0.02em" }}
             >
               {data.proximaVisita.hora}
             </span>
@@ -230,32 +240,26 @@ function MetricCard({
   href,
   value,
   label,
-  valueColor,
-  labelColor,
-  bg,
 }: {
   href: string;
   value: number;
   label: string;
-  valueColor: string;
-  labelColor: string;
-  bg: string;
 }) {
   return (
     <Link
       href={href}
       className="flex-1 flex flex-col gap-5 rounded-[18px] p-4 active:opacity-90 transition-opacity"
-      style={{ backgroundColor: bg }}
+      style={GLASS}
     >
       <span
         className="font-extrabold leading-none"
-        style={{ color: valueColor, fontSize: "40px", letterSpacing: "-0.04em" }}
+        style={{ color: NEGRO, fontSize: "40px", letterSpacing: "-0.04em" }}
       >
         {value}
       </span>
       <span
         className="text-[14px] font-bold uppercase"
-        style={{ color: labelColor, letterSpacing: "0.04em" }}
+        style={{ color: NEGRO, letterSpacing: "0.04em" }}
       >
         {label}
       </span>
@@ -269,21 +273,19 @@ function PanelRow({
   count,
   pendingLabel,
   restLabel,
-  chipBg,
 }: {
   href: string;
   title: string;
   count: number;
   pendingLabel?: string;
   restLabel: string;
-  chipBg: string;
 }) {
   const showChip = count > 0 && pendingLabel;
   return (
     <Link
       href={href}
-      className="flex items-center justify-between rounded-[18px] bg-white px-[18px] py-4 active:opacity-90 transition-opacity"
-      style={{ border: `1.5px solid ${NEGRO}` }}
+      className="flex items-center justify-between rounded-[18px] px-[18px] py-4 active:opacity-90 transition-opacity"
+      style={GLASS}
     >
       <span className="text-[16px] font-bold" style={{ color: NEGRO }}>
         {title}
@@ -292,12 +294,12 @@ function PanelRow({
         {showChip ? (
           <span
             className="text-[12px] font-bold rounded-[20px] px-2 py-[3px]"
-            style={{ backgroundColor: chipBg, color: NEGRO }}
+            style={{ backgroundColor: NEGRO, color: "#FFFFFF" }}
           >
             {pendingLabel}
           </span>
         ) : (
-          <span className="text-[13px]" style={{ color: TXT_SECUNDARIO }}>
+          <span className="text-[13px] font-medium" style={{ color: TXT_SOBRE_VIDRIO }}>
             {restLabel}
           </span>
         )}
