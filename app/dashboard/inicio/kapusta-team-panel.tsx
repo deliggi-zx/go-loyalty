@@ -21,22 +21,10 @@ const NEGRO = "#0B1417";
 const TXT_SOBRE_VIDRIO = "rgba(11, 20, 23, 0.62)"; // secundario sobre el vidrio celeste
 
 // Estilo "simil vidrio" (glassmorphism) celeste para los botones/tarjetas
-// del panel. La hoja donde se apoyan es blanca (pedido de Die), así que
-// el vidrio celeste destaca por contraste de color: fondo celeste
-// translúcido —no muy transparente—, blur del fondo, borde celeste sutil
-// que define el canto contra el blanco, sombra celeste suave hacia abajo
-// (glow) + brillo blanco interno arriba. Texto en el negro de marca.
-const GLASS: React.CSSProperties = {
-  backgroundColor: "rgba(1, 128, 171, 0.32)", // #0180AB @ 32%
-  backdropFilter: "blur(14px)",
-  WebkitBackdropFilter: "blur(14px)",
-  border: "1px solid rgba(1, 128, 171, 0.28)",
-  boxShadow:
-    "0 10px 24px -10px rgba(1, 128, 171, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.55)",
-};
-
-// La hoja inferior del panel: blanca, para que el vidrio celeste de los
-// botones destaque.
+// del panel. Vive en globals.css como .kap-glass (reflejo diagonal ::before,
+// glow al presionar ::after) + .kap-glass-breathe (respiración mientras hay
+// consultas pendientes). La hoja donde se apoyan es blanca, así el vidrio
+// celeste destaca por contraste. Texto en el negro de marca.
 const SHEET_BG = "#FFFFFF";
 
 const UNIDADES = ["cero", "una", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"];
@@ -171,6 +159,7 @@ export function KapustaTeamPanel({
             href="/dashboard/inicio/consultas"
             value={data.consultasSinAsignar}
             label="Consultas"
+            breathe={data.consultasSinAsignar > 0}
           />
           <MetricCard
             href="/dashboard/inicio/reuniones"
@@ -205,10 +194,8 @@ export function KapustaTeamPanel({
         {/* c) próxima visita — solo si hay. Bloque de vidrio también, para
             no quedar como texto suelto sobre el celeste. */}
         {data.proximaVisita && (
-          <div
-            className="mt-1 flex items-center justify-between rounded-[18px] px-[18px] py-4"
-            style={GLASS}
-          >
+          <div className="kap-glass mt-1 flex items-center justify-between rounded-[18px] px-[18px] py-4">
+
             <div className="flex flex-col gap-0.5 min-w-0">
               <span
                 className="text-[11px] font-bold uppercase"
@@ -238,16 +225,19 @@ function MetricCard({
   href,
   value,
   label,
+  breathe = false,
 }: {
   href: string;
   value: number;
   label: string;
+  breathe?: boolean;
 }) {
   return (
     <Link
       href={href}
-      className="flex-1 flex flex-col gap-5 rounded-[18px] p-4 active:opacity-90 transition-opacity"
-      style={GLASS}
+      className={`kap-glass flex-1 flex flex-col gap-5 rounded-[18px] p-4 ${
+        breathe ? "kap-glass-breathe" : ""
+      }`}
     >
       <span
         className="font-extrabold leading-none"
@@ -282,8 +272,7 @@ function PanelRow({
   return (
     <Link
       href={href}
-      className="flex items-center justify-between rounded-[18px] px-[18px] py-4 active:opacity-90 transition-opacity"
-      style={GLASS}
+      className="kap-glass flex items-center justify-between rounded-[18px] px-[18px] py-4"
     >
       <span className="text-[16px] font-bold" style={{ color: NEGRO }}>
         {title}

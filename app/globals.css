@@ -886,3 +886,111 @@
   color: var(--accent-bike);
   text-shadow: 0 0 8px color-mix(in srgb, var(--accent-bike) 55%, transparent);
 }
+
+/* ── Kapusta: botones "simil vidrio" del panel del equipo ──────────────
+   Ver app/dashboard/inicio/kapusta-team-panel.tsx. Base celeste
+   translúcida + blur, más tres detalles pedidos por Die:
+   1. ::before  → reflejo de luz diagonal en la parte superior (highlight
+                  de vidrio real, no solo un rectángulo semitransparente).
+   2. ::after   → glow celeste que se expande desde la base al presionar,
+                  para dar sensación de que el botón "se ilumina" al tacto.
+   3. .kap-glass-breathe → pulso/respiración del glow mientras haya al
+                  menos una consulta sin atender (se saca al volver a 0). */
+.kap-glass {
+  position: relative;
+  isolation: isolate;
+  background-color: rgba(1, 128, 171, 0.32);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(1, 128, 171, 0.28);
+  box-shadow:
+    0 10px 24px -10px rgba(1, 128, 171, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  transition: transform 140ms ease, box-shadow 240ms ease;
+}
+
+/* 1 — reflejo de vidrio: claro arriba-izquierda → transparente hacia abajo */
+.kap-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    150deg,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(216, 241, 249, 0.2) 30%,
+    rgba(255, 255, 255, 0) 58%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 2 — resplandor celeste que se enciende desde la base al presionar.
+   Va por encima del relleno (z-index 0) para leerse como una luz en el
+   canto inferior del botón, y desborda un poco hacia abajo. */
+.kap-glass::after {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: -8px;
+  height: 22px;
+  border-radius: 999px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(120, 210, 240, 0.9) 0%,
+    rgba(1, 128, 171, 0.55) 35%,
+    rgba(1, 128, 171, 0) 72%
+  );
+  filter: blur(7px);
+  opacity: 0;
+  transform: scaleX(0.55);
+  transform-origin: center bottom;
+  transition: opacity 200ms ease, transform 220ms ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* el contenido va por encima del reflejo */
+.kap-glass > * {
+  position: relative;
+  z-index: 2;
+}
+
+.kap-glass:active {
+  transform: scale(0.985);
+  filter: brightness(1.07) saturate(1.08);
+}
+.kap-glass:active::after {
+  opacity: 1;
+  transform: scaleX(1); /* el resplandor se expande desde la base */
+}
+
+/* 3 — respiración mientras hay consultas sin atender */
+@keyframes kap-glass-breathe {
+  0%,
+  100% {
+    box-shadow:
+      0 10px 24px -10px rgba(1, 128, 171, 0.3),
+      0 0 0 0 rgba(1, 128, 171, 0),
+      inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  }
+  50% {
+    box-shadow:
+      0 12px 26px -8px rgba(1, 128, 171, 0.42),
+      0 0 24px 6px rgba(1, 128, 171, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  }
+}
+.kap-glass-breathe {
+  animation: kap-glass-breathe 2600ms ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kap-glass-breathe {
+    animation: none;
+  }
+  .kap-glass {
+    transition: none;
+  }
+}
