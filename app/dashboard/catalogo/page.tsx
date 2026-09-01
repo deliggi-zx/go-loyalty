@@ -81,15 +81,32 @@ export default async function CatalogoPage() {
   return (
     <div className="flex-1 overflow-y-auto">
       <header className="bg-white border-b border-stone-200 px-8 h-16 flex items-center justify-between shrink-0">
-        <div>
-          <h1 className="text-lg font-semibold text-stone-900">Catálogo</h1>
-          <p className="text-xs text-stone-400">
-            Gestioná las categorías y productos de tu negocio
-          </p>
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Volver al panel — sin esto, un empleado que entra al catálogo
+              desde el panel (o el ícono del sitio público) queda sin forma
+              de volver en mobile, donde no hay sidebar. Para Domus/Kapusta
+              apunta al panel principal; el resto de las orgs no usa esa
+              ruta (redirige) — les damos el dashboard genérico. */}
+          <Link
+            href={isDomus ? "/dashboard/inicio" : "/dashboard"}
+            className="text-sm text-stone-400 hover:text-stone-700 transition-colors shrink-0"
+          >
+            {isDomus ? "‹ Inicio" : "‹ Dashboard"}
+          </Link>
+          <div className="min-w-0">
+            <h1 className="text-lg font-semibold text-stone-900 truncate">
+              {isDomus ? "Catálogo de propiedades" : "Catálogo"}
+            </h1>
+            <p className="text-xs text-stone-400 truncate">
+              {isDomus
+                ? "Gestioná las propiedades y sus categorías"
+                : "Gestioná las categorías y productos de tu negocio"}
+            </p>
+          </div>
         </div>
         <Link
           href="/dashboard/catalogo/carruseles"
-          className="text-sm font-medium text-stone-600 hover:text-stone-900 border border-stone-200 hover:bg-stone-50 px-4 py-2 rounded-lg transition-colors"
+          className="shrink-0 text-sm font-medium text-stone-600 hover:text-stone-900 border border-stone-200 hover:bg-stone-50 px-4 py-2 rounded-lg transition-colors"
         >
           Carruseles de la home →
         </Link>

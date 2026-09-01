@@ -5,6 +5,7 @@ import { getOrgId } from "@/lib/supabase/get-org";
 import { ProductForm } from "../../product-form";
 import { ProductImagesManager } from "../../product-images-manager";
 import { ProductSpecsManager } from "../../product-specs-manager";
+import { PropertySpecsForm } from "../../property-specs-form";
 import { ProductCarouselsManager } from "../../product-carousels-manager";
 
 export default async function EditarProductoPage({
@@ -54,6 +55,10 @@ export default async function EditarProductoPage({
 
   if (!product) return notFound();
 
+  // Catálogo inmobiliario (Domus / Kapusta): el editor de specs genérico
+  // clave/valor se reemplaza por el formulario orientado al rubro.
+  const isDomus = org?.slug === "domus" || org?.slug === "kapusta";
+
   return (
     <div className="flex-1 overflow-y-auto">
       <header className="bg-white border-b border-stone-200 px-8 h-16 flex items-center gap-3 shrink-0">
@@ -74,10 +79,17 @@ export default async function EditarProductoPage({
           images={images ?? []}
           orgSlug={org?.slug}
         />
-        <ProductSpecsManager
-          productId={product.id}
-          specs={(product.specs as Record<string, string> | null) ?? {}}
-        />
+        {isDomus ? (
+          <PropertySpecsForm
+            productId={product.id}
+            specs={(product.specs as Record<string, string> | null) ?? {}}
+          />
+        ) : (
+          <ProductSpecsManager
+            productId={product.id}
+            specs={(product.specs as Record<string, string> | null) ?? {}}
+          />
+        )}
         <ProductCarouselsManager
           productId={product.id}
           carousels={carousels ?? []}
