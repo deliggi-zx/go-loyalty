@@ -21,25 +21,23 @@ const NEGRO = "#0B1417";
 const TXT_SOBRE_VIDRIO = "rgba(11, 20, 23, 0.62)"; // secundario sobre el vidrio celeste
 
 // Estilo "simil vidrio" (glassmorphism) celeste para los botones/tarjetas
-// del panel (pedido de Die, opción C). La hoja inferior pasó de casi
-// blanca a un degradé celeste, así el blur y la profundidad se notan de
-// verdad. Fondo celeste translúcido —no muy transparente—, blur del
-// fondo, borde blanco sutil, sombra suave hacia abajo + brillo interno
-// arriba. Texto en el negro de marca, que sobre el celeste da la mejor
-// legibilidad.
+// del panel. La hoja donde se apoyan es blanca (pedido de Die), así que
+// el vidrio celeste destaca por contraste de color: fondo celeste
+// translúcido —no muy transparente—, blur del fondo, borde celeste sutil
+// que define el canto contra el blanco, sombra celeste suave hacia abajo
+// (glow) + brillo blanco interno arriba. Texto en el negro de marca.
 const GLASS: React.CSSProperties = {
-  backgroundColor: "rgba(1, 128, 171, 0.30)", // #0180AB @ 30%
+  backgroundColor: "rgba(1, 128, 171, 0.32)", // #0180AB @ 32%
   backdropFilter: "blur(14px)",
   WebkitBackdropFilter: "blur(14px)",
-  border: "1px solid rgba(255, 255, 255, 0.6)",
+  border: "1px solid rgba(1, 128, 171, 0.28)",
   boxShadow:
-    "0 14px 30px -12px rgba(11, 20, 23, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.4)",
+    "0 10px 24px -10px rgba(1, 128, 171, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.55)",
 };
 
-// Degradé celeste de la hoja inferior — arranca cerca del celeste de
-// marca del saludo y se profundiza hacia abajo, para dar textura detrás
-// del vidrio.
-const SHEET_BG = "linear-gradient(180deg, #6FC1E4 0%, #4CA4D2 100%)";
+// La hoja inferior del panel: blanca, para que el vidrio celeste de los
+// botones destaque.
+const SHEET_BG = "#FFFFFF";
 
 const UNIDADES = ["cero", "una", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"];
 
@@ -160,11 +158,11 @@ export function KapustaTeamPanel({
         </div>
       </div>
 
-      {/* Hoja inferior — degradé celeste (opción C): da textura detrás del
-          vidrio de los botones. */}
+      {/* Hoja inferior — blanca: hace que el vidrio celeste de los botones
+          destaque por contraste. */}
       <div
         className="flex-1 px-5 pt-6 pb-8 space-y-3"
-        style={{ background: SHEET_BG, borderRadius: "28px 28px 0 0" }}
+        style={{ backgroundColor: SHEET_BG, borderRadius: "28px 28px 0 0" }}
       >
         {/* a) dos tarjetas métricas — mismo vidrio celeste que el resto,
             para que quede consistente (pedido de Die). */}
