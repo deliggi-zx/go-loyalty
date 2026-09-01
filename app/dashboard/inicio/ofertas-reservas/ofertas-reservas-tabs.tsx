@@ -8,6 +8,8 @@ import { ReservasManager, type ReservationRow } from "@/app/dashboard/reservas/r
 interface OfertasReservasTabsProps {
   offers: OfferRow[];
   reservations: ReservationRow[];
+  // Kapusta: estilo "simil vidrio" en tarjetas y pestañas.
+  glass?: boolean;
 }
 
 // Fase reorganizar panel: pantalla combinada para el botón "Ofertas/
@@ -17,14 +19,19 @@ interface OfertasReservasTabsProps {
 // muestra. Pestañas en vez de secciones apiladas (Gate 0): las dos listas
 // pueden ser largas por separado, apilarlas obligaría a un scroll doble
 // sin necesidad.
-export function OfertasReservasTabs({ offers, reservations }: OfertasReservasTabsProps) {
+export function OfertasReservasTabs({ offers, reservations, glass = false }: OfertasReservasTabsProps) {
   const [tab, setTab] = useState<"ofertas" | "reservas">("ofertas");
 
   const tabBtnClass = (active: boolean) =>
-    cn(
-      "px-4 py-2 text-sm font-medium rounded-lg transition-colors",
-      active ? "bg-amber-100 text-amber-700" : "text-stone-500 hover:bg-stone-100"
-    );
+    glass
+      ? cn(
+          "px-4 py-2 text-sm font-medium rounded-xl transition-colors",
+          active ? "kap-glass text-[#0B1417]" : "text-[#0B1417]/60 hover:bg-black/5"
+        )
+      : cn(
+          "px-4 py-2 text-sm font-medium rounded-lg transition-colors",
+          active ? "bg-amber-100 text-amber-700" : "text-stone-500 hover:bg-stone-100"
+        );
 
   return (
     <div className="space-y-4">
@@ -41,7 +48,11 @@ export function OfertasReservasTabs({ offers, reservations }: OfertasReservasTab
         </button>
       </div>
 
-      {tab === "ofertas" ? <OfertasManager offers={offers} /> : <ReservasManager reservations={reservations} />}
+      {tab === "ofertas" ? (
+        <OfertasManager offers={offers} glass={glass} />
+      ) : (
+        <ReservasManager reservations={reservations} glass={glass} />
+      )}
     </div>
   );
 }

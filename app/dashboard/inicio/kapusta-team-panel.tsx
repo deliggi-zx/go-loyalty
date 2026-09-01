@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { getMorningSummary } from "./domus-morning-summary-actions";
 import { GENERIC_SUMMARY_TEXTS } from "./morning-summary-constants";
+import { GlassLink } from "./kapusta-glass";
 import type { KapustaPanelData } from "./kapusta-panel-data";
 
 // Panel del equipo de Kapusta rediseñado — ver handoff/KAPUSTA_PANEL_SPEC.md.
@@ -78,9 +78,11 @@ export function KapustaTeamPanel({
       const n = data.consultasSinAsignar;
       return `${capitalizar(enPalabras(n))} ${n === 1 ? "consulta espera" : "consultas esperan"} respuesta.`;
     }
-    if (data.visitasHoy > 0) {
-      const n = data.visitasHoy;
-      return `${capitalizar(enPalabras(n))} ${n === 1 ? "visita confirmada" : "visitas confirmadas"} para hoy.`;
+    if (data.visitasReunionesHoy > 0) {
+      const n = data.visitasReunionesHoy;
+      return `${capitalizar(enPalabras(n))} ${
+        n === 1 ? "visita o reunión" : "visitas y reuniones"
+      } para hoy.`;
     }
     if (data.ofertasReservasNuevas > 0) {
       const n = data.ofertasReservasNuevas;
@@ -163,8 +165,8 @@ export function KapustaTeamPanel({
           />
           <MetricCard
             href="/dashboard/inicio/reuniones"
-            value={data.visitasHoy}
-            label="Visitas hoy"
+            value={data.visitasReunionesHoy}
+            label="Visitas/Reuniones"
           />
         </div>
 
@@ -218,52 +220,6 @@ export function KapustaTeamPanel({
         )}
       </div>
     </div>
-  );
-}
-
-// Link con el estilo vidrio + glow al presionar manejado por eventos de
-// puntero explícitos, NO solo por :active. En mobile :active es poco
-// confiable y, como estas tarjetas navegan a otra pantalla al tocarlas,
-// el efecto no llega a verse. onPointerDown enciende el glow al instante;
-// se apaga con un pequeño delay al soltar/cancelar (o al desmontar por la
-// navegación, que es lo más común acá).
-function GlassLink({
-  href,
-  className,
-  breathe = false,
-  children,
-}: {
-  href: string;
-  className: string;
-  breathe?: boolean;
-  children: ReactNode;
-}) {
-  const [lit, setLit] = useState(false);
-  const dimTimer = useRef<ReturnType<typeof setTimeout>>();
-
-  function light() {
-    clearTimeout(dimTimer.current);
-    setLit(true);
-  }
-  function dim() {
-    clearTimeout(dimTimer.current);
-    dimTimer.current = setTimeout(() => setLit(false), 280);
-  }
-  useEffect(() => () => clearTimeout(dimTimer.current), []);
-
-  return (
-    <Link
-      href={href}
-      className={`kap-glass ${breathe ? "kap-glass-breathe " : ""}${
-        lit ? "kap-glass-lit " : ""
-      }${className}`}
-      onPointerDown={light}
-      onPointerUp={dim}
-      onPointerCancel={dim}
-      onPointerLeave={dim}
-    >
-      {children}
-    </Link>
   );
 }
 

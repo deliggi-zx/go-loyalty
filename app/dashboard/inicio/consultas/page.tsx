@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { cn, formatPrice } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
+import { GlassLink } from "../kapusta-glass";
 
 // Fase 1c (rol agente): antes solo admin, ahora también agente — mismo
 // criterio ALLOWED_ROLES que /dashboard/consultas (el gerente sigue
@@ -38,6 +39,10 @@ export default async function InicioConsultasPage() {
 
   if (org?.slug !== "domus" && org?.slug !== "kapusta") redirect("/dashboard");
   if (!membership || !ALLOWED_ROLES.includes(membership.role)) redirect("/dashboard");
+
+  // Kapusta: mismo lenguaje visual "simil vidrio" que el panel principal
+  // en toda la sección — Domus queda con las cards blancas de siempre.
+  const isKapusta = org?.slug === "kapusta";
 
   // Fase 1c (rol agente): mismo filtro de visibilidad que
   // /dashboard/consultas — el gerente ve todas las consultas generales
@@ -110,30 +115,51 @@ export default async function InicioConsultasPage() {
     })),
   ].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
+  const CardTag = isKapusta ? GlassLink : Link;
+  const cardClass = isKapusta
+    ? "block rounded-2xl p-4 space-y-1"
+    : "block bg-white rounded-xl border border-stone-200 p-4 space-y-1 hover:border-amber-300 transition-colors";
+
   return (
-    <div className="flex-1 overflow-y-auto">
-      <header className="bg-white border-b border-stone-200 px-8 h-16 flex items-center gap-3 shrink-0">
-        <Link href="/dashboard/inicio" className="text-sm text-stone-400 hover:text-stone-700 transition-colors">
+    <div className={cn("flex-1 overflow-y-auto", isKapusta && "bg-white")}>
+      <header
+        className={cn(
+          "border-b px-8 h-16 flex items-center gap-3 shrink-0",
+          isKapusta ? "bg-[#69BDE1] border-[#4FA6D3]" : "bg-white border-stone-200"
+        )}
+      >
+        <Link
+          href="/dashboard/inicio"
+          className={cn(
+            "text-sm transition-colors",
+            isKapusta ? "text-[#0B1417]/70 hover:text-[#0B1417]" : "text-stone-400 hover:text-stone-700"
+          )}
+        >
           ‹ Inicio
         </Link>
-        <h1 className="text-lg font-semibold text-stone-900">Consultas</h1>
+        <h1 className={cn("text-lg font-semibold", isKapusta ? "text-[#0B1417]" : "text-stone-900")}>
+          Consultas
+        </h1>
       </header>
 
       <div className="p-8">
         {rows.length === 0 ? (
-          <div className="bg-white rounded-xl border border-dashed border-stone-200 py-16 text-center text-stone-400 text-sm">
+          <div
+            className={cn(
+              "rounded-xl py-16 text-center text-sm",
+              isKapusta
+                ? "kap-glass text-[#0B1417]/60"
+                : "bg-white border border-dashed border-stone-200 text-stone-400"
+            )}
+          >
             No hay nada pendiente por resolver.
           </div>
         ) : (
           <div className="space-y-3 max-w-3xl">
             {rows.map((row) => (
-              <Link
-                key={`${row.type}-${row.id}`}
-                href={row.href}
-                className="block bg-white rounded-xl border border-stone-200 p-4 space-y-1 hover:border-amber-300 transition-colors"
-              >
+              <CardTag key={`${row.type}-${row.id}`} href={row.href} className={cardClass}>
                 <div className="flex items-start justify-between gap-3">
-                  <p className="text-sm font-semibold text-stone-900">
+                  <p className={cn("text-sm font-semibold", isKapusta ? "text-[#0B1417]" : "text-stone-900")}>
                     {row.name} · {row.phone}
                   </p>
                   <span
@@ -145,8 +171,8 @@ export default async function InicioConsultasPage() {
                     {row.type === "consulta" ? "Consulta general" : "Oferta de propiedad"}
                   </span>
                 </div>
-                <p className="text-sm text-stone-600">{row.summary}</p>
-                <p className="text-xs text-stone-400">
+                <p className={cn("text-sm", isKapusta ? "text-[#0B1417]/80" : "text-stone-600")}>{row.summary}</p>
+                <p className={cn("text-xs", isKapusta ? "text-[#0B1417]/55" : "text-stone-400")}>
                   {new Date(row.createdAt).toLocaleDateString("es-AR", {
                     day: "numeric",
                     month: "short",
@@ -154,7 +180,7 @@ export default async function InicioConsultasPage() {
                     minute: "2-digit",
                   })}
                 </p>
-              </Link>
+              </CardTag>
             ))}
           </div>
         )}

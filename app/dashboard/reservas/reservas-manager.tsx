@@ -13,6 +13,8 @@ export interface ReservationRow {
 
 interface ReservasManagerProps {
   reservations: ReservationRow[];
+  // Kapusta: tarjetas "simil vidrio". Default false = blancas de siempre.
+  glass?: boolean;
 }
 
 function formatDate(iso: string): string {
@@ -28,10 +30,17 @@ function formatDate(iso: string): string {
 // + dos acciones de estado, sacando la fila de la lista en cuanto se
 // confirma o rechaza (esta pantalla solo muestra pendientes — una vez
 // resuelta, ya no pertenece acá).
-export function ReservasManager({ reservations: initialReservations }: ReservasManagerProps) {
+export function ReservasManager({ reservations: initialReservations, glass = false }: ReservasManagerProps) {
   const [isPending, startTransition] = useTransition();
   const [reservations, setReservations] = useState(initialReservations);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  const cardClass = glass
+    ? "kap-glass rounded-2xl p-4 space-y-3"
+    : "bg-white rounded-xl border border-stone-200 p-4 space-y-3";
+  const emptyClass = glass
+    ? "kap-glass rounded-xl py-16 text-center text-[#0B1417]/60 text-sm"
+    : "bg-white rounded-xl border border-dashed border-stone-200 py-16 text-center text-stone-400 text-sm";
 
   function handleConfirm(id: string) {
     setUpdatingId(id);
@@ -52,17 +61,13 @@ export function ReservasManager({ reservations: initialReservations }: ReservasM
   }
 
   if (reservations.length === 0) {
-    return (
-      <div className="bg-white rounded-xl border border-dashed border-stone-200 py-16 text-center text-stone-400 text-sm">
-        No hay reservas pendientes.
-      </div>
-    );
+    return <div className={emptyClass}>No hay reservas pendientes.</div>;
   }
 
   return (
     <div className="space-y-3 max-w-3xl">
       {reservations.map((r) => (
-        <div key={r.id} className="bg-white rounded-xl border border-stone-200 p-4 space-y-3">
+        <div key={r.id} className={cardClass}>
           <div>
             <p className="text-sm font-semibold text-stone-900">{r.propertyName}</p>
             <p className="text-xs text-stone-500">

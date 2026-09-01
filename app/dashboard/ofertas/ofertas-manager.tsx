@@ -28,6 +28,9 @@ export interface OfferRow {
 
 interface OfertasManagerProps {
   offers: OfferRow[];
+  // Kapusta: tarjetas "simil vidrio". Default false = blancas de siempre
+  // (pantalla /dashboard/ofertas standalone, Domus).
+  glass?: boolean;
 }
 
 const STATUS_LABEL: Record<OfferRow["status"], string> = {
@@ -71,7 +74,13 @@ function nowLocalForInput(): string {
 // global. Acá cada fila tiene más datos (galería de fotos, ficha
 // completa), por eso es una card en vez de una fila de tabla — mismo
 // criterio de "card" que ya usa ConsultasManager, no una tabla nueva.
-export function OfertasManager({ offers: initialOffers }: OfertasManagerProps) {
+export function OfertasManager({ offers: initialOffers, glass = false }: OfertasManagerProps) {
+  const cardClass = glass
+    ? "kap-glass rounded-2xl p-4 space-y-3"
+    : "bg-white rounded-xl border border-stone-200 p-4 space-y-3";
+  const emptyClass = glass
+    ? "kap-glass rounded-xl py-16 text-center text-[#0B1417]/60 text-sm"
+    : "bg-white rounded-xl border border-dashed border-stone-200 py-16 text-center text-stone-400 text-sm";
   const [isPending, startTransition] = useTransition();
   const [offers, setOffers] = useState(initialOffers);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -113,11 +122,7 @@ export function OfertasManager({ offers: initialOffers }: OfertasManagerProps) {
   }
 
   if (offers.length === 0) {
-    return (
-      <div className="bg-white rounded-xl border border-dashed border-stone-200 py-16 text-center text-stone-400 text-sm">
-        No hay ofertas todavía.
-      </div>
-    );
+    return <div className={emptyClass}>No hay ofertas todavía.</div>;
   }
 
   return (
@@ -134,7 +139,7 @@ export function OfertasManager({ offers: initialOffers }: OfertasManagerProps) {
         );
 
         return (
-          <div key={offer.id} className="bg-white rounded-xl border border-stone-200 p-4 space-y-3">
+          <div key={offer.id} className={cardClass}>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-stone-900">

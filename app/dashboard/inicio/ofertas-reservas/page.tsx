@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
 import { OfertasReservasTabs } from "./ofertas-reservas-tabs";
@@ -38,6 +39,8 @@ export default async function InicioOfertasReservasPage() {
 
   if (org?.slug !== "domus" && org?.slug !== "kapusta") redirect("/dashboard");
   if (!membership || !ALLOWED_ROLES.includes(membership.role)) redirect("/dashboard");
+
+  const isKapusta = org?.slug === "kapusta";
 
   const [{ data: offersData }, { data: reservationsData }] = await Promise.all([
     supabase
@@ -123,16 +126,29 @@ export default async function InicioOfertasReservasPage() {
   }));
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      <header className="bg-white border-b border-stone-200 px-8 h-16 flex items-center gap-3 shrink-0">
-        <Link href="/dashboard/inicio" className="text-sm text-stone-400 hover:text-stone-700 transition-colors">
+    <div className={cn("flex-1 overflow-y-auto", isKapusta && "bg-white")}>
+      <header
+        className={cn(
+          "border-b px-8 h-16 flex items-center gap-3 shrink-0",
+          isKapusta ? "bg-[#69BDE1] border-[#4FA6D3]" : "bg-white border-stone-200"
+        )}
+      >
+        <Link
+          href="/dashboard/inicio"
+          className={cn(
+            "text-sm transition-colors",
+            isKapusta ? "text-[#0B1417]/70 hover:text-[#0B1417]" : "text-stone-400 hover:text-stone-700"
+          )}
+        >
           ‹ Inicio
         </Link>
-        <h1 className="text-lg font-semibold text-stone-900">Ofertas/Reservas</h1>
+        <h1 className={cn("text-lg font-semibold", isKapusta ? "text-[#0B1417]" : "text-stone-900")}>
+          Ofertas y reservas
+        </h1>
       </header>
 
       <div className="p-8">
-        <OfertasReservasTabs offers={offerRows} reservations={reservationRows} />
+        <OfertasReservasTabs offers={offerRows} reservations={reservationRows} glass={isKapusta} />
       </div>
     </div>
   );

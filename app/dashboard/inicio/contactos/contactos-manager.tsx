@@ -23,6 +23,9 @@ export interface ContactRow {
 
 interface ContactosManagerProps {
   contacts: ContactRow[];
+  // Kapusta: tarjetas "simil vidrio" en vez de blancas, para que la
+  // sección se sienta consistente con el panel. Default false = Domus.
+  glass?: boolean;
 }
 
 const TYPE_LABEL: Record<ContactInteraction["type"], string> = {
@@ -53,9 +56,16 @@ function formatDate(iso: string): string {
 // server en cada tecla. Mismo espíritu "solo lectura, sin acciones" que
 // la versión anterior: las acciones de cambio de estado siguen viviendo
 // en Consultas/Ofertas-Reservas/Visitas.
-export function ContactosManager({ contacts }: ContactosManagerProps) {
+export function ContactosManager({ contacts, glass = false }: ContactosManagerProps) {
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const cardClass = glass
+    ? "kap-glass rounded-2xl p-4 space-y-3"
+    : "bg-white rounded-xl border border-stone-200 p-4 space-y-3";
+  const emptyClass = glass
+    ? "kap-glass rounded-xl py-16 text-center text-[#0B1417]/60 text-sm"
+    : "bg-white rounded-xl border border-dashed border-stone-200 py-16 text-center text-stone-400 text-sm";
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -76,14 +86,14 @@ export function ContactosManager({ contacts }: ContactosManagerProps) {
       />
 
       {filtered.length === 0 ? (
-        <div className="bg-white rounded-xl border border-dashed border-stone-200 py-16 text-center text-stone-400 text-sm">
+        <div className={emptyClass}>
           {contacts.length === 0 ? "Todavía no hay contactos." : "Ningún contacto coincide con la búsqueda."}
         </div>
       ) : (
         filtered.map((c) => {
           const expanded = expandedId === c.profileId;
           return (
-            <div key={c.profileId} className="bg-white rounded-xl border border-stone-200 p-4 space-y-3">
+            <div key={c.profileId} className={cardClass}>
               <div>
                 <p className="text-sm font-semibold text-stone-900">{c.name}</p>
                 <p className="text-xs text-stone-500">

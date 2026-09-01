@@ -14,7 +14,8 @@ import { getDomusAgentBadgeCounts } from "./domus-badge-counts";
 
 export interface KapustaPanelData {
   consultasSinAsignar: number;
-  visitasHoy: number;
+  // Visitas confirmadas + reuniones (de ofertas y manuales) para hoy.
+  visitasReunionesHoy: number;
   ofertasReservasNuevas: number;
   seguimientosEnCurso: number;
   fichasCartera: number;
@@ -42,6 +43,7 @@ export async function getKapustaPanelData(
     { data: carteraOffers },
     { data: carteraVisits },
     { data: proximasVisitas },
+    { count: meetingsTodayCount },
   ] = await Promise.all([
     getDomusAgentBadgeCounts(orgId, agentProfileId),
     supabase
@@ -73,6 +75,11 @@ export async function getKapustaPanelData(
       .order("visit_date", { ascending: true })
       .order("visit_time", { ascending: true })
       .limit(8),
+    supabase
+      .from("kapusta_meetings")
+      .select("id", { count: "exact", head: true })
+      .eq("org_id", orgId)
+      .eq("meeting_date", today),
   ]);
 
   // Cartera de clientes: profiles distintos que aparecen en cualquiera de
@@ -107,7 +114,7 @@ export async function getKapustaPanelData(
 
   return {
     consultasSinAsignar: badgeCounts.consultasNuevoCount,
-    visitasHoy: badgeCounts.reunionesHoyCount,
+    visitasReunionesHoy: badgeCounts.reunionesHoyCount + (meetingsTodayCount ?? 0),
     ofertasReservasNuevas: badgeCounts.ofertasReservasCount,
     seguimientosEnCurso: (seguimientoOffersCount ?? 0) + (seguimientoInquiriesCount ?? 0),
     fichasCartera: carteraIds.size,

@@ -8,6 +8,8 @@ import { PriceListManager } from "./price-list-manager";
 import { ContactForm } from "./contact-form";
 import { RequirementsForm } from "./requirements-form";
 import { WorkshopCapacityForm } from "./workshop-capacity-form";
+import { GoogleCalendarConnect } from "./google-calendar-connect";
+import { getConnectionInfo, isCalendarConfigured } from "@/lib/google-calendar-oauth";
 
 export default async function ConfiguracionPage() {
   const supabase = createClient();
@@ -38,6 +40,19 @@ export default async function ConfiguracionPage() {
   const promoItems = contentRes.data?.filter((c) => c.type === "promo") ?? [];
   const priceItems =
     contentRes.data?.filter((c) => c.type === "price_list") ?? [];
+
+  // Google Calendar (solo Kapusta): estado de la conexión + rol del
+  // usuario para saber si puede conectar/desconectar.
+  const isKapusta = org.slug === "kapusta";
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const [{ data: membership }, calendarConnection] = await Promise.all([
+    isKapusta && user
+      ? supabase.from("loyalty_members").select("role").eq("org_id", orgId).eq("profile_id", user.id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    isKapusta ? getConnectionInfo(orgId) : Promise.resolve(null),
+  ]);
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -71,6 +86,15 @@ export default async function ConfiguracionPage() {
         {/* Fase Requisitos: solo Domus tiene "venta"/"alquiler" como
             concepto — el resto de las orgs no ve este bloque. */}
         {(org.slug === "domus" || org.slug === "kapusta") && <RequirementsForm org={org} />}
+        {/* Google Calendar compartido — solo Kapusta (ver Visitas/Reuniones). */}
+        {isKapusta && (
+          <GoogleCalendarConnect
+            configured={isCalendarConfigured()}
+            connectedEmail={calendarConnection?.connectedEmail ?? null}
+            connectedAt={calendarConnection?.connectedAt ?? null}
+            canManage={membership?.role === "admin"}
+          />
+        )}
         {/* Fase T1 "Mundo Bike" Taller: solo bike tiene taller de service —
             el resto de las orgs no ve este bloque. */}
         {org.slug === "bike" && <WorkshopCapacityForm org={org} />}
