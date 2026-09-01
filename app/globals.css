@@ -906,7 +906,7 @@
   box-shadow:
     0 10px 24px -10px rgba(1, 128, 171, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.55);
-  transition: transform 140ms ease, box-shadow 240ms ease;
+  transition: transform 140ms ease, box-shadow 240ms ease, filter 200ms ease;
 }
 
 /* 1 — reflejo de vidrio: claro arriba-izquierda → transparente hacia abajo */
@@ -926,27 +926,27 @@
 }
 
 /* 2 — resplandor celeste que se enciende desde la base al presionar.
-   Va por encima del relleno (z-index 0) para leerse como una luz en el
-   canto inferior del botón, y desborda un poco hacia abajo. */
+   Desborda hacia abajo y se difumina, para leerse como una luz saliendo
+   del canto inferior del botón. */
 .kap-glass::after {
   content: "";
   position: absolute;
-  left: 8%;
-  right: 8%;
-  bottom: -8px;
-  height: 22px;
+  left: 4%;
+  right: 4%;
+  bottom: -16px;
+  height: 44px;
   border-radius: 999px;
   background: radial-gradient(
     ellipse at center,
-    rgba(120, 210, 240, 0.9) 0%,
-    rgba(1, 128, 171, 0.55) 35%,
-    rgba(1, 128, 171, 0) 72%
+    rgba(150, 224, 248, 0.95) 0%,
+    rgba(1, 128, 171, 0.6) 38%,
+    rgba(1, 128, 171, 0) 74%
   );
-  filter: blur(7px);
+  filter: blur(8px);
   opacity: 0;
-  transform: scaleX(0.55);
+  transform: scaleX(0.5);
   transform-origin: center bottom;
-  transition: opacity 200ms ease, transform 220ms ease;
+  transition: opacity 240ms ease, transform 260ms ease;
   pointer-events: none;
   z-index: 0;
 }
@@ -957,13 +957,29 @@
   z-index: 2;
 }
 
+/* Encendido al presionar. Se maneja por dos vías:
+   - .kap-glass-lit → clase que agrega kapusta-team-panel.tsx en
+     onPointerDown / onPointerUp. En mobile :active es poco confiable y,
+     como la tarjeta navega a otra pantalla al tocarla, el efecto no llega
+     a verse — por eso se dispara por evento explícito.
+   - :active → respaldo para mouse/desktop.
+   Al encenderse, el resplandor y el brillo aparecen casi al toque
+   (transición corta); al soltarse se desvanecen con la transición larga
+   de base. */
+.kap-glass-lit,
 .kap-glass:active {
-  transform: scale(0.985);
-  filter: brightness(1.07) saturate(1.08);
+  transform: scale(0.98);
+  filter: brightness(1.1) saturate(1.14);
+  box-shadow:
+    0 14px 30px -6px rgba(1, 128, 171, 0.5),
+    0 4px 26px 2px rgba(1, 128, 171, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
+.kap-glass-lit::after,
 .kap-glass:active::after {
   opacity: 1;
   transform: scaleX(1); /* el resplandor se expande desde la base */
+  transition-duration: 70ms, 110ms;
 }
 
 /* 3 — respiración mientras hay consultas sin atender */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { getMorningSummary } from "./domus-morning-summary-actions";
 import { GENERIC_SUMMARY_TEXTS } from "./morning-summary-constants";
@@ -221,6 +221,52 @@ export function KapustaTeamPanel({
   );
 }
 
+// Link con el estilo vidrio + glow al presionar manejado por eventos de
+// puntero explícitos, NO solo por :active. En mobile :active es poco
+// confiable y, como estas tarjetas navegan a otra pantalla al tocarlas,
+// el efecto no llega a verse. onPointerDown enciende el glow al instante;
+// se apaga con un pequeño delay al soltar/cancelar (o al desmontar por la
+// navegación, que es lo más común acá).
+function GlassLink({
+  href,
+  className,
+  breathe = false,
+  children,
+}: {
+  href: string;
+  className: string;
+  breathe?: boolean;
+  children: ReactNode;
+}) {
+  const [lit, setLit] = useState(false);
+  const dimTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  function light() {
+    clearTimeout(dimTimer.current);
+    setLit(true);
+  }
+  function dim() {
+    clearTimeout(dimTimer.current);
+    dimTimer.current = setTimeout(() => setLit(false), 280);
+  }
+  useEffect(() => () => clearTimeout(dimTimer.current), []);
+
+  return (
+    <Link
+      href={href}
+      className={`kap-glass ${breathe ? "kap-glass-breathe " : ""}${
+        lit ? "kap-glass-lit " : ""
+      }${className}`}
+      onPointerDown={light}
+      onPointerUp={dim}
+      onPointerCancel={dim}
+      onPointerLeave={dim}
+    >
+      {children}
+    </Link>
+  );
+}
+
 function MetricCard({
   href,
   value,
@@ -233,11 +279,10 @@ function MetricCard({
   breathe?: boolean;
 }) {
   return (
-    <Link
+    <GlassLink
       href={href}
-      className={`kap-glass flex-1 flex flex-col gap-5 rounded-[18px] p-4 ${
-        breathe ? "kap-glass-breathe" : ""
-      }`}
+      breathe={breathe}
+      className="flex-1 flex flex-col gap-5 rounded-[18px] p-4"
     >
       <span
         className="font-extrabold leading-none"
@@ -251,7 +296,7 @@ function MetricCard({
       >
         {label}
       </span>
-    </Link>
+    </GlassLink>
   );
 }
 
@@ -270,9 +315,9 @@ function PanelRow({
 }) {
   const showChip = count > 0 && pendingLabel;
   return (
-    <Link
+    <GlassLink
       href={href}
-      className="kap-glass flex items-center justify-between rounded-[18px] px-[18px] py-4"
+      className="flex items-center justify-between rounded-[18px] px-[18px] py-4"
     >
       <span className="text-[16px] font-bold" style={{ color: NEGRO }}>
         {title}
@@ -294,6 +339,6 @@ function PanelRow({
           ›
         </span>
       </span>
-    </Link>
+    </GlassLink>
   );
 }
