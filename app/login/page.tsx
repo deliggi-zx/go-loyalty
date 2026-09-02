@@ -1,4 +1,5 @@
 import { login } from "./actions";
+import { PasswordField } from "./password-field";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,23 +71,8 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Contraseña</Label>
-                  <a
-                    href="/forgot-password"
-                    className="text-xs text-amber-600 hover:text-amber-700 hover:underline"
-                  >
-                    ¿Olvidaste tu contraseña?
-                  </a>
-                </div>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  autoComplete="current-password"
-                  className="border-stone-200 focus-visible:ring-amber-500"
-                />
+                <Label htmlFor="password">Contraseña</Label>
+                <PasswordField />
               </div>
 
               <Button
@@ -95,6 +81,15 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
               >
                 Ingresar
               </Button>
+
+              <p className="text-center text-sm text-stone-500">
+                <a
+                  href="/forgot-password"
+                  className="text-amber-600 hover:text-amber-700 hover:underline"
+                >
+                  ¿Olvidaste tu contraseña?
+                </a>
+              </p>
             </form>
           </CardContent>
         </Card>

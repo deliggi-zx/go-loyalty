@@ -17,7 +17,17 @@ const DOMAIN_TO_SLUG: Record<string, string> = {
 // Rutas que NO pertenecen a una organización puntual (panel, login, POS,
 // API, assets). Se sirven igual aunque se entre por un dominio propio —
 // no se reescriben.
-const APP_LEVEL_PREFIXES = ["/dashboard", "/login", "/pos", "/admin", "/api", "/_next"];
+const APP_LEVEL_PREFIXES = [
+  "/dashboard",
+  "/login",
+  "/forgot-password",
+  "/reset-password",
+  "/auth",
+  "/pos",
+  "/admin",
+  "/api",
+  "/_next",
+];
 
 function isAppLevel(pathname: string): boolean {
   return APP_LEVEL_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
