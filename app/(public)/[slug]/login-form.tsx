@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 // Forma del jsonb que devuelve reserve_gym_invite_code() — ver migración en
@@ -11,6 +12,25 @@ interface ReserveInviteCodeResult {
   code_id?: string;
   message?: string;
 }
+
+// Mismo criterio que app/login/actions.ts (login de plataforma): GoTrue
+// devuelve code "invalid_credentials" (400) puntualmente para usuario/
+// contraseña que no matchean. Cualquier otra cosa —500, timeout, GoTrue
+// caído, esquema roto— es un problema de servidor, no de credenciales, y
+// no hay que mostrarle al usuario "contraseña mal" (ya nos costó un
+// diagnóstico real: el 500 de GoTrue de admin-kapusta se leyó como
+// contraseña mal tipeada por culpa de este mismo cartel).
+function isInvalidCredentials(error: {
+  code?: string;
+  status?: number;
+  message?: string;
+}): boolean {
+  if (error.code) return error.code === "invalid_credentials";
+  return /invalid login credentials/i.test(error.message ?? "");
+}
+
+const CREDENTIALS_ERROR = "Credenciales incorrectas. Verificá tu email y contraseña.";
+const SERVER_ERROR = "Hubo un problema para iniciar sesión, probá de nuevo en un momento.";
 
 interface LoginFormProps {
   primaryColor: string;
@@ -70,6 +90,7 @@ export function LoginForm({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [inviteCode, setInviteCode] = useState("");
   // Fase registro extendido (Domus): apellido obligatorio, el resto
   // opcional — solo se leen/insertan cuando isDomus, ver handleSubmit.
@@ -99,9 +120,33 @@ export function LoginForm({
     setError(null);
 
     if (mode === "login") {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        setError("Credenciales incorrectas. Verificá tu email y contraseña.");
+      let signInError: Awaited<
+        ReturnType<typeof supabase.auth.signInWithPassword>
+      >["error"] = null;
+      try {
+        ({ error: signInError } = await supabase.auth.signInWithPassword({ email, password }));
+      } catch (err) {
+        // Excepción antes de tener respuesta (red, timeout, DNS...): es un
+        // problema de servidor/conexión, nunca "contraseña mal".
+        console.error("[login-form] excepción al llamar a signInWithPassword:", err);
+        setError(SERVER_ERROR);
+        setLoading(false);
+        return;
+      }
+      if (signInError) {
+        if (isInvalidCredentials(signInError)) {
+          setError(CREDENTIALS_ERROR);
+        } else {
+          // Error real inesperado: lo dejamos en consola para poder
+          // diagnosticarlo en vez de perseguir un fantasma de "contraseña
+          // mal".
+          console.error("[login-form] error inesperado de Supabase Auth:", {
+            code: signInError.code,
+            status: signInError.status,
+            message: signInError.message,
+          });
+          setError(SERVER_ERROR);
+        }
       } else {
         // La sesión ya quedó creada en Supabase acá arriba (200 confirmado
         // por auth.signInWithPassword) — router.refresh() solo le pide al
@@ -286,6 +331,23 @@ export function LoginForm({
     : bikeTheme
     ? "w-full text-xs transition-colors pt-1 text-[#9b9995] hover:text-[#ff6b00]"
     : "w-full text-xs text-stone-400 hover:text-stone-600 transition-colors pt-1";
+  // Ojo mostrar/ocultar: mismo criterio de acento por tema que el resto
+  // del form (lima Gym2 / naranja bike / stone en claro). El ícono arranca
+  // apagado y se enciende al acento en hover.
+  const eyeButtonClass = neonTheme
+    ? "text-[#6b6965] hover:text-[#ccff00] transition-colors"
+    : bikeTheme
+    ? "text-[#6b6965] hover:text-[#ff6b00] transition-colors"
+    : "text-stone-400 hover:text-stone-600 transition-colors";
+  // "¿Olvidaste tu contraseña?": lleva al flujo genérico /forgot-password
+  // (ruta app-level, fuera del rewrite por dominio propio). <a> y no
+  // <Link>: /forgot-password vive afuera del layout de [slug], conviene
+  // navegación dura.
+  const forgotLinkClass = neonTheme
+    ? "text-xs transition-colors text-[#9b9995] hover:text-[#ccff00]"
+    : bikeTheme
+    ? "text-xs transition-colors text-[#9b9995] hover:text-[#ff6b00]"
+    : "text-xs text-stone-400 hover:text-stone-600 transition-colors";
   const successIconWrapClass = darkChrome
     ? "w-12 h-12 rounded-full bg-emerald-950/40 flex items-center justify-center mx-auto"
     : "w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mx-auto";
@@ -369,15 +431,35 @@ export function LoginForm({
           required
           className={inputClass}
         />
-        <input
-          type="password"
-          placeholder="Contraseña"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={6}
-          className={inputClass}
-        />
+        <div className="relative">
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="Contraseña"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={6}
+            autoComplete={mode === "login" ? "current-password" : "new-password"}
+            className={`${inputClass} pr-10`}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            tabIndex={-1}
+            aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+            aria-pressed={showPassword}
+            className={`absolute inset-y-0 right-0 flex w-10 items-center justify-center ${eyeButtonClass}`}
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+        {mode === "login" && (
+          <div className="-mt-1 text-right">
+            <a href="/forgot-password" className={forgotLinkClass}>
+              ¿Olvidaste tu contraseña?
+            </a>
+          </div>
+        )}
         {mode === "register" && requireInviteCode && (
           <input
             type="text"
