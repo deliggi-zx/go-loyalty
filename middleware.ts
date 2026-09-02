@@ -1,18 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { slugForHost } from "@/lib/org-domains";
 
-// ── Dominios propios de organizaciones → slug interno ────────────────────
-// Cuando una org conecta su propio dominio en Vercel, la app sigue
-// sirviendo su sitio desde la ruta interna /<slug>, pero sin que esa ruta
-// aparezca en la barra del navegador: el middleware reescribe
-// dominio-propio.com/loquesea → /<slug>/loquesea.
-//
-// Para sumar un dominio nuevo alcanza con agregar la entrada acá (apex +
-// www). Nada más hardcodeado — el resto de la lógica es genérica.
-const DOMAIN_TO_SLUG: Record<string, string> = {
-  "kapusta.com.ar": "kapusta",
-  "www.kapusta.com.ar": "kapusta",
-};
+// El mapa dominio-propio → slug (y su resolución) vive en lib/org-domains.ts
+// porque también lo usa el server (ver reset-password/page.tsx). Para sumar
+// un dominio nuevo se edita ahí.
 
 // Rutas que NO pertenecen a una organización puntual (panel, login, POS,
 // API, assets). Se sirven igual aunque se entre por un dominio propio —
@@ -37,10 +29,10 @@ function isAppLevel(pathname: string): boolean {
 // petición según el hostname. Devuelve null si no hay dominio propio o si
 // la ruta no debe tocarse.
 function resolveOrgRewrite(request: NextRequest): URL | null {
-  const host = (request.headers.get("host") ?? request.headers.get("x-forwarded-host") ?? "")
-    .toLowerCase()
-    .split(":")[0];
-  const slug = DOMAIN_TO_SLUG[host];
+  const slug = slugForHost(
+    request.headers.get("host"),
+    request.headers.get("x-forwarded-host")
+  );
   if (!slug) return null;
 
   const { pathname } = request.nextUrl;

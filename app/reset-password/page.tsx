@@ -1,5 +1,7 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { slugForHost } from "@/lib/org-domains";
 import { AuthShell } from "@/components/auth-shell";
 import { ResetPasswordForm } from "./reset-password-form";
 
@@ -55,7 +57,17 @@ export default async function ResetPasswordPage() {
       .select("slug")
       .eq("id", membership.org_id)
       .maybeSingle();
-    if (org?.slug) homeHref = `/${org.slug}`;
+    if (org?.slug) {
+      // Si el usuario entró por el dominio propio de SU org
+      // (kapusta.com.ar), el middleware ya sirve /<slug> desde la raíz y
+      // oculta el slug de la barra — mandarlo a "/" para no volver a
+      // mostrarlo. Si entró por go-loyalty.vercel.app (o cualquier otro
+      // host), el slug sí hace falta en la ruta. Misma resolución de host
+      // que el middleware (slugForHost).
+      const h = headers();
+      const currentSlug = slugForHost(h.get("host"), h.get("x-forwarded-host"));
+      homeHref = currentSlug === org.slug ? "/" : `/${org.slug}`;
+    }
   }
 
   return (
