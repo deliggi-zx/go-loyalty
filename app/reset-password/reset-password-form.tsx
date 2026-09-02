@@ -7,8 +7,12 @@ import { Button } from "@/components/ui/button";
 import { PasswordField } from "@/app/login/password-field";
 import { updatePassword } from "./actions";
 
-export function ResetPasswordForm() {
+// homeHref: adónde vuelve el usuario después de guardar la contraseña —
+// lo resuelve la page según el rol (/dashboard para staff, /<slug> para
+// un cliente del sitio público). Ver reset-password/page.tsx.
+export function ResetPasswordForm({ homeHref = "/dashboard" }: { homeHref?: string }) {
   const router = useRouter();
+  const goingToDashboard = homeHref === "/dashboard";
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -54,10 +58,10 @@ export function ResetPasswordForm() {
         </div>
         <Button
           type="button"
-          onClick={() => router.replace("/dashboard")}
+          onClick={() => router.replace(homeHref)}
           className="w-full bg-amber-500 hover:bg-amber-600 text-white font-medium"
         >
-          Ir al panel
+          {goingToDashboard ? "Ir al panel" : "Ir al inicio"}
         </Button>
       </div>
     );

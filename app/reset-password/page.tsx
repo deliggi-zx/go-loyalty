@@ -36,9 +36,31 @@ export default async function ResetPasswordPage() {
     );
   }
 
+  // Adónde mandar al usuario después de guardar la contraseña. El flujo de
+  // reset se armó para el login de plataforma (staff → /dashboard), pero
+  // también lo usan clientes que entran por el modal del sitio público: un
+  // customer no tiene nada que hacer en /dashboard, va a la home pública
+  // de su organización (/<slug>). Cualquier otro rol (admin, agente,
+  // owner, vet…) es staff → /dashboard, como hasta ahora.
+  const { data: membership } = await supabase
+    .from("loyalty_members")
+    .select("role, org_id")
+    .eq("profile_id", user.id)
+    .maybeSingle();
+
+  let homeHref = "/dashboard";
+  if (membership?.role === "customer" && membership.org_id) {
+    const { data: org } = await supabase
+      .from("loyalty_organizations")
+      .select("slug")
+      .eq("id", membership.org_id)
+      .maybeSingle();
+    if (org?.slug) homeHref = `/${org.slug}`;
+  }
+
   return (
     <AuthShell title="Nueva contraseña" description="Elegí la contraseña con la que vas a entrar de ahora en más.">
-      <ResetPasswordForm />
+      <ResetPasswordForm homeHref={homeHref} />
     </AuthShell>
   );
 }
