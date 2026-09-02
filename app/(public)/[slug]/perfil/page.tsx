@@ -21,6 +21,7 @@ import { GeneralInquiryForm } from "../general-inquiry-form";
 import { MyVisitsList, type MyVisitRow } from "../my-visits-list";
 import { todayLocalYmd } from "../vet-appointments-config";
 import { formatPrice } from "@/lib/utils";
+import { loyaltyTypeLabel } from "@/lib/loyalty/config";
 import { DomusAgentPanel } from "@/app/dashboard/inicio/domus-agent-panel";
 import { getDomusAgentBadgeCounts } from "@/app/dashboard/inicio/domus-badge-counts";
 import { getKapustaPanelData } from "@/app/dashboard/inicio/kapusta-panel-data";
@@ -54,6 +55,21 @@ export default async function PerfilPage({
   const primary = org.primary_color ?? "#f59e0b";
   const threshold = org.next_reward_threshold ?? 1000;
   const progressPct = Math.min(100, Math.round((balance / threshold) * 100));
+
+  // Fase fidelización Kapusta: historial completo de Puntos Kapusta (bonus de
+  // registro + cargas manuales del admin), distinto del historial de "compra"
+  // de arriba que filtra por status='claimed' (flujo QR de SuperElectro, que
+  // Kapusta no usa).
+  const { data: kapustaTxData } =
+    params.slug === "kapusta"
+      ? await supabase
+          .from("loyalty_transactions")
+          .select("id, amount, type, note, created_at")
+          .eq("profile_id", user.id)
+          .eq("org_id", org.id)
+          .order("created_at", { ascending: false })
+      : { data: null };
+  const kapustaTransactions = kapustaTxData ?? [];
 
   // Fase P4: puntos con estética oscuro+naranja — mismo criterio simple
   // (slug directo) que ya usa el saludo más abajo y page.tsx (isBike).
@@ -267,6 +283,53 @@ export default async function PerfilPage({
           mismo criterio de "un bloque más" que el resto de esta página. */}
       {hasVetFeatures && (
         <VetReviewsSection slug={params.slug} orgId={org.id} primaryColor={primary} reviews={vetReviews} />
+      )}
+
+      {/* Fase fidelización Kapusta: saldo de Puntos Kapusta + historial.
+          Solo cliente (un agente no tiene puntos propios). Sin barra de
+          progreso a "próxima recompensa": el canje todavía no está
+          definido con el cliente, no se promete una mecánica que no
+          existe. */}
+      {isKapusta && isDomusCustomer && (
+        <div className="space-y-3">
+          <PointsPanel label="Puntos Kapusta" balance={balance} primaryColor={primary} />
+          <p className="text-center text-xs text-stone-500">
+            Seguí sumando Puntos Kapusta con cada visita y operación.
+          </p>
+
+          <div className="space-y-2">
+            <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
+              Historial de Puntos Kapusta
+            </h2>
+            {kapustaTransactions.length > 0 ? (
+              <div className="bg-white divide-y divide-stone-100 border border-stone-100 rounded-lg overflow-hidden">
+                {kapustaTransactions.map((tx) => (
+                  <div
+                    key={tx.id}
+                    className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-stone-700 truncate">{tx.note || loyaltyTypeLabel(tx.type)}</p>
+                      <p className="text-xs text-stone-400">
+                        {new Date(tx.created_at).toLocaleDateString("es-AR")}
+                      </p>
+                    </div>
+                    <span
+                      className={`font-medium shrink-0 tabular-nums ${
+                        tx.amount >= 0 ? "text-stone-900" : "text-red-600"
+                      }`}
+                    >
+                      {tx.amount >= 0 ? "+" : ""}
+                      {tx.amount.toLocaleString("es-AR")} pts
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-stone-400">Todavía no sumaste Puntos Kapusta.</p>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Casillero "¿Qué estás buscando?" — mismo GeneralInquiryForm de la
@@ -496,8 +559,10 @@ export default async function PerfilPage({
           mismo criterio que el bloque de puntos de arriba) ni al staff de
           Kapusta con el panel rediseñado (KAPUSTA_PANEL_SPEC §1.4: "sin
           bloques vacíos", herencia de SuperElectro que no aplica a
-          inmobiliaria). Domus lo sigue mostrando igual que siempre. */}
-      {!isBikeAdmin && !(isKapusta && isDomusAgent) && (
+          inmobiliaria). Domus lo sigue mostrando igual que siempre.
+          Kapusta cliente tiene su propio "Historial de Puntos Kapusta" más
+          arriba, así que este bloque genérico no aplica. */}
+      {!isBikeAdmin && !isKapusta && (
       <div className="space-y-2">
         <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
           Historial de consumo

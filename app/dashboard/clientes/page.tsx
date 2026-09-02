@@ -48,21 +48,42 @@ export default async function ClientesPage() {
         .eq("org_id", orgId)
         .in("profile_id", profileIds);
 
+      // Fase fidelización: ingresos registrados (loyalty_visits). Se traen
+      // todos los del org+clientes y se agregan en JS — última visita y
+      // conteo del mes en curso. Hoy solo tiene filas para Kapusta; para
+      // el resto de las orgs queda todo en 0 / fecha de alta como antes.
+      const { data: visitData } = await supabase
+        .from("loyalty_visits")
+        .select("profile_id, visited_at")
+        .eq("org_id", orgId)
+        .in("profile_id", profileIds);
+
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const visitsByProfile = new Map<string, { last: string; month: number }>();
+      for (const v of visitData ?? []) {
+        const cur = visitsByProfile.get(v.profile_id) ?? { last: "", month: 0 };
+        if (!cur.last || v.visited_at > cur.last) cur.last = v.visited_at;
+        if (new Date(v.visited_at) >= startOfMonth) cur.month += 1;
+        visitsByProfile.set(v.profile_id, cur);
+      }
+
       customers = members.map((m) => {
         const profile = profiles?.find((p) => p.id === m.profile_id);
         const pts = pointsData?.find((p) => p.profile_id === m.profile_id);
+        const visitAgg = visitsByProfile.get(m.profile_id);
 
         return {
           id: m.profile_id,
           name: profile?.full_name ?? "Cliente sin nombre",
           contact: "",
           points: pts?.balance ?? 0,
-          totalVisits: 0,
-          // Sin timestamp real de "última visita" en loyalty_user_points
-          // (ver nota arriba), se usa la fecha en que se hizo miembro
-          // como aproximación — mismo dato que ya se usaba como fallback
-          // antes, ahora es la única fuente.
-          lastVisit: m.created_at ?? "",
+          visitsThisMonth: visitAgg?.month ?? 0,
+          // Última visita real si hay registro; si no, la fecha de alta
+          // como aproximación (comportamiento previo).
+          lastVisit: visitAgg?.last || m.created_at || "",
           status: "activo" as const,
         };
       });

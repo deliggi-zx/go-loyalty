@@ -13,7 +13,9 @@ import { WhatsAppButton } from "./whatsapp-button";
 import { HeroVideo } from "./hero-video";
 import { SectionNavTabs, type SectionNavTabItem } from "./section-nav-tabs";
 import { KapustaFloatingDock } from "./kapusta-floating-dock";
+import { VisitTracker } from "./visit-tracker";
 import { getGymLocations } from "./gym-data";
+import { isLoyaltyPointsSlug } from "@/lib/loyalty/config";
 import { ORG_LOGO_LOCKUP } from "@/lib/org-logo-lockup";
 
 // Copy de las franjas del hero, por org (keyed por slug). Cada org que
@@ -264,7 +266,14 @@ export default async function TenantLayout({
   // pueda scopear por página sin lógica nueva de ruta). El resto de las
   // orgs sigue viéndolo exactamente igual, salvo el admin de bike (Fase
   // 3j, mismo criterio que Domus: un admin no tiene puntos propios).
-  const pointsBadge = user && !isDomusOrg && !isBikeAdmin && (
+  //
+  // Fase fidelización Kapusta: Kapusta SÍ tiene puntos (bonus de registro +
+  // carga manual), así que es la excepción a "Domus sin badge" — se muestra
+  // salvo al staff (isDomusStaff: un agente/gerente no tiene puntos propios).
+  const showPointsBadge = isLoyaltyPointsSlug(params.slug)
+    ? !isDomusStaff
+    : !isDomusOrg && !isBikeAdmin;
+  const pointsBadge = user && showPointsBadge && (
     <PointsBadge
       tierLabel={org.member_tier_label ?? "Socio Frecuente"}
       balance={pointsBalance}
@@ -378,6 +387,13 @@ export default async function TenantLayout({
           </CornerReserveProvider>
         ) : (
           children
+        )}
+
+        {/* Fase fidelización: registro informativo de ingreso, solo para
+            clientes logueados de orgs con puntos (hoy Kapusta). No renderiza
+            nada. */}
+        {user && domusMemberRole === "customer" && isLoyaltyPointsSlug(params.slug) && (
+          <VisitTracker orgId={org.id} />
         )}
 
         {isKapusta && (

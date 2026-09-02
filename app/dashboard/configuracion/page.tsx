@@ -1,7 +1,10 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
+import { publicBaseUrlForSlug } from "@/lib/org-domains";
 import { AppearanceForm } from "./appearance-form";
+import { WelcomeQr } from "./welcome-qr";
 import { CarouselManager } from "./carousel-manager";
 import { PromoManager } from "./promo-manager";
 import { PriceListManager } from "./price-list-manager";
@@ -44,6 +47,17 @@ export default async function ConfiguracionPage() {
   // Google Calendar (solo Kapusta): estado de la conexión + rol del
   // usuario para saber si puede conectar/desconectar.
   const isKapusta = org.slug === "kapusta";
+
+  // Fase fidelización Kapusta: URL de la página de bienvenida para el QR
+  // imprimible. Dominio propio si lo tiene (kapusta.com.ar/bienvenida), si
+  // no el origin actual + /<slug>/bienvenida.
+  const h = headers();
+  const currentOrigin = `${h.get("x-forwarded-proto") ?? "https"}://${
+    h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000"
+  }`;
+  const welcomeUrl = isKapusta
+    ? `${publicBaseUrlForSlug(org.slug!, currentOrigin)}/bienvenida`
+    : null;
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -86,6 +100,8 @@ export default async function ConfiguracionPage() {
         {/* Fase Requisitos: solo Domus tiene "venta"/"alquiler" como
             concepto — el resto de las orgs no ve este bloque. */}
         {(org.slug === "domus" || org.slug === "kapusta") && <RequirementsForm org={org} />}
+        {/* Fidelización — QR de bienvenida (solo Kapusta). */}
+        {welcomeUrl && <WelcomeQr url={welcomeUrl} />}
         {/* Google Calendar compartido — solo Kapusta (ver Visitas/Reuniones). */}
         {isKapusta && (
           <GoogleCalendarConnect

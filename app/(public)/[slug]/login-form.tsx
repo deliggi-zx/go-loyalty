@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { isLoyaltyPointsSlug } from "@/lib/loyalty/config";
+import { awardSignupBonus } from "./loyalty-actions";
 
 // Forma del jsonb que devuelve reserve_gym_invite_code() — ver migración en
 // Supabase (Fase 0a de "Gym2 funcional").
@@ -72,6 +74,9 @@ interface LoginFormProps {
   // usa el ícono del header) — el único caller real que necesita pasarlo
   // es LoginModal.
   orgSlug?: string;
+  // Fase fidelización Kapusta: la página /[slug]/bienvenida monta este form
+  // arrancando en registro (el modal del header sigue arrancando en login).
+  defaultMode?: "login" | "register";
 }
 
 export function LoginForm({
@@ -82,11 +87,18 @@ export function LoginForm({
   requireInviteCode = false,
   orgId,
   orgSlug,
+  defaultMode = "login",
 }: LoginFormProps) {
   const supabase = createClient();
   const router = useRouter();
   const isDomus = orgSlug === "domus" || orgSlug === "kapusta";
-  const [mode, setMode] = useState<"login" | "register">("login");
+  // Fase fidelización: solo Kapusta acredita bonus de registro y muestra el
+  // copy de "Puntos Kapusta" en la pantalla de éxito (ver isLoyaltyPointsSlug).
+  const hasLoyaltyPoints = isLoyaltyPointsSlug(orgSlug);
+  const [mode, setMode] = useState<"login" | "register">(defaultMode);
+  // Puntos acreditados por el bonus de registro (0 si no aplica) — solo para
+  // el copy de la pantalla de éxito.
+  const [signupBonus, setSignupBonus] = useState(0);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -283,6 +295,18 @@ export function LoginForm({
         }
       }
 
+      // Fase fidelización Kapusta: bonus de puntos por registrarse. Best-
+      // effort — si falla no bloquea la pantalla de éxito (la cuenta ya
+      // quedó creada y afiliada). Idempotente del lado del server.
+      if (hasLoyaltyPoints && orgId && signUpData.user) {
+        try {
+          const bonus = await awardSignupBonus(orgId);
+          setSignupBonus(bonus);
+        } catch (err) {
+          console.error("No se pudo acreditar el bonus de registro:", err);
+        }
+      }
+
       setRegistered(true);
     }
 
@@ -362,6 +386,35 @@ export function LoginForm({
   const successLinkStyle = darkChrome ? undefined : { color: primaryColor || "#f59e0b" };
 
   if (registered) {
+    // Kapusta (fidelización): la sesión ya queda activa al registrarse
+    // (confirmación de mail apagada), así que se lo manda directo al perfil
+    // en vez de "revisá tu email e iniciá sesión". El copy destaca los
+    // Puntos Kapusta recién acreditados.
+    if (hasLoyaltyPoints) {
+      return (
+        <div className={successWrapperClass}>
+          <div className={successIconWrapClass}>
+            <svg className={successIconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <p className={successTitleClass}>¡Cuenta creada!</p>
+          <p className={successSubtitleClass}>
+            {signupBonus > 0
+              ? `Ya sumaste ${signupBonus.toLocaleString("es-AR")} Puntos Kapusta de bienvenida.`
+              : "Tu cuenta ya está lista."}
+          </p>
+          <button
+            onClick={() => router.push(`/${orgSlug}/perfil`)}
+            className={successLinkClass}
+            style={successLinkStyle}
+          >
+            Ir a mi perfil
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className={successWrapperClass}>
         <div className={successIconWrapClass}>

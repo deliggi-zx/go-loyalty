@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Search, SlidersHorizontal, ChevronRight, Coins } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -9,7 +10,8 @@ export interface Customer {
   name: string;
   contact: string;
   points: number;
-  totalVisits: number;
+  // Fase fidelización: ingresos registrados en el mes en curso (loyalty_visits).
+  visitsThisMonth: number;
   lastVisit: string;
   status: "activo" | "inactivo";
 }
@@ -39,6 +41,7 @@ interface CustomersTableProps {
 }
 
 export function CustomersTable({ customers }: CustomersTableProps) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("todos");
 
@@ -124,7 +127,7 @@ export function CustomersTable({ customers }: CustomersTableProps) {
               <tr className="border-b border-stone-100 bg-stone-50">
                 <th className="text-left px-5 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Cliente</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Puntos</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide hidden md:table-cell">Visitas</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide hidden md:table-cell">Visitas (mes)</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide hidden lg:table-cell">Última visita</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Estado</th>
                 <th className="px-4 py-3" />
@@ -132,7 +135,11 @@ export function CustomersTable({ customers }: CustomersTableProps) {
             </thead>
             <tbody className="divide-y divide-stone-100">
               {filtered.map((c) => (
-                <tr key={c.id} className="hover:bg-stone-50 transition-colors group">
+                <tr
+                  key={c.id}
+                  onClick={() => router.push(`/dashboard/clientes/${c.id}`)}
+                  className="hover:bg-stone-50 transition-colors group cursor-pointer"
+                >
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
@@ -153,7 +160,7 @@ export function CustomersTable({ customers }: CustomersTableProps) {
                     </div>
                   </td>
                   <td className="px-4 py-3.5 text-stone-600 hidden md:table-cell">
-                    {c.totalVisits || "—"}
+                    {c.visitsThisMonth || "—"}
                   </td>
                   <td className="px-4 py-3.5 text-stone-500 hidden lg:table-cell">
                     {formatDate(c.lastVisit)}

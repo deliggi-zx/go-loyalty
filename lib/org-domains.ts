@@ -33,3 +33,18 @@ export function slugForHost(
   if (!normalized) return null;
   return DOMAIN_TO_SLUG[normalized] ?? null;
 }
+
+// Base URL pública "canónica" de una org, para embeber en cosas que se
+// imprimen o comparten (ej. el QR de bienvenida de Kapusta) y tienen que
+// seguir funcionando aunque cambie desde dónde se generan.
+//   - Si la org tiene dominio propio → "https://<apex>" (se prefiere el
+//     apex sobre el www; el middleware sirve el sitio en la raíz).
+//   - Si no → "<fallbackOrigin>/<slug>" (ej. https://go-loyalty.vercel.app/kapusta).
+export function publicBaseUrlForSlug(slug: string, fallbackOrigin: string): string {
+  const domains = Object.entries(DOMAIN_TO_SLUG)
+    .filter(([, s]) => s === slug)
+    .map(([d]) => d);
+  const apex = domains.find((d) => !d.startsWith("www.")) ?? domains[0];
+  if (apex) return `https://${apex}`;
+  return `${fallbackOrigin.replace(/\/$/, "")}/${slug}`;
+}
