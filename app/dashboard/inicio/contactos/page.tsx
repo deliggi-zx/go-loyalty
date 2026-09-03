@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
 import { ContactosManager, type ContactRow, type ContactInteraction } from "./contactos-manager";
+import { normalizeEmailKey, normalizePhoneKey } from "./portfolio";
 
 // Fase reorganizar panel: antes solo admin, ahora también agente — mismo
 // criterio ya aplicado a Consultas (Fase 1c) y a los demás destinos del
@@ -121,7 +122,7 @@ export default async function ContactosPage() {
   }
 
   const profileIds = Array.from(contactsById.keys());
-  const [{ data: profilesData }, { data: detailsData }] = await Promise.all([
+  const [{ data: profilesData }, { data: detailsData }, { data: portfolioData }] = await Promise.all([
     profileIds.length > 0
       ? supabase.from("profiles").select("id, full_name").in("id", profileIds)
       : Promise.resolve({ data: [] as { id: string; full_name: string | null }[] }),
@@ -145,6 +146,15 @@ export default async function ContactosPage() {
             interest_zone: string | null;
           }[],
         }),
+    // Fase Cartera ampliada: clientes SIN cuenta — cargados a mano o
+    // importados desde planilla. Viven en su propia tabla con los datos de
+    // contacto en la fila (ver migración create_domus_portfolio_clients).
+    supabase
+      .from("domus_portfolio_clients")
+      .select(
+        "id, first_name, last_name, phone, email, profession, budget_range, interest_zone, consintio_comunicaciones, source, created_at"
+      )
+      .eq("org_id", orgId),
   ]);
   const nameById = new Map((profilesData ?? []).map((p) => [p.id, p.full_name]));
   const detailsByProfileId = new Map((detailsData ?? []).map((d) => [d.profile_id, d]));
@@ -153,21 +163,65 @@ export default async function ContactosPage() {
   // antes — ContactosManager ordena alfabético él solo. Acá solo se
   // ordenan las interactions de cada contacto (más reciente primero
   // adentro del historial, sigue teniendo sentido) y se arma lastContactAt.
-  const contacts: ContactRow[] = Array.from(contactsById.values()).map((c) => {
+  const accountContacts: ContactRow[] = Array.from(contactsById.values()).map((c) => {
     const details = detailsByProfileId.get(c.profileId);
     const firstName = nameById.get(c.profileId) ?? "—";
     const sortedInteractions = [...c.interactions].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
     return {
-      profileId: c.profileId,
+      id: c.profileId,
+      kind: "account" as const,
       phone: c.phone,
+      email: null,
       name: details?.last_name ? `${firstName} ${details.last_name}` : firstName,
       profession: details?.profession ?? null,
       budgetRange: details?.budget_range ?? null,
       interestZone: details?.interest_zone ?? null,
+      consintioComunicaciones: null,
       lastContactAt: sortedInteractions[0].createdAt,
       interactions: sortedInteractions,
     };
   });
+
+  // Fase Cartera ampliada: clientes sin cuenta (tabla propia). No tienen
+  // historial de interacciones — la fecha que se muestra es la de alta.
+  const standaloneContacts: ContactRow[] = (portfolioData ?? []).map((p) => ({
+    id: `portfolio:${p.id}`,
+    kind: "standalone" as const,
+    phone: p.phone ?? "—",
+    email: p.email ?? null,
+    name: p.last_name ? `${p.first_name} ${p.last_name}` : p.first_name,
+    profession: p.profession ?? null,
+    budgetRange: p.budget_range ?? null,
+    interestZone: p.interest_zone ?? null,
+    consintioComunicaciones: p.consintio_comunicaciones,
+    lastContactAt: p.created_at,
+    interactions: [],
+  }));
+
+  const contacts: ContactRow[] = [...accountContacts, ...standaloneContacts];
+
+  // Claves de contacto ya existentes (teléfono normalizado / mail) — para
+  // que la previsualización de la importación marque duplicados sin ir al
+  // server. Junta consultas + ofertas + visitas + detalles de perfil +
+  // cartera manual.
+  const existingPhoneSet = new Set<string>();
+  const existingEmailSet = new Set<string>();
+  for (const list of [inquiries ?? [], offers ?? [], visits ?? []]) {
+    for (const r of list) {
+      const pk = normalizePhoneKey((r as { phone: string | null }).phone);
+      if (pk) existingPhoneSet.add(pk);
+    }
+  }
+  for (const d of detailsData ?? []) {
+    const pk = normalizePhoneKey(d.phone);
+    if (pk) existingPhoneSet.add(pk);
+  }
+  for (const p of portfolioData ?? []) {
+    const pk = normalizePhoneKey(p.phone);
+    if (pk) existingPhoneSet.add(pk);
+    const ek = normalizeEmailKey(p.email);
+    if (ek) existingEmailSet.add(ek);
+  }
 
   return (
     <div className={cn("flex-1 overflow-y-auto", isKapusta && "bg-white")}>
@@ -192,7 +246,12 @@ export default async function ContactosPage() {
       </header>
 
       <div className="p-8">
-        <ContactosManager contacts={contacts} glass={isKapusta} />
+        <ContactosManager
+          contacts={contacts}
+          glass={isKapusta}
+          existingPhones={Array.from(existingPhoneSet)}
+          existingEmails={Array.from(existingEmailSet)}
+        />
       </div>
     </div>
   );
