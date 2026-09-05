@@ -26,9 +26,19 @@ interface AppearanceFormProps {
   // se pidió tocarlos. El resto de las orgs no manda esta prop y ve las
   // 5 secciones de siempre.
   hideBannerBgColors?: boolean;
+  // Kapusta le dice "Fidelización" a esto (pedido 05/09): con Banner/
+  // Fondo/Colores ocultos, lo que queda (Tipo de socio, Meta de puntos)
+  // ya no es "Apariencia" — el resto de las orgs sigue viendo "Apariencia".
+  title?: string;
+  description?: string;
 }
 
-export function AppearanceForm({ org, hideBannerBgColors = false }: AppearanceFormProps) {
+export function AppearanceForm({
+  org,
+  hideBannerBgColors = false,
+  title = "Apariencia",
+  description = "Configurá la imagen y los colores de tu página pública",
+}: AppearanceFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -167,10 +177,10 @@ export function AppearanceForm({ org, hideBannerBgColors = false }: AppearanceFo
     <section className="space-y-6">
       <div>
         <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">
-          Apariencia
+          {title}
         </h2>
         <p className="text-xs text-stone-400 mt-0.5">
-          Configurá la imagen y los colores de tu página pública
+          {description}
         </p>
       </div>
 

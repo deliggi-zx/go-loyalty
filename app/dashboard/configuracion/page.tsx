@@ -104,7 +104,12 @@ export default async function ConfiguracionPage() {
             {welcomeUrl && <WelcomeQr url={welcomeUrl} />}
             <ContactForm org={org} />
             <RequirementsForm org={org} />
-            <AppearanceForm org={org} hideBannerBgColors />
+            <AppearanceForm
+              org={org}
+              hideBannerBgColors
+              title="Fidelización"
+              description="Cómo ven los clientes su tipo de socio y su progreso de puntos"
+            />
             <PromoManager orgId={orgId} items={promoItems} title="Flyers" />
             <GoogleCalendarConnect
               configured={isCalendarConfigured()}
