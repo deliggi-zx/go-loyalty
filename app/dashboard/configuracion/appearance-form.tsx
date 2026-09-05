@@ -21,9 +21,14 @@ interface OrgData {
 
 interface AppearanceFormProps {
   org: OrgData;
+  // Kapusta oculta Banner/Fondo de página/Colores de marca acá (pedido
+  // 05/09) — "Tipo de socio" y "Próxima meta de puntos" siguen igual, no
+  // se pidió tocarlos. El resto de las orgs no manda esta prop y ve las
+  // 5 secciones de siempre.
+  hideBannerBgColors?: boolean;
 }
 
-export function AppearanceForm({ org }: AppearanceFormProps) {
+export function AppearanceForm({ org, hideBannerBgColors = false }: AppearanceFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -175,7 +180,11 @@ export function AppearanceForm({ org }: AppearanceFormProps) {
         </div>
       )}
 
-      {/* Banner */}
+      {/* Banner / Fondo de página / Colores de marca — Kapusta los oculta
+          acá (pedido 05/09): banner y colores de marca ya definen su
+          identidad, y el fondo de página no es algo que gestionen. */}
+      {!hideBannerBgColors && (
+      <>
       <div className="bg-white rounded-xl border border-stone-200 p-5 space-y-4">
         <div>
           <p className="text-sm font-medium text-stone-700">Imagen de banner</p>
@@ -317,6 +326,8 @@ export function AppearanceForm({ org }: AppearanceFormProps) {
           {isPending ? "Guardando..." : "Guardar colores"}
         </button>
       </div>
+      </>
+      )}
 
       {/* Tipo de socio */}
       <div className="bg-white rounded-xl border border-stone-200 p-5 space-y-4">

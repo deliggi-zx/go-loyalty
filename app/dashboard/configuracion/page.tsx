@@ -92,28 +92,42 @@ export default async function ConfiguracionPage() {
       </header>
 
       <div className="p-8 space-y-10 max-w-3xl">
-        <AppearanceForm org={org} />
-        <CarouselManager orgId={orgId} items={carouselItems} />
-        <PromoManager orgId={orgId} items={promoItems} />
-        <PriceListManager orgId={orgId} items={priceItems} />
-        <ContactForm org={org} />
-        {/* Fase Requisitos: solo Domus tiene "venta"/"alquiler" como
-            concepto — el resto de las orgs no ve este bloque. */}
-        {(org.slug === "domus" || org.slug === "kapusta") && <RequirementsForm org={org} />}
-        {/* Fidelización — QR de bienvenida (solo Kapusta). */}
-        {welcomeUrl && <WelcomeQr url={welcomeUrl} />}
-        {/* Google Calendar compartido — solo Kapusta (ver Visitas/Reuniones). */}
-        {isKapusta && (
-          <GoogleCalendarConnect
-            configured={isCalendarConfigured()}
-            connectedEmail={calendarConnection?.connectedEmail ?? null}
-            connectedAt={calendarConnection?.connectedAt ?? null}
-            canManage={membership?.role === "admin"}
-          />
+        {isKapusta ? (
+          // Orden y secciones propios de Kapusta (pedido 05/09): QR primero,
+          // después Contacto y redes, después Requisitos (sin cambios) —
+          // Carrusel/Lista de precios ocultos del todo (Carrusel ya se
+          // gestiona desde Catálogo, Lista de precios no aplica a
+          // inmobiliaria) y Apariencia sin Banner/Fondo/Colores de marca.
+          // Domus y el resto de las orgs no entran acá — ver la rama de
+          // abajo, intacta.
+          <>
+            {welcomeUrl && <WelcomeQr url={welcomeUrl} />}
+            <ContactForm org={org} />
+            <RequirementsForm org={org} />
+            <AppearanceForm org={org} hideBannerBgColors />
+            <PromoManager orgId={orgId} items={promoItems} title="Flyers" />
+            <GoogleCalendarConnect
+              configured={isCalendarConfigured()}
+              connectedEmail={calendarConnection?.connectedEmail ?? null}
+              connectedAt={calendarConnection?.connectedAt ?? null}
+              canManage={membership?.role === "admin"}
+            />
+          </>
+        ) : (
+          <>
+            <AppearanceForm org={org} />
+            <CarouselManager orgId={orgId} items={carouselItems} />
+            <PromoManager orgId={orgId} items={promoItems} />
+            <PriceListManager orgId={orgId} items={priceItems} />
+            <ContactForm org={org} />
+            {/* Fase Requisitos: solo Domus tiene "venta"/"alquiler" como
+                concepto — el resto de las orgs no ve este bloque. */}
+            {org.slug === "domus" && <RequirementsForm org={org} />}
+            {/* Fase T1 "Mundo Bike" Taller: solo bike tiene taller de
+                service — el resto de las orgs no ve este bloque. */}
+            {org.slug === "bike" && <WorkshopCapacityForm org={org} />}
+          </>
         )}
-        {/* Fase T1 "Mundo Bike" Taller: solo bike tiene taller de service —
-            el resto de las orgs no ve este bloque. */}
-        {org.slug === "bike" && <WorkshopCapacityForm org={org} />}
       </div>
     </div>
   );

@@ -15,9 +15,12 @@ interface PromoItem {
 interface PromoManagerProps {
   orgId: string;
   items: PromoItem[];
+  // Kapusta le dice "Flyers" a esto (mismo contenido/función, pedido
+  // 05/09) — el resto de las orgs sigue viendo "Promos".
+  title?: string;
 }
 
-export function PromoManager({ orgId, items: initialItems }: PromoManagerProps) {
+export function PromoManager({ orgId, items: initialItems, title = "Promos" }: PromoManagerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [items, setItems] = useState(initialItems);
@@ -99,7 +102,7 @@ export function PromoManager({ orgId, items: initialItems }: PromoManagerProps) 
     <section className="space-y-4">
       <div>
         <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">
-          Promos
+          {title}
         </h2>
         <p className="text-xs text-stone-400 mt-0.5">
           Carrusel de promociones, separado del carrusel principal. Máx. 5 MB por imagen.
