@@ -1,6 +1,8 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
+import { publicBaseUrlForSlug } from "@/lib/org-domains";
 import { DomusAgentPanel } from "./domus-agent-panel";
 import { getDomusAgentBadgeCounts } from "./domus-badge-counts";
 import { getKapustaPanelData } from "./kapusta-panel-data";
@@ -62,6 +64,18 @@ export default async function InicioPage() {
   // extra (seguimiento, cartera, próxima visita). Domus no lo llama.
   const kapustaData = isKapusta ? await getKapustaPanelData(orgId, agentProfileId) : undefined;
 
+  // Botón "‹ Ver sitio" del panel (pedido 05/09, solo Kapusta): misma
+  // resolución de URL que el QR de bienvenida (dominio propio si lo tiene,
+  // si no origin actual + /kapusta) — ver publicBaseUrlForSlug.
+  let publicHomeHref: string | undefined;
+  if (isKapusta) {
+    const h = headers();
+    const currentOrigin = `${h.get("x-forwarded-proto") ?? "https"}://${
+      h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000"
+    }`;
+    publicHomeHref = publicBaseUrlForSlug(org.slug, currentOrigin);
+  }
+
   return (
     <div className="flex-1 overflow-y-auto">
       {!isKapusta && (
@@ -81,6 +95,7 @@ export default async function InicioPage() {
         slug={org.slug}
         userName={profile?.full_name ?? user.email?.split("@")[0] ?? null}
         kapustaData={kapustaData}
+        publicHomeHref={publicHomeHref}
         primaryColor={org.primary_color ?? "#005F77"}
         secondaryColor={org.secondary_color ?? "#0180AB"}
         backgroundColor={org.background_color ?? "#69BDE1"}

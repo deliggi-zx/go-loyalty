@@ -60,6 +60,11 @@ interface DomusAgentPanelProps {
   slug?: string;
   userName?: string | null;
   kapustaData?: KapustaPanelData;
+  // Botón "‹ Ver sitio" del header del panel (pedido 05/09) — solo se
+  // pasa desde /dashboard/inicio y /dashboard (ver esos callers); si no
+  // llega, KapustaTeamPanel no lo muestra (ej. /kapusta/perfil, que ya
+  // está dentro del sitio público).
+  publicHomeHref?: string;
   primaryColor?: string;
   secondaryColor?: string;
   backgroundColor?: string;
@@ -76,6 +81,7 @@ export function DomusAgentPanel(props: DomusAgentPanelProps) {
         orgId={props.orgId}
         userName={props.userName ?? null}
         data={props.kapustaData}
+        publicHomeHref={props.publicHomeHref}
         primaryColor={props.primaryColor ?? "#005F77"}
         secondaryColor={props.secondaryColor ?? "#0180AB"}
         backgroundColor={props.backgroundColor ?? "#69BDE1"}

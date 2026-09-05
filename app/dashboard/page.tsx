@@ -1,7 +1,9 @@
+import { headers } from "next/headers";
 import { Users, Stamp, Gift, TrendingUp } from "lucide-react";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
+import { publicBaseUrlForSlug } from "@/lib/org-domains";
 import { DomusAgentPanel } from "./inicio/domus-agent-panel";
 import { getDomusAgentBadgeCounts } from "./inicio/domus-badge-counts";
 import { getKapustaPanelData, type KapustaPanelData } from "./inicio/kapusta-panel-data";
@@ -49,6 +51,9 @@ export default async function DashboardPage() {
   let kapustaPanelData: KapustaPanelData | undefined;
   let kapustaUserName: string | null = null;
   let kapustaColors = { primary: "#005F77", secondary: "#0180AB", background: "#69BDE1" };
+  // Botón "‹ Ver sitio" del panel (pedido 05/09, solo Kapusta) — ver
+  // publicHomeHref en inicio/page.tsx, misma resolución de URL.
+  let kapustaPublicHomeHref: string | undefined;
 
   if (orgId) {
     const {
@@ -100,6 +105,11 @@ export default async function DashboardPage() {
         secondary: orgRes.data?.secondary_color ?? "#0180AB",
         background: orgRes.data?.background_color ?? "#69BDE1",
       };
+      const h = headers();
+      const currentOrigin = `${h.get("x-forwarded-proto") ?? "https"}://${
+        h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000"
+      }`;
+      kapustaPublicHomeHref = publicBaseUrlForSlug("kapusta", currentOrigin);
     }
 
     // Badges del panel (CAMBIO 3): solo tienen sentido si de verdad se va
@@ -145,6 +155,7 @@ export default async function DashboardPage() {
             slug={isKapusta ? "kapusta" : undefined}
             userName={kapustaUserName}
             kapustaData={kapustaPanelData}
+            publicHomeHref={kapustaPublicHomeHref}
             primaryColor={kapustaColors.primary}
             secondaryColor={kapustaColors.secondary}
             backgroundColor={kapustaColors.background}

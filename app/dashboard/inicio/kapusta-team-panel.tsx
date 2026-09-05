@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { getMorningSummary } from "./domus-morning-summary-actions";
 import { GENERIC_SUMMARY_TEXTS } from "./morning-summary-constants";
 import { GlassLink } from "./kapusta-glass";
@@ -41,6 +42,11 @@ interface KapustaTeamPanelProps {
   orgId: string;
   userName: string | null;
   data: KapustaPanelData;
+  // Botón "‹ Ver sitio" del header (pedido 05/09): sale del panel hacia
+  // la home pública de Kapusta (dominio propio si lo tiene). Opcional —
+  // sin él el header queda como antes (ej. /kapusta/perfil, que ya está
+  // dentro del sitio público y no lo necesita).
+  publicHomeHref?: string;
   primaryColor: string; // petróleo
   secondaryColor: string; // petróleo claro
   backgroundColor: string; // celeste marca
@@ -50,6 +56,7 @@ export function KapustaTeamPanel({
   orgId,
   userName,
   data,
+  publicHomeHref,
   backgroundColor,
 }: KapustaTeamPanelProps) {
   const [summary, setSummary] = useState<string | null>(null);
@@ -103,14 +110,28 @@ export function KapustaTeamPanel({
           /kapusta/perfil el lockup completo ya aparece en el banner del
           sitio justo arriba — repetirlo daría dos logos pegados. En
           /dashboard/inicio y /dashboard mobile, donde el panel es toda la
-          pantalla, el wordmark alcanza como encabezado. */}
-      <div className="px-5 pt-5 pb-1">
+          pantalla, el wordmark alcanza como encabezado.
+          "‹ Ver sitio" (pedido 05/09): sale del panel hacia la home
+          pública, mismo criterio visual que "‹ Inicio" del catálogo
+          (texto atenuado que se oscurece al pasar el mouse). Solo llega
+          publicHomeHref desde /dashboard/inicio y /dashboard — en
+          /kapusta/perfil no se pasa y el botón no aparece. */}
+      <div className="px-5 pt-5 pb-1 flex items-center justify-between gap-3">
         <span
           className="text-base font-extrabold"
           style={{ color: NEGRO, letterSpacing: "-0.02em" }}
         >
           Kapusta <span className="font-semibold">Propiedades</span>
         </span>
+        {publicHomeHref && (
+          <Link
+            href={publicHomeHref}
+            className="text-sm font-medium opacity-60 hover:opacity-100 transition-opacity shrink-0"
+            style={{ color: NEGRO }}
+          >
+            ‹ Ver sitio
+          </Link>
+        )}
       </div>
 
       {/* Saludo + resumen (sobre celeste, sin tarjeta contenedora) */}
