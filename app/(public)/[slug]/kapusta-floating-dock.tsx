@@ -75,6 +75,7 @@ export function KapustaFloatingDock({
       <KapustaCalcModal
         open={calcOpen}
         onClose={() => setCalcOpen(false)}
+        slug={slug}
         primaryColor={primaryColor}
         secondaryColor={secondaryColor}
         accentColor={accentColor}

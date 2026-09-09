@@ -4,6 +4,8 @@ import { StatCard } from "@/components/dashboard/stat-card";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
 import { publicBaseUrlForSlug } from "@/lib/org-domains";
+import { hasFeature } from "@/lib/features";
+import { glassTheme } from "@/lib/glass-theme";
 import { DomusAgentPanel } from "./inicio/domus-agent-panel";
 import { getDomusAgentBadgeCounts } from "./inicio/domus-badge-counts";
 import { getKapustaPanelData, type KapustaPanelData } from "./inicio/kapusta-panel-data";
@@ -46,13 +48,16 @@ export default async function DashboardPage() {
   let domusConsultasNuevoCount = 0;
   let domusReunionesHoyCount = 0;
   let domusOfertasReservasCount = 0;
-  // Rediseño del panel de Kapusta (KAPUSTA_PANEL_SPEC) — solo esta org.
-  let isKapusta = false;
+  // Panel del equipo rediseñado (estilo vidrio) — para toda la vertical
+  // inmobiliaria; cada org usa su propia paleta (primary/secondary/background).
+  let showTeamPanel = false;
+  let teamPanelSlug: string | undefined;
   let kapustaPanelData: KapustaPanelData | undefined;
   let kapustaUserName: string | null = null;
   let kapustaColors = { primary: "#005F77", secondary: "#0180AB", background: "#69BDE1" };
-  // Botón "‹ Ver sitio" del panel (pedido 05/09, solo Kapusta) — ver
-  // publicHomeHref en inicio/page.tsx, misma resolución de URL.
+  let teamPanelGlassVars: Record<string, string> = {};
+  // Botón "‹ Ver sitio" del header del panel — ver publicHomeHref en
+  // inicio/page.tsx, misma resolución de URL.
   let kapustaPublicHomeHref: string | undefined;
 
   if (orgId) {
@@ -77,7 +82,7 @@ export default async function DashboardPage() {
         .eq("org_id", orgId),
       supabase
         .from("loyalty_organizations")
-        .select("slug, primary_color, secondary_color, background_color")
+        .select("slug, primary_color, secondary_color, background_color, feature_tier, feature_overrides")
         .eq("id", orgId)
         .maybeSingle(),
       user
@@ -94,22 +99,24 @@ export default async function DashboardPage() {
     activeRewardsCount = rewardsRes.count ?? 0;
     totalPoints =
       txRes.data?.reduce((sum, tx) => sum + (tx.points ?? 0), 0) ?? 0;
-    const isDomusOrg = orgRes.data?.slug === "domus" || orgRes.data?.slug === "kapusta";
     const domusRole = membershipRes.data?.role;
-    isDomusManager = isDomusOrg && domusRole === "admin";
-    isDomusStaff = isDomusOrg && (domusRole === "admin" || domusRole === "agente");
-    isKapusta = orgRes.data?.slug === "kapusta";
-    if (isKapusta) {
+    const hasCrm = hasFeature(orgRes.data, "crm_leads");
+    isDomusManager = hasCrm && domusRole === "admin";
+    isDomusStaff = hasCrm && (domusRole === "admin" || domusRole === "agente");
+    showTeamPanel = isDomusStaff;
+    if (showTeamPanel && orgRes.data?.slug) {
+      teamPanelSlug = orgRes.data.slug;
       kapustaColors = {
         primary: orgRes.data?.primary_color ?? "#005F77",
         secondary: orgRes.data?.secondary_color ?? "#0180AB",
         background: orgRes.data?.background_color ?? "#69BDE1",
       };
+      teamPanelGlassVars = glassTheme(orgRes.data).vars;
       const h = headers();
       const currentOrigin = `${h.get("x-forwarded-proto") ?? "https"}://${
         h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000"
       }`;
-      kapustaPublicHomeHref = publicBaseUrlForSlug("kapusta", currentOrigin);
+      kapustaPublicHomeHref = publicBaseUrlForSlug(orgRes.data.slug, currentOrigin);
     }
 
     // Badges del panel (CAMBIO 3): solo tienen sentido si de verdad se va
@@ -123,7 +130,7 @@ export default async function DashboardPage() {
       domusReunionesHoyCount = counts.reunionesHoyCount;
       domusOfertasReservasCount = counts.ofertasReservasCount;
 
-      if (isKapusta) {
+      if (showTeamPanel) {
         kapustaPanelData = await getKapustaPanelData(orgId, isDomusManager ? null : user?.id);
         const { data: profile } = user
           ? await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle()
@@ -146,13 +153,13 @@ export default async function DashboardPage() {
   if (isDomusStaff && orgId) {
     return (
       <div className="flex-1 overflow-y-auto">
-        <div className="md:hidden">
+        <div className="md:hidden" style={teamPanelGlassVars}>
           <DomusAgentPanel
             orgId={orgId}
             consultasNuevoCount={domusConsultasNuevoCount}
             reunionesHoyCount={domusReunionesHoyCount}
             ofertasReservasCount={domusOfertasReservasCount}
-            slug={isKapusta ? "kapusta" : undefined}
+            slug={teamPanelSlug}
             userName={kapustaUserName}
             kapustaData={kapustaPanelData}
             publicHomeHref={kapustaPublicHomeHref}

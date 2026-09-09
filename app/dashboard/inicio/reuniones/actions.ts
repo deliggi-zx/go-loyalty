@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { hasFeature } from "@/lib/features";
 import { tryCreateCalendarEvent } from "@/lib/google-calendar-oauth";
 
 const ALLOWED_ROLES = ["admin", "agente"];
@@ -42,10 +43,10 @@ export async function createKapustaMeeting(
 
   const { data: org } = await supabase
     .from("loyalty_organizations")
-    .select("slug")
+    .select("feature_tier, feature_overrides")
     .eq("id", membership.org_id)
     .maybeSingle();
-  if (org?.slug !== "kapusta") return { ok: false, error: "unauthorized" };
+  if (!hasFeature(org, "crm_leads")) return { ok: false, error: "unauthorized" };
 
   const title = input.title.trim();
   const location = input.location.trim();

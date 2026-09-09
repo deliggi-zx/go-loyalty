@@ -2,8 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getTenantOrg, getTenantUser, getFeaturedProducts, getActiveCarousels, getUserPointsBalance, isVetOrgSlug, isCornerOrgSlug } from "./data";
 import { getVetReviews } from "./vet-reviews-data";
 import { getGymLocations, getGymClasses, getGymTestimonials } from "./gym-data";
+import { isRealEstateOrg, hasFeature } from "@/lib/features";
 import { GeneralInquiryForm } from "./general-inquiry-form";
-import { DomusChatWidget } from "./domus-chat-widget";
 import { BikeChatWidget } from "./bike-chat-widget";
 import { Carousel } from "./carousel";
 import { SocialLinks } from "./social-links";
@@ -191,14 +191,8 @@ export default async function TenantPage({
     .map((r) => r.image_url)
     .filter((u): u is string => !!u);
 
-  // Fase 2b Domus: mismo criterio simple (slug directo, un único flag en
-  // este archivo) que isBike arriba — botón "Consultas" en la home
-  // pública, scoped a esta org, no genérico.
-  const isDomus = params.slug === "domus" || params.slug === "kapusta";
-
-  // Calculadoras inmobiliarias: solo Kapusta (marca propia) — mismo
-  // criterio de slug directo que isDomus/isBike.
-  const isKapusta = params.slug === "kapusta";
+  // Vertical inmobiliaria (cualquier nivel) — ver lib/features.ts.
+  const isDomus = isRealEstateOrg(org);
 
   // Funcionalidad de gimnasio (Sedes, Clases, Comentarios): solo se muestra si
   // esta organización tiene datos cargados en las tablas gym_*. Ninguna otra
@@ -226,7 +220,7 @@ export default async function TenantPage({
           en vez del botón "Consultas". Ajuste 1: ya no hay un LoginForm
           inline arriba para señalar (Domus usa el ícono del header, igual
           que Gym2) — el mensaje apunta ahí en vez de "arriba". */}
-      {isDomus &&
+      {hasFeature(org, "crm_leads") &&
         (user ? (
           <div id="consultas" className="max-w-lg mx-auto px-4 pt-4">
             <GeneralInquiryForm slug={params.slug} orgId={org.id} primaryColor={primary} />
@@ -237,20 +231,10 @@ export default async function TenantPage({
           </p>
         ))}
 
-      {/* Las calculadoras de Kapusta se acceden desde el botón flotante
-          (KapustaFloatingDock, layout.tsx) y el link del drawer
-          (side-menu.tsx). La tarjeta que vivía acá se sacó — quedaba
-          duplicada con el botón flotante. */}
-
-      {/* Fase chatbot Domus: botón flotante propio en la home (no
-          reemplaza ni convive mal con WhatsAppButton de layout.tsx —
-          este vive apilado arriba, bottom-24 en vez de bottom-5, ver
-          domus-chat-widget.tsx). Kapusta NO usa este launcher fijo: su
-          chat vive en el dock flotante arrastrable de layout.tsx
-          (KapustaFloatingDock), presente en todas las rutas. */}
-      {isDomus && !isKapusta && (
-        <DomusChatWidget slug={params.slug} orgId={org.id} whatsappNumber={org.whatsapp_number} />
-      )}
+      {/* Calculadoras y chatbot: se acceden desde el drawer (side-menu.tsx),
+          la tarjeta del home y el dock flotante arrastrable
+          (KapustaFloatingDock, layout.tsx) según el nivel de la org. Ya no
+          hay launcher fijo de chat en esta página. */}
 
       {/* Fase 5 "Mundo Bike": mismo mecanismo que el chat de Domus de
           arriba (botón flotante propio, apilado sobre WhatsAppButton de
@@ -277,6 +261,7 @@ export default async function TenantPage({
               primaryColor={primary}
               catalogHref={`/${params.slug}/precios`}
               autoplay={carousel.autoplay}
+              isRealEstate={isDomus}
               loopInfinite={carousel.loopInfinite}
               autoplaySpeedMs={carousel.autoplaySpeedMs}
               direction={carousel.direction}

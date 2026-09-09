@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
+import { hasFeature } from "@/lib/features";
 import { ConsultasManager, type InquiryRow, type AgentOption } from "./consultas-manager";
 
 // Solo Domus — role admin (gerente) o agente, ver Fase 1c (rol agente):
@@ -20,7 +21,7 @@ export default async function ConsultasPage() {
   if (!user) redirect("/login");
 
   const [{ data: org }, { data: membership }] = await Promise.all([
-    supabase.from("loyalty_organizations").select("slug").eq("id", orgId).maybeSingle(),
+    supabase.from("loyalty_organizations").select("slug, feature_tier, feature_overrides").eq("id", orgId).maybeSingle(),
     supabase
       .from("loyalty_members")
       .select("role")
@@ -29,7 +30,7 @@ export default async function ConsultasPage() {
       .maybeSingle(),
   ]);
 
-  if (org?.slug !== "domus" && org?.slug !== "kapusta") redirect("/dashboard");
+  if (!hasFeature(org, "crm_leads")) redirect("/dashboard");
   if (!membership || !ALLOWED_ROLES.includes(membership.role)) redirect("/dashboard");
 
   const isManager = membership.role === "admin";

@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { hasFeature } from "@/lib/features";
 import { exchangeCodeForTokens, saveConnection } from "@/lib/google-calendar-oauth";
 
 // Callback de OAuth de Google. Debe coincidir EXACTO con
@@ -36,10 +37,10 @@ export async function GET(req: NextRequest) {
 
   const { data: org } = await supabase
     .from("loyalty_organizations")
-    .select("slug")
+    .select("feature_tier, feature_overrides")
     .eq("id", membership.org_id)
     .maybeSingle();
-  if (org?.slug !== "kapusta") return back("forbidden");
+  if (!hasFeature(org, "google_calendar")) return back("forbidden");
 
   try {
     const { refreshToken, email } = await exchangeCodeForTokens(code);

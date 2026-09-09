@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ToggleLeft, ToggleRight, Pencil, Package, Star } from "lucide-react";
+import { ToggleLeft, ToggleRight, Pencil, Package, Star, CheckCircle2, X } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { toggleProductActive, toggleProductFeatured } from "./actions";
 
@@ -25,13 +25,44 @@ interface ProductsListProps {
   // — mismo botón, mismo destino, ya estaba visible de entrada sin
   // gating (nada que abrir antes), solo cambia el texto.
   isDomus?: boolean;
+  // Llega en true cuando se aterriza acá desde "Publicar y volver al
+  // catálogo" (?published=1, ver back-to-catalog-link.tsx / page.tsx) —
+  // pedido de una clienta real (Kapusta, 08/09) que no veía confirmación
+  // de que la propiedad recién cargada había quedado guardada. Dispara
+  // el aviso de abajo y fuerza el scroll arriba del todo (por las dudas:
+  // como es una navegación dura, window ya llega scrolleado a 0, pero el
+  // contenedor con overflow-y-auto es un elemento propio, no el body).
+  justPublished?: boolean;
 }
 
-export function ProductsList({ products: initialProducts, categories, isDomus = false }: ProductsListProps) {
+export function ProductsList({
+  products: initialProducts,
+  categories,
+  isDomus = false,
+  justPublished = false,
+}: ProductsListProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [products, setProducts] = useState(initialProducts);
   const [categoryFilter, setCategoryFilter] = useState<string>("todos");
+  const [showPublishedBanner, setShowPublishedBanner] = useState(justPublished);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!justPublished) return;
+    // Contenedor real de scroll de esta pantalla (ver "flex-1
+    // overflow-y-auto" en page.tsx) — no es window, así que
+    // scrollTo/window.scrollTo no alcanza. closest() desde un elemento
+    // de esta misma sección evita agarrar por error el <nav> del
+    // sidebar, que usa la misma clase.
+    sectionRef.current?.closest(".overflow-y-auto")?.scrollTo({ top: 0 });
+    // Saca el ?published=1 de la URL para que un refresh manual no
+    // repita el aviso — no dispara re-fetch (mismo path).
+    router.replace("/dashboard/catalogo", { scroll: false });
+    const timer = setTimeout(() => setShowPublishedBanner(false), 6000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [justPublished]);
 
   function handleToggle(id: string, currentActive: boolean) {
     setProducts((prev) =>
@@ -63,7 +94,24 @@ export function ProductsList({ products: initialProducts, categories, isDomus = 
     categories.find((c) => c.id === id)?.name ?? "Sin categoría";
 
   return (
-    <section className="space-y-4">
+    <section ref={sectionRef} className="space-y-4">
+      {showPublishedBanner && (
+        <div className="flex items-center justify-between gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <p className="text-sm font-semibold text-emerald-800">
+              {isDomus ? "Propiedad publicada" : "Producto publicado"} — ya está visible en el catálogo.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowPublishedBanner(false)}
+            className="text-emerald-600 hover:text-emerald-800 transition-colors shrink-0"
+            aria-label="Cerrar aviso"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">

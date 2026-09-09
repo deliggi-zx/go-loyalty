@@ -7,17 +7,16 @@ import { GENERIC_SUMMARY_TEXTS } from "./morning-summary-constants";
 import { GlassLink } from "./kapusta-glass";
 import type { KapustaPanelData } from "./kapusta-panel-data";
 
-// Panel del equipo de Kapusta rediseñado — ver handoff/KAPUSTA_PANEL_SPEC.md.
-// Se renderiza SOLO cuando slug === "kapusta" (ver DomusAgentPanel); Domus y
-// el resto de las inmobiliarias siguen con el panel de 5 botones de siempre.
+// Panel del equipo rediseñado (estilo vidrio) — ver handoff/KAPUSTA_PANEL_SPEC.md.
+// Lo usa toda la vertical inmobiliaria (Inmo Básica / Pro / 360) cuando
+// llegan los datos del panel (ver DomusAgentPanel); cada org con su propia
+// paleta (primary/secondary/background_color), leída por props.
 //
-// Principios del spec: marca celeste + negro (nada de arena ni petróleo de
-// fondo), cada destino muestra su número, sin la palabra "agente" de cara
-// al usuario, sin bloques vacíos.
+// Principios del spec: marca + negro de fondo, cada destino muestra su
+// número, sin la palabra "agente" de cara al usuario, sin bloques vacíos.
 
-// Colores que NO viven en loyalty_organizations (derivados del logo / la
-// paleta del spec §2). Los de marca (celeste, petróleo, petróleo claro)
-// llegan por props, leídos como org.primary_color ?? "#005F77" etc.
+// El negro de marca es fijo (no vive en loyalty_organizations). Los colores
+// de marca llegan por props, leídos como org.primary_color ?? "#005F77" etc.
 const NEGRO = "#0B1417";
 const TXT_SOBRE_VIDRIO = "rgba(11, 20, 23, 0.62)"; // secundario sobre el vidrio celeste
 
@@ -158,11 +157,11 @@ export function KapustaTeamPanel({
         <div className="mt-3 max-w-[300px]">
           {resumenLoading ? (
             <div className="space-y-2 animate-pulse" aria-label="Cargando resumen del día">
-              <div className="h-3 rounded w-full" style={{ backgroundColor: "#8fcfe6" }} />
-              <div className="h-3 rounded w-3/5" style={{ backgroundColor: "#8fcfe6" }} />
+              <div className="h-3 rounded w-full" style={{ backgroundColor: "rgba(255, 255, 255, 0.45)" }} />
+              <div className="h-3 rounded w-3/5" style={{ backgroundColor: "rgba(255, 255, 255, 0.45)" }} />
             </div>
           ) : (
-            <p className="text-[15px] leading-[1.45]" style={{ color: "#103038" }}>
+            <p className="text-[15px] leading-[1.45]" style={{ color: "rgba(11, 20, 23, 0.82)" }}>
               {resumenText}
             </p>
           )}

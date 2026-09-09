@@ -25,15 +25,16 @@ import {
 // estimarTasacionKapusta en kapusta-calculadoras-actions.ts.
 
 interface Props {
+  slug: string;
   theme: KapustaTheme;
   tipos: string[];
   zonas: string[];
   // true mientras el modal del botón flotante todavía trae tipos/zonas del
-  // catálogo (en la página /kapusta/calculadoras llegan ya resueltos).
+  // catálogo (en la página /<slug>/calculadoras llegan ya resueltos).
   optionsLoading?: boolean;
 }
 
-export function KapustaCalcTasacion({ theme, tipos, zonas, optionsLoading = false }: Props) {
+export function KapustaCalcTasacion({ slug, theme, tipos, zonas, optionsLoading = false }: Props) {
   const [superficie, setSuperficie] = useState("");
   const [tipo, setTipo] = useState(tipos[0] ?? "");
   const [operacion, setOperacion] = useState("Venta");
@@ -59,12 +60,15 @@ export function KapustaCalcTasacion({ theme, tipos, zonas, optionsLoading = fals
     setError(null);
     setResult(null);
     try {
-      const res = await estimarTasacionKapusta({
-        superficieM2: superficieNum,
-        tipo,
-        operacion,
-        zona,
-      });
+      const res = await estimarTasacionKapusta(
+        {
+          superficieM2: superficieNum,
+          tipo,
+          operacion,
+          zona,
+        },
+        slug
+      );
       if (!res.ok) {
         setError("Revisá los datos ingresados e intentá de nuevo.");
         return;

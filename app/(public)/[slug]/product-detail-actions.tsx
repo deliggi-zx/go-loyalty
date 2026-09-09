@@ -11,14 +11,17 @@ interface ProductDetailActionsProps {
   imageUrl: string | null;
   primaryColor: string;
   whatsappNumber: string | null;
-  // Fase Carrito→Favoritos: mismo patrón que en ClientHeader/CartPanel/
-  // ProductModal — ver comentario en ClientHeader. addItem/useCart de
-  // abajo no cambian, solo el texto del botón.
-  orgSlug?: string;
-  // Fase Requisitos (Domus): texto ya resuelto server-side según el tipo
-  // de operación de ESTA propiedad (venta/alquiler) — ver producto/[id]/
-  // page.tsx. null/undefined para cualquier otra org, o si Domus todavía
-  // no cargó el texto correspondiente en Configuración.
+  // Vertical inmobiliaria (cualquier nivel): el segundo botón pasa a ser
+  // "Requisitos" en vez de "Consultar por WhatsApp".
+  isRealEstate?: boolean;
+  // Nivel Pro/360 de la vertical: "Agregar a favoritos" en vez de "Agregar
+  // al carrito". Una inmobiliaria Básica no muestra ningún botón de
+  // carrito/favoritos (def. 1).
+  hasFavorites?: boolean;
+  // Requisitos de operación (nivel Básica): texto ya resuelto server-side
+  // según el tipo de operación de ESTA propiedad (venta/alquiler) — ver
+  // producto/[id]/page.tsx. null/undefined si la org no tiene la feature o
+  // todavía no cargó el texto en Configuración.
   requirementsText?: string | null;
 }
 
@@ -37,10 +40,12 @@ export function ProductDetailActions({
   imageUrl,
   primaryColor,
   whatsappNumber,
-  orgSlug,
+  isRealEstate = false,
+  hasFavorites = false,
   requirementsText,
 }: ProductDetailActionsProps) {
-  const isDomus = orgSlug === "domus" || orgSlug === "kapusta";
+  const isDomus = isRealEstate;
+  const showAddButton = !isRealEstate || hasFavorites;
   const [added, setAdded] = useState(false);
   const [requirementsOpen, setRequirementsOpen] = useState(false);
   const { addItem } = useCart();
@@ -58,14 +63,16 @@ export function ProductDetailActions({
 
   return (
     <div className="space-y-2.5">
-      <button
-        onClick={handleAddToCart}
-        disabled={added}
-        className="w-full py-3 rounded-xl text-white font-medium transition-opacity disabled:opacity-70"
-        style={{ backgroundColor: primaryColor }}
-      >
-        {added ? "Agregado ✓" : isDomus ? "Agregar a favoritos" : "Agregar al carrito"}
-      </button>
+      {showAddButton && (
+        <button
+          onClick={handleAddToCart}
+          disabled={added}
+          className="w-full py-3 rounded-xl text-white font-medium transition-opacity disabled:opacity-70"
+          style={{ backgroundColor: primaryColor }}
+        >
+          {added ? "Agregado ✓" : hasFavorites ? "Agregar a favoritos" : "Agregar al carrito"}
+        </button>
+      )}
 
       {isDomus
         ? requirementsText && (

@@ -5,9 +5,9 @@
 // clientes que NO tienen cuenta en el sitio (cargados a mano o importados
 // desde planilla), con sus datos de contacto en la propia fila.
 
-// Solo estos dos slugs comparten la vertical inmobiliaria (Domus original
-// + Kapusta, su clon). Mismo guard que ya usan page.tsx y seguimiento.
-export const PORTFOLIO_SLUGS = ["domus", "kapusta"] as const;
+// La cartera de clientes ampliada es nivel Pro de la vertical inmobiliaria
+// (feature "cartera_clientes", ver lib/features.ts). Roles con acceso:
+// gerente (admin) y agente.
 export const PORTFOLIO_ROLES = ["admin", "agente"] as const;
 
 export interface PortfolioClientInput {

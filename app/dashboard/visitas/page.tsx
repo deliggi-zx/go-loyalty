@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
+import { hasFeature } from "@/lib/features";
 import { todayLocalYmd } from "@/app/(public)/[slug]/vet-appointments-config";
 import { VisitasManager, type VisitRow, type AvailabilityRow } from "./visitas-manager";
 
@@ -23,7 +24,7 @@ export default async function VisitasPage() {
   if (!user) redirect("/login");
 
   const [{ data: org }, { data: membership }] = await Promise.all([
-    supabase.from("loyalty_organizations").select("slug").eq("id", orgId).maybeSingle(),
+    supabase.from("loyalty_organizations").select("slug, feature_tier, feature_overrides").eq("id", orgId).maybeSingle(),
     supabase
       .from("loyalty_members")
       .select("role")
@@ -32,7 +33,7 @@ export default async function VisitasPage() {
       .maybeSingle(),
   ]);
 
-  if (org?.slug !== "domus" && org?.slug !== "kapusta") redirect("/dashboard");
+  if (!hasFeature(org, "agenda_visitas")) redirect("/dashboard");
   if (!membership || !ALLOWED_ROLES.includes(membership.role)) redirect("/dashboard");
 
   const today = todayLocalYmd();

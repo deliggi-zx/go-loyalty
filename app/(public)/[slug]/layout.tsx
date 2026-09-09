@@ -15,7 +15,7 @@ import { SectionNavTabs, type SectionNavTabItem } from "./section-nav-tabs";
 import { KapustaFloatingDock } from "./kapusta-floating-dock";
 import { VisitTracker } from "./visit-tracker";
 import { getGymLocations } from "./gym-data";
-import { isLoyaltyPointsSlug } from "@/lib/loyalty/config";
+import { hasFeature, isRealEstateOrg } from "@/lib/features";
 import { ORG_LOGO_LOCKUP } from "@/lib/org-logo-lockup";
 
 // Copy de las franjas del hero, por org (keyed por slug). Cada org que
@@ -144,7 +144,7 @@ export default async function TenantLayout({
         .eq("status", "claimed")
         .order("claimed_at", { ascending: false }),
       getUserPointsBalance(org.id, user.id),
-      params.slug === "domus" || params.slug === "kapusta"
+      isRealEstateOrg(org)
         ? supabase
             .from("loyalty_members")
             .select("role")
@@ -173,16 +173,19 @@ export default async function TenantLayout({
   const hasGymFeatures = gymLocations.length > 0;
   const isFloatingHeaderOrg = FLOATING_HEADER_SLUGS.has(params.slug);
 
-  // Ajuste 1 Domus: mismo criterio simple (slug directo) que ORG_LOGO_LOCKUP/
-  // isVetOrgSlug de este archivo.
-  const isDomusOrg = params.slug === "domus" || params.slug === "kapusta";
-  // Kapusta (marca propia): botones flotantes arrastrables (calculadoras +
-  // chat) en todo el sitio público. Domus y el resto no los tienen.
-  const isKapusta = params.slug === "kapusta";
-  // Fase íconos de staff: agente o gerente de Domus — mismo criterio
-  // admin/agente que dashboard/layout.tsx (isDomusStaff ahí). Un cliente
-  // de Domus, o cualquier usuario de cualquier otra org, queda en false
-  // y el header no cambia en nada (ver showStaffIcons en ClientHeader).
+  // Vertical inmobiliaria (Inmo Básica / Pro / 360) — ver lib/features.ts.
+  // Gatea lo que es diseño y no nivel: drawer sin "Lista de precios",
+  // categorías agrupadas por operación, íconos de staff en el header.
+  const isDomusOrg = isRealEstateOrg(org);
+  // Dock flotante arrastrable (calculadoras + chat): se monta solo si la
+  // org tiene el chatbot IA (nivel 360, o el override promocional de
+  // Kapusta) — el resto de las inmobiliarias accede a las calculadoras
+  // desde el link del drawer y la tarjeta del home (ver definición 6).
+  const showFloatingDock = hasFeature(org, "chatbot_ia");
+  // Fase íconos de staff: agente o gerente de una inmobiliaria — mismo
+  // criterio admin/agente que dashboard/layout.tsx (isDomusStaff ahí). Un
+  // cliente, o cualquier usuario de cualquier otra org, queda en false y el
+  // header no cambia en nada (ver showStaffIcons en ClientHeader).
   const isDomusStaff = isDomusOrg && (domusMemberRole === "admin" || domusMemberRole === "agente");
 
   // Fase 3j: mismo criterio simple (slug directo) que isDomusOrg arriba —
@@ -235,6 +238,10 @@ export default async function TenantLayout({
       floatingOverlay={isFloatingHeaderOrg}
       showScanIcon={!isFloatingHeaderOrg}
       orgSlug={params.slug}
+      isRealEstate={isDomusOrg}
+      hasFavorites={hasFeature(org, "favoritos")}
+      hasRegistroExtendido={hasFeature(org, "registro_extendido")}
+      hasLoyaltyPoints={hasFeature(org, "fidelizacion_qr")}
       isDomusStaff={isDomusStaff}
       menuProps={{
         slug: params.slug,
@@ -254,6 +261,8 @@ export default async function TenantLayout({
         primaryColor: primary,
         catalogType: org.catalog_type,
         productCategories,
+        isRealEstate: isDomusOrg,
+        hasCalculadoras: hasFeature(org, "calculadoras"),
       }}
     />
   );
@@ -267,10 +276,11 @@ export default async function TenantLayout({
   // orgs sigue viéndolo exactamente igual, salvo el admin de bike (Fase
   // 3j, mismo criterio que Domus: un admin no tiene puntos propios).
   //
-  // Fase fidelización Kapusta: Kapusta SÍ tiene puntos (bonus de registro +
-  // carga manual), así que es la excepción a "Domus sin badge" — se muestra
-  // salvo al staff (isDomusStaff: un agente/gerente no tiene puntos propios).
-  const showPointsBadge = isLoyaltyPointsSlug(params.slug)
+  // Fidelización con QR (nivel 360, u override): esa org SÍ tiene puntos
+  // (bono de registro + carga manual), así que es la excepción a "las
+  // inmobiliarias sin badge" — se muestra salvo al staff (isDomusStaff: un
+  // agente/gerente no tiene puntos propios).
+  const showPointsBadge = hasFeature(org, "fidelizacion_qr")
     ? !isDomusStaff
     : !isDomusOrg && !isBikeAdmin;
   const pointsBadge = user && showPointsBadge && (
@@ -389,14 +399,13 @@ export default async function TenantLayout({
           children
         )}
 
-        {/* Fase fidelización: registro informativo de ingreso, solo para
-            clientes logueados de orgs con puntos (hoy Kapusta). No renderiza
-            nada. */}
-        {user && domusMemberRole === "customer" && isLoyaltyPointsSlug(params.slug) && (
+        {/* Fidelización con QR: registro informativo de ingreso, solo para
+            clientes logueados de orgs con la feature. No renderiza nada. */}
+        {user && domusMemberRole === "customer" && hasFeature(org, "fidelizacion_qr") && (
           <VisitTracker orgId={org.id} />
         )}
 
-        {isKapusta && (
+        {showFloatingDock && (
           <KapustaFloatingDock
             slug={params.slug}
             orgId={org.id}

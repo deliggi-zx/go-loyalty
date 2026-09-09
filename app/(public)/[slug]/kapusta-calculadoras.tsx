@@ -9,6 +9,9 @@ import { KapustaCalcTasacion } from "./kapusta-calc-tasacion";
 import { KapustaCalcAlquiler } from "./kapusta-calc-alquiler";
 
 interface KapustaCalculadorasProps {
+  // slug de la org — la calc de tasación lo manda al server action, que
+  // igual re-verifica el nivel (hasFeature) antes de tocar el catálogo.
+  slug: string;
   tipos: string[];
   zonas: string[];
   primaryColor: string;
@@ -34,6 +37,7 @@ const TABS: { id: TabId; label: string; icon: typeof Calculator }[] = [
 // `optionsLoading`: true mientras el modal todavía trae tipos/zonas del
 // catálogo en segundo plano (solo lo usa la pestaña de tasación).
 export function KapustaCalcTabs({
+  slug,
   tipos,
   zonas,
   optionsLoading = false,
@@ -81,6 +85,7 @@ export function KapustaCalcTabs({
         {active === "alquiler" && <KapustaCalcAlquiler theme={theme} />}
         {active === "tasacion" && (
           <KapustaCalcTasacion
+            slug={slug}
             theme={theme}
             tipos={tipos}
             zonas={zonas}
@@ -93,6 +98,7 @@ export function KapustaCalcTabs({
 }
 
 export function KapustaCalculadoras({
+  slug,
   tipos,
   zonas,
   primaryColor,
@@ -112,6 +118,7 @@ export function KapustaCalculadoras({
       </header>
 
       <KapustaCalcTabs
+        slug={slug}
         tipos={tipos}
         zonas={zonas}
         primaryColor={primaryColor}

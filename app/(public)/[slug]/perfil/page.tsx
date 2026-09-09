@@ -22,6 +22,8 @@ import { MyVisitsList, type MyVisitRow } from "../my-visits-list";
 import { todayLocalYmd } from "../vet-appointments-config";
 import { formatPrice } from "@/lib/utils";
 import { loyaltyTypeLabel } from "@/lib/loyalty/config";
+import { hasFeature, isRealEstateOrg } from "@/lib/features";
+import { glassTheme } from "@/lib/glass-theme";
 import { DomusAgentPanel } from "@/app/dashboard/inicio/domus-agent-panel";
 import { getDomusAgentBadgeCounts } from "@/app/dashboard/inicio/domus-badge-counts";
 import { getKapustaPanelData } from "@/app/dashboard/inicio/kapusta-panel-data";
@@ -60,15 +62,15 @@ export default async function PerfilPage({
   // registro + cargas manuales del admin), distinto del historial de "compra"
   // de arriba que filtra por status='claimed' (flujo QR de SuperElectro, que
   // Kapusta no usa).
-  const { data: kapustaTxData } =
-    params.slug === "kapusta"
-      ? await supabase
-          .from("loyalty_transactions")
-          .select("id, amount, type, note, created_at")
-          .eq("profile_id", user.id)
-          .eq("org_id", org.id)
-          .order("created_at", { ascending: false })
-      : { data: null };
+  const hasLoyalty = hasFeature(org, "fidelizacion_qr");
+  const { data: kapustaTxData } = hasLoyalty
+    ? await supabase
+        .from("loyalty_transactions")
+        .select("id, amount, type, note, created_at")
+        .eq("profile_id", user.id)
+        .eq("org_id", org.id)
+        .order("created_at", { ascending: false })
+    : { data: null };
   const kapustaTransactions = kapustaTxData ?? [];
 
   // Fase P4: puntos con estética oscuro+naranja — mismo criterio simple
@@ -109,20 +111,20 @@ export default async function PerfilPage({
   // redirige arriba si !user, así que no hace falta gating adicional acá
   // (a diferencia de Visitas/Consultas, que viven en páginas públicas sin
   // login obligatorio).
-  const isDomus = params.slug === "domus" || params.slug === "kapusta";
-  const isKapusta = params.slug === "kapusta";
+  const isDomus = isRealEstateOrg(org);
+  const isKapusta = hasLoyalty;
+  const hasCrm = hasFeature(org, "crm_leads");
+  const canBookVisit = hasFeature(org, "agenda_visitas");
 
-  // Fase perfil agente vs. cliente: reusa getOrgRole (ya importado arriba
-  // para vetRole, mismo query que membership.role en dashboard/layout.tsx)
-  // en vez de escribir un query nuevo. Solo Domus tiene esta rama — el
-  // resto de las orgs no diferencia agente/cliente en Mi Perfil. Fase 1c
-  // (rol agente): antes solo "admin" representaba a un agente — ahora
-  // también el role "agente" ve el panel (el gerente sigue viendo TODO
-  // en sus badges, un agente solo lo suyo, ver domusBadgeCounts abajo).
+  // Perfil agente vs. cliente: reusa getOrgRole (ya importado arriba para
+  // vetRole). Solo la vertical inmobiliaria diferencia agente/cliente en Mi
+  // Perfil. El panel del agente y sus secciones (Mis consultas / ofertas)
+  // requieren además el CRM (nivel Pro).
   const domusRole = isDomus ? await getOrgRole(org.id, user.id) : null;
   const isDomusManager = isDomus && domusRole === "admin";
-  const isDomusAgent = isDomus && (domusRole === "admin" || domusRole === "agente");
-  const isDomusCustomer = isDomus && !isDomusAgent;
+  const isStaffRole = isDomus && (domusRole === "admin" || domusRole === "agente");
+  const isDomusAgent = hasCrm && isStaffRole;
+  const isDomusCustomer = isDomus && !isStaffRole;
 
   // Fase 5 Domus: "Mis consultas" / "Mis visitas" / "Mis propiedades
   // ofrecidas" — mismo criterio isDomusCustomer (antes isDomus a secas:
@@ -132,7 +134,8 @@ export default async function PerfilPage({
   // owner_profile_id de ESTE usuario (nunca toda la org, a diferencia de
   // los paneles del agente en /dashboard). Se piden en paralelo, no en
   // cascada.
-  const [{ data: myInquiriesData }, { data: myVisitsData }, { data: myOffersData }] = isDomusCustomer
+  const showCrmCustomerSections = isDomusCustomer && hasCrm;
+  const [{ data: myInquiriesData }, { data: myVisitsData }, { data: myOffersData }] = showCrmCustomerSections
     ? await Promise.all([
         supabase
           .from("domus_general_inquiries")
@@ -164,7 +167,7 @@ export default async function PerfilPage({
 
   const myVisitProductIds = Array.from(new Set(myVisitsRaw.map((v) => v.product_id)));
   const { data: myVisitProductsData } =
-    isDomusCustomer && myVisitProductIds.length > 0
+    showCrmCustomerSections && myVisitProductIds.length > 0
       ? await supabase.from("products").select("id, name").in("id", myVisitProductIds)
       : { data: [] as { id: string; name: string }[] };
   const productNameById = new Map((myVisitProductsData ?? []).map((p) => [p.id, p.name]));
@@ -191,11 +194,10 @@ export default async function PerfilPage({
     ? await getDomusAgentBadgeCounts(org.id, isDomusManager ? null : user.id)
     : { consultasNuevoCount: 0, reunionesHoyCount: 0, ofertasReservasCount: 0 };
 
-  // Rediseño del panel de Kapusta (handoff/KAPUSTA_PANEL_SPEC.md) — solo
-  // esta org, solo para staff. El resto de las inmobiliarias sigue con el
-  // panel de 5 botones (domusBadgeCounts de arriba).
+  // Panel del equipo rediseñado (estilo vidrio) — para toda la vertical
+  // inmobiliaria, solo para staff.
   const kapustaPanelData =
-    isKapusta && isDomusAgent
+    isDomusAgent
       ? await getKapustaPanelData(org.id, isDomusManager ? null : user.id)
       : undefined;
 
@@ -339,17 +341,15 @@ export default async function PerfilPage({
           del cliente, no escondido detrás de un botón "Consultas" como
           en la home pública. Solo cliente — un agente no le manda una
           consulta a sí mismo, ve el resumen de abajo en su lugar. */}
-      {isDomusCustomer && (
+      {showCrmCustomerSections && (
         <GeneralInquiryForm slug={params.slug} orgId={org.id} primaryColor={primary} startOpen />
       )}
 
-      {/* Panel del equipo (CAMBIO 1) — reemplaza las secciones de cliente
-          de acá abajo. Mismo componente que /dashboard/inicio. Para
-          Kapusta es el panel rediseñado (con su propio header, sin el
-          título "Panel del agente" — ver KAPUSTA_PANEL_SPEC §3.1 y el
-          glosario); el resto sigue con el de 5 botones y su encabezado. */}
-      {isDomusAgent && kapustaPanelData ? (
-        <div className="-mx-4">
+      {/* Panel del equipo — mismo componente (rediseñado, estilo vidrio) que
+          /dashboard/inicio, con la paleta de cada org. Reemplaza las
+          secciones de cliente de acá abajo. */}
+      {isDomusAgent && kapustaPanelData && (
+        <div className="-mx-4" style={glassTheme(org).vars}>
           <DomusAgentPanel
             orgId={org.id}
             consultasNuevoCount={domusBadgeCounts.consultasNuevoCount}
@@ -363,23 +363,11 @@ export default async function PerfilPage({
             backgroundColor={org.background_color ?? "#69BDE1"}
           />
         </div>
-      ) : isDomusAgent ? (
-        <div className="space-y-2 -mx-4">
-          <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide px-4">
-            Panel del agente
-          </h2>
-          <DomusAgentPanel
-            orgId={org.id}
-            consultasNuevoCount={domusBadgeCounts.consultasNuevoCount}
-            reunionesHoyCount={domusBadgeCounts.reunionesHoyCount}
-            ofertasReservasCount={domusBadgeCounts.ofertasReservasCount}
-          />
-        </div>
-      ) : null}
+      )}
 
-      {/* Ofrecer mi propiedad (Fase 3 Domus) — bloque propio, mismo
-          criterio de "un bloque más" que Mis Mascotas/Comentarios arriba. */}
-      {isDomusCustomer && (
+      {/* Ofrecer mi propiedad — bloque propio, mismo criterio de "un bloque
+          más" que Mis Mascotas/Comentarios arriba. */}
+      {showCrmCustomerSections && (
         <PropertyOfferForm slug={params.slug} orgId={org.id} userId={user.id} primaryColor={primary} />
       )}
 
@@ -387,7 +375,7 @@ export default async function PerfilPage({
           cada una con su propio título (pedido explícito: no mezclar en
           una sola lista), mismo estilo de card blanca con borde que
           "Historial de consumo" más abajo. */}
-      {isDomusCustomer && (
+      {showCrmCustomerSections && (
         <div className="space-y-2">
           <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
             Mis consultas
@@ -417,7 +405,7 @@ export default async function PerfilPage({
         </div>
       )}
 
-      {isDomusCustomer && (
+      {showCrmCustomerSections && canBookVisit && (
         <div className="space-y-2">
           <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
             Mis visitas
@@ -426,7 +414,7 @@ export default async function PerfilPage({
         </div>
       )}
 
-      {isDomusCustomer && (
+      {showCrmCustomerSections && (
         <div className="space-y-2">
           <h2 className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
             Mis propiedades ofrecidas

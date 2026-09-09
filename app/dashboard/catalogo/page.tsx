@@ -2,10 +2,15 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
+import { hasFeature } from "@/lib/features";
 import { CategoryManager } from "./category-manager";
 import { ProductsList, type ProductRow } from "./products-list";
 
-export default async function CatalogoPage() {
+export default async function CatalogoPage({
+  searchParams,
+}: {
+  searchParams: { published?: string };
+}) {
   const supabase = createClient();
   const orgId = await getOrgId();
 
@@ -13,16 +18,18 @@ export default async function CatalogoPage() {
 
   const { data: org } = await supabase
     .from("loyalty_organizations")
-    .select("catalog_type, slug")
+    .select("catalog_type, slug, feature_tier, feature_overrides")
     .eq("id", orgId)
     .maybeSingle();
 
   if (org?.catalog_type !== "products") redirect("/dashboard");
 
-  // Fase catálogo Domus: categorías colapsadas + "Agregar propiedad" en
-  // vez de "Nuevo producto" — mismo criterio simple de slug directo que
-  // el resto de las fases Domus (ProductForm, ProductImagesManager).
-  const isDomus = org?.slug === "domus" || org?.slug === "kapusta";
+  // Catálogo inmobiliario (feature "catalogo_propiedades", nivel Básica+):
+  // categorías colapsadas + "Agregar propiedad" en vez de "Nuevo producto",
+  // títulos "Catálogo de propiedades". El back-link va a Inicio solo si la
+  // org tiene el CRM (Pro+).
+  const isDomus = hasFeature(org, "catalogo_propiedades");
+  const hasCrm = hasFeature(org, "crm_leads");
 
   const [categoriesRes, productsRes] = await Promise.all([
     supabase
@@ -88,10 +95,10 @@ export default async function CatalogoPage() {
               apunta al panel principal; el resto de las orgs no usa esa
               ruta (redirige) — les damos el dashboard genérico. */}
           <Link
-            href={isDomus ? "/dashboard/inicio" : "/dashboard"}
+            href={hasCrm ? "/dashboard/inicio" : "/dashboard"}
             className="text-sm text-stone-400 hover:text-stone-700 transition-colors shrink-0"
           >
-            {isDomus ? "‹ Inicio" : "‹ Dashboard"}
+            {hasCrm ? "‹ Inicio" : "‹ Dashboard"}
           </Link>
           <div className="min-w-0">
             <h1 className="text-lg font-semibold text-stone-900 truncate">
@@ -114,7 +121,12 @@ export default async function CatalogoPage() {
 
       <div className="p-8 space-y-10 max-w-5xl">
         <CategoryManager categories={categories} isDomus={isDomus} />
-        <ProductsList products={products} categories={categories} isDomus={isDomus} />
+        <ProductsList
+          products={products}
+          categories={categories}
+          isDomus={isDomus}
+          justPublished={searchParams.published === "1"}
+        />
       </div>
     </div>
   );

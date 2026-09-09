@@ -1,13 +1,8 @@
-// Fidelización por puntos — hoy habilitada solo para Kapusta. Mismo patrón
-// que VET_ORG_SLUGS / CORNER_ORG_SLUGS en app/(public)/[slug]/data.ts:
-// gating por slug, único origen de verdad para el sitio público y el panel.
-// Domus (la vertical inmobiliaria de la que Kapusta es clon) NO tiene puntos
-// — se agrega acá cualquier org que quiera la mecánica.
-const LOYALTY_POINTS_SLUGS = new Set(["kapusta"]);
-
-export function isLoyaltyPointsSlug(slug: string | null | undefined): boolean {
-  return !!slug && LOYALTY_POINTS_SLUGS.has(slug);
-}
+// Fidelización por puntos — ahora gateada por el sistema de niveles de la
+// vertical inmobiliaria: hasFeature(org, "fidelizacion_qr") en lib/features.ts
+// (nivel 360, o el override promocional de Kapusta). Antes vivía acá como
+// un Set de slugs (isLoyaltyPointsSlug); se movió para no tener dos fuentes
+// de verdad del acceso a features.
 
 // Tipos de movimiento del ledger (loyalty_transactions.type). Los "manual_*"
 // los carga un admin desde la ficha del cliente; "signup_bonus" es

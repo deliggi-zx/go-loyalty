@@ -59,6 +59,11 @@ export interface SideMenuProps {
   // Label del ítem de catálogo/precios en el menú claro de siempre (el de
   // GymSideMenuItems no lo usa: ese tiene "Planes" y "Tienda" fijos).
   priceListLabel?: string;
+  // Vertical inmobiliaria (cualquier nivel): oculta "Lista de precios" y
+  // agrupa las categorías por operación (Venta / Alquiler).
+  isRealEstate?: boolean;
+  // Nivel Básica+ de la vertical inmobiliaria: link a las calculadoras.
+  hasCalculadoras?: boolean;
 }
 
 export function SideMenu({
@@ -84,20 +89,17 @@ export function SideMenu({
   neonTheme = false,
   bikeTheme = false,
   priceListLabel = "Lista de precios",
+  isRealEstate = false,
+  hasCalculadoras = false,
 }: SideMenuProps) {
   const router = useRouter();
   const [showTerms, setShowTerms] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const hasSocials = facebookUrl || instagramUrl || twitterUrl || youtubeUrl;
 
-  // Ajuste 1/2 Domus: mismo criterio simple (slug directo) que isBike en
-  // page.tsx/perfil — sin ícono/prop nueva, esta rama (neonTheme/bikeTheme
-  // ambos false) es la que ya usa Domus.
-  const isDomusOrg = slug === "domus" || slug === "kapusta";
-  // Calculadoras inmobiliarias: solo Kapusta (marca propia) — Domus y el
-  // resto de las inmobiliarias no las tienen. Mismo criterio de slug
-  // directo que isDomusOrg.
-  const isKapusta = slug === "kapusta";
+  // Vertical inmobiliaria (cualquier nivel): oculta "Lista de precios" y
+  // agrupa las categorías por operación.
+  const isDomusOrg = isRealEstate;
   // Ajuste 2: categorías raíz (parent_id null) y sus hijas, para agrupar
   // Venta/Alquiler con sus subcategorías debajo — mismo criterio de
   // filtrado por parent_id que category-drilldown.tsx. Solo se arma/usa
@@ -224,7 +226,7 @@ export function SideMenu({
             </Link>
           )}
 
-          {isKapusta && (
+          {hasCalculadoras && (
             <Link
               href={`/${slug}/calculadoras`}
               onClick={onClose}
