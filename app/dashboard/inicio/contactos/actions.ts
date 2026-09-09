@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { hasFeature } from "@/lib/features";
 import {
   PORTFOLIO_ROLES,
-  PORTFOLIO_SLUGS,
   isDuplicate,
   normalizeEmailKey,
   normalizePhoneKey,
@@ -17,7 +17,7 @@ type Guard =
   | { ok: false; error: "unauthorized" };
 
 // Mismo criterio que page.tsx: usuario logueado, miembro admin/agente de
-// una org de la vertical inmobiliaria (domus | kapusta).
+// una org con la feature "cartera_clientes" (nivel Pro de la vertical).
 async function guard(): Promise<Guard> {
   const supabase = createClient();
   const {
@@ -36,10 +36,10 @@ async function guard(): Promise<Guard> {
 
   const { data: org } = await supabase
     .from("loyalty_organizations")
-    .select("slug")
+    .select("feature_tier, feature_overrides")
     .eq("id", membership.org_id)
     .maybeSingle();
-  if (!org || !(PORTFOLIO_SLUGS as readonly string[]).includes(org.slug)) {
+  if (!hasFeature(org, "cartera_clientes")) {
     return { ok: false, error: "unauthorized" };
   }
 

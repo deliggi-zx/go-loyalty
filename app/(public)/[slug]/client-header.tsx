@@ -39,11 +39,19 @@ interface ClientHeaderProps {
   // Ícono de escaneo QR — hoy se saca por completo (no solo se oculta)
   // para "bike" (Fase 3c), no tiene lector del otro lado todavía.
   showScanIcon?: boolean;
-  // Fase Carrito→Favoritos: mismo patrón que orgSlug en ProductForm
-  // (dashboard/catalogo/product-form.tsx) — slug de la org activa, solo
-  // para el toggle carrito/favoritos scopeado a Domus acá abajo y en
-  // CartPanel. El resto del componente es genérico y no la lee.
+  // Fase Carrito→Favoritos: slug de la org activa, para el link a /perfil
+  // y para reenviar a LoginModal / CartPanel. El toggle carrito/favoritos
+  // ya no se decide por slug — ver isRealEstate / hasFavorites abajo.
   orgSlug?: string;
+  // Vertical inmobiliaria (cualquier nivel). Una inmobiliaria de nivel
+  // Básica no muestra ni carrito ni favoritos (ver definición 1); Pro/360
+  // muestran "Favoritos" (hasFavorites). Una org de productos que no es
+  // inmobiliaria sigue con el carrito de siempre.
+  isRealEstate?: boolean;
+  hasFavorites?: boolean;
+  // Nivel de la vertical inmobiliaria — se reenvían a LoginModal → LoginForm.
+  hasRegistroExtendido?: boolean;
+  hasLoyaltyPoints?: boolean;
   // Fase íconos de staff (Domus): agente o gerente logueado — repurposa
   // el ícono de escaneo (sin función real hoy, ver Gate 0) a un acceso
   // directo a Catálogo, y suma un ícono nuevo de Configuración al lado.
@@ -66,17 +74,24 @@ export function ClientHeader({
   floatingOverlay = false,
   showScanIcon = true,
   orgSlug,
+  isRealEstate = false,
+  hasFavorites = false,
+  hasRegistroExtendido = false,
+  hasLoyaltyPoints = false,
   isDomusStaff = false,
 }: ClientHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const { totalQuantity } = useCart();
-  const showCart = catalogType === "products";
+  // Una inmobiliaria de nivel Básica no muestra ni carrito ni favoritos
+  // (definición 1); Pro/360 muestran "Favoritos". El resto de las orgs de
+  // productos sigue con el carrito de siempre.
+  const showCart = catalogType === "products" && (!isRealEstate || hasFavorites);
   // Fase Carrito→Favoritos: mismo mecanismo (useCart, cartOpen, badge de
-  // totalQuantity) para todas las orgs — acá solo cambia qué ícono/texto
-  // se muestra, nunca la lógica. Ver mismo criterio en CartPanel.
-  const isDomus = orgSlug === "domus" || orgSlug === "kapusta";
+  // totalQuantity) — acá solo cambia qué ícono/texto se muestra. Ver mismo
+  // criterio en CartPanel.
+  const isDomus = hasFavorites;
 
   const iconColorClass = neonTheme ? "neon-icon" : floatingOverlay ? "bike-icon" : "text-white";
   const iconActiveClass = neonTheme ? "neon-icon-active" : floatingOverlay ? "bike-icon-active" : "";
@@ -194,7 +209,7 @@ export function ClientHeader({
           isOpen={cartOpen}
           onClose={() => setCartOpen(false)}
           primaryColor={primaryColor}
-          orgSlug={orgSlug}
+          favoritesMode={hasFavorites}
         />
       )}
       {!isLoggedIn && (
@@ -211,6 +226,8 @@ export function ClientHeader({
           requireInviteCode={requireInviteCode}
           orgId={orgId}
           orgSlug={orgSlug}
+          hasRegistroExtendido={hasRegistroExtendido}
+          hasLoyaltyPoints={hasLoyaltyPoints}
         />
       )}
     </>

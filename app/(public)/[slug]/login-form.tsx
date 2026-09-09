@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { isLoyaltyPointsSlug } from "@/lib/loyalty/config";
 import { awardSignupBonus } from "./loyalty-actions";
 
 // Forma del jsonb que devuelve reserve_gym_invite_code() — ver migración en
@@ -66,14 +65,16 @@ interface LoginFormProps {
   // con algún caller que hoy no lo pase, pero todos los que importan
   // (page.tsx, ClientHeader, HuellitasHome) ya lo pasan.
   orgId?: string;
-  // Fase registro extendido (Domus): slug de la org activa, solo para
-  // mostrar los campos nuevos (apellido/teléfono/profesión/presupuesto/
-  // zona) scopeados a esta org — mismo patrón que orgSlug en ClientHeader/
-  // CartPanel. El resto del formulario es genérico y no la lee. Este
-  // LoginForm inline de page.tsx nunca se monta para Domus (ver Ajuste 1,
-  // usa el ícono del header) — el único caller real que necesita pasarlo
-  // es LoginModal.
+  // Slug de la org activa — para el redirect a /<slug>/perfil tras el
+  // registro exitoso.
   orgSlug?: string;
+  // Registro extendido (nivel Pro de la vertical inmobiliaria): apellido
+  // obligatorio + teléfono/profesión/presupuesto/zona → domus_client_
+  // profile_details. Lo decide el server (lib/features.ts).
+  hasRegistroExtendido?: boolean;
+  // Fidelización con QR (nivel 360, u override): acredita bono de registro
+  // y muestra el copy de puntos en la pantalla de éxito.
+  hasLoyaltyPoints?: boolean;
   // Fase fidelización Kapusta: la página /[slug]/bienvenida monta este form
   // arrancando en registro (el modal del header sigue arrancando en login).
   defaultMode?: "login" | "register";
@@ -87,14 +88,13 @@ export function LoginForm({
   requireInviteCode = false,
   orgId,
   orgSlug,
+  hasRegistroExtendido = false,
+  hasLoyaltyPoints = false,
   defaultMode = "login",
 }: LoginFormProps) {
   const supabase = createClient();
   const router = useRouter();
-  const isDomus = orgSlug === "domus" || orgSlug === "kapusta";
-  // Fase fidelización: solo Kapusta acredita bonus de registro y muestra el
-  // copy de "Puntos Kapusta" en la pantalla de éxito (ver isLoyaltyPointsSlug).
-  const hasLoyaltyPoints = isLoyaltyPointsSlug(orgSlug);
+  const isDomus = hasRegistroExtendido;
   const [mode, setMode] = useState<"login" | "register">(defaultMode);
   // Puntos acreditados por el bonus de registro (0 si no aplica) — solo para
   // el copy de la pantalla de éxito.

@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { hasFeature } from "@/lib/features";
 import { buildAuthUrl, isCalendarConfigured } from "@/lib/google-calendar-oauth";
 
 // Inicia el flujo OAuth de Google Calendar. Solo el gerente (role admin)
@@ -27,10 +28,10 @@ export async function GET(req: NextRequest) {
 
   const { data: org } = await supabase
     .from("loyalty_organizations")
-    .select("slug")
+    .select("feature_tier, feature_overrides")
     .eq("id", membership.org_id)
     .maybeSingle();
-  if (org?.slug !== "kapusta") return back("forbidden");
+  if (!hasFeature(org, "google_calendar")) return back("forbidden");
 
   const state = crypto.randomBytes(16).toString("hex");
   cookies().set("gcal_oauth_state", state, {

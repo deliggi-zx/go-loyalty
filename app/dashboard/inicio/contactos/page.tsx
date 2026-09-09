@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
+import { hasFeature, isRealEstateOrg } from "@/lib/features";
+import { glassTheme } from "@/lib/glass-theme";
 import { ContactosManager, type ContactRow, type ContactInteraction } from "./contactos-manager";
 import { normalizeEmailKey, normalizePhoneKey } from "./portfolio";
 
@@ -32,7 +34,11 @@ export default async function ContactosPage() {
   if (!user) redirect("/login");
 
   const [{ data: org }, { data: membership }] = await Promise.all([
-    supabase.from("loyalty_organizations").select("slug").eq("id", orgId).maybeSingle(),
+    supabase
+      .from("loyalty_organizations")
+      .select("slug, primary_color, secondary_color, background_color, feature_tier, feature_overrides")
+      .eq("id", orgId)
+      .maybeSingle(),
     supabase
       .from("loyalty_members")
       .select("role")
@@ -41,10 +47,11 @@ export default async function ContactosPage() {
       .maybeSingle(),
   ]);
 
-  if (org?.slug !== "domus" && org?.slug !== "kapusta") redirect("/dashboard");
+  if (!hasFeature(org, "cartera_clientes")) redirect("/dashboard");
   if (!membership || !ALLOWED_ROLES.includes(membership.role)) redirect("/dashboard");
 
-  const isKapusta = org?.slug === "kapusta";
+  const glass = isRealEstateOrg(org);
+  const gt = glassTheme(org);
 
   const [{ data: inquiries }, { data: offers }, { data: visits }] = await Promise.all([
     supabase
@@ -224,31 +231,31 @@ export default async function ContactosPage() {
   }
 
   return (
-    <div className={cn("flex-1 overflow-y-auto", isKapusta && "bg-white")}>
+    <div className={cn("flex-1 overflow-y-auto", glass && "bg-white")} style={glass ? gt.vars : undefined}>
       <header
         className={cn(
           "border-b px-8 h-16 flex items-center gap-3 shrink-0",
-          isKapusta ? "bg-[#69BDE1] border-[#4FA6D3]" : "bg-white border-stone-200"
+          glass ? "bg-[var(--kap-header-bg)] border-[var(--kap-header-border)]" : "bg-white border-stone-200"
         )}
       >
         <Link
           href="/dashboard/inicio"
           className={cn(
             "text-sm transition-colors",
-            isKapusta ? "text-[#0B1417]/70 hover:text-[#0B1417]" : "text-stone-400 hover:text-stone-700"
+            glass ? "text-[#0B1417]/70 hover:text-[#0B1417]" : "text-stone-400 hover:text-stone-700"
           )}
         >
           ‹ Inicio
         </Link>
-        <h1 className={cn("text-lg font-semibold", isKapusta ? "text-[#0B1417]" : "text-stone-900")}>
-          {isKapusta ? "Cartera de clientes" : "Contactos"}
+        <h1 className={cn("text-lg font-semibold", glass ? "text-[#0B1417]" : "text-stone-900")}>
+          {glass ? "Cartera de clientes" : "Contactos"}
         </h1>
       </header>
 
       <div className="p-8">
         <ContactosManager
           contacts={contacts}
-          glass={isKapusta}
+          glass={glass}
           existingPhones={Array.from(existingPhoneSet)}
           existingEmails={Array.from(existingEmailSet)}
         />

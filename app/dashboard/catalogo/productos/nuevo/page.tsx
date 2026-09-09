@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
+import { hasFeature } from "@/lib/features";
 import { ProductForm } from "../../product-form";
 
 export default async function NuevoProductoPage() {
@@ -15,11 +16,16 @@ export default async function NuevoProductoPage() {
       .select("id, name, parent_id")
       .eq("org_id", orgId)
       .order("display_order", { ascending: true }),
-    // Fase moneda/cuotas: el slug de la org determina el default de
-    // moneda por categoría y si se oculta el campo de cuotas — ambos
-    // scopeados a Domus dentro de ProductForm, ver ese componente.
-    supabase.from("loyalty_organizations").select("slug").eq("id", orgId).maybeSingle(),
+    // Vertical inmobiliaria (feature "catalogo_propiedades"): default de
+    // moneda por categoría y campos de e-commerce ocultos — ver ProductForm.
+    supabase
+      .from("loyalty_organizations")
+      .select("feature_tier, feature_overrides")
+      .eq("id", orgId)
+      .maybeSingle(),
   ]);
+
+  const isRealEstate = hasFeature(org, "catalogo_propiedades");
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -34,7 +40,7 @@ export default async function NuevoProductoPage() {
       </header>
 
       <div className="p-8">
-        <ProductForm categories={categories ?? []} orgSlug={org?.slug} />
+        <ProductForm categories={categories ?? []} isRealEstate={isRealEstate} />
       </div>
     </div>
   );

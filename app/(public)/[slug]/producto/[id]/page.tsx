@@ -6,7 +6,7 @@ import { ProductDetailActions } from "../../product-detail-actions";
 import { PropertyVisitBooking } from "../../property-visit-booking";
 import { PropertyReservationButton } from "../../property-reservation-button";
 import { LoginForm } from "../../login-form";
-import { DomusChatWidget } from "../../domus-chat-widget";
+import { hasFeature, isRealEstateOrg } from "@/lib/features";
 import { formatPrice } from "@/lib/utils";
 import { findRootAncestor } from "@/lib/category-tree";
 import { getProductReservationState } from "../../domus-reservations-data";
@@ -39,19 +39,24 @@ export default async function ProductoPage({
   const product = await getProductDetail(org.id, params.id);
   if (!product) return notFound();
 
-  // Fase 1 Domus: "Solicitar visita" solo para esta org — ver mismo
-  // patrón orgSlug === "domus" que ProductDetailActions/CartPanel más
-  // abajo. getTenantUser() está cache()-ado (ver data.ts), así que no
-  // duplica la llamada que ya hace layout.tsx en el mismo request.
-  const isDomus = params.slug === "domus" || params.slug === "kapusta";
-  const user = isDomus ? await getTenantUser() : null;
+  // Vertical inmobiliaria — ver lib/features.ts. La agenda de visitas y las
+  // reservas son nivel Pro; los requisitos de operación, nivel Básica. Una
+  // inmobiliaria Básica deja la ficha solo con WhatsApp directo (def. 9).
+  const isRealEstate = isRealEstateOrg(org);
+  const canBookVisit = hasFeature(org, "agenda_visitas");
+  const canReserve = hasFeature(org, "reservas_propiedad");
+  const showRequisitos = hasFeature(org, "requisitos_operacion");
+  const hasFavorites = hasFeature(org, "favoritos");
+  // getTenantUser() está cache()-ado (ver data.ts), así que no duplica la
+  // llamada que ya hace layout.tsx en el mismo request.
+  const user = canBookVisit || canReserve ? await getTenantUser() : null;
 
-  // Fase Reservas (Domus): ver Gate 0 — no hay columna de disponibilidad
-  // en `products`, domus_property_reservations es la fuente de verdad.
-  // hasActiveReservation oculta "Reservar" (pendiente o confirmada);
-  // isConfirmedReservation recién muestra el badge público "Reservada"
-  // una vez que el agente la confirmó (ver domus-reservations-data.ts).
-  const { hasActiveReservation, isConfirmed: isConfirmedReservation } = isDomus
+  // Reservas (Pro): no hay columna de disponibilidad en `products`,
+  // domus_property_reservations es la fuente de verdad. hasActiveReservation
+  // oculta "Reservar" (pendiente o confirmada); isConfirmedReservation
+  // recién muestra el badge público "Reservada" una vez que el agente la
+  // confirmó (ver domus-reservations-data.ts).
+  const { hasActiveReservation, isConfirmed: isConfirmedReservation } = canReserve
     ? await getProductReservationState(product.id)
     : { hasActiveReservation: false, isConfirmed: false };
 
@@ -65,7 +70,7 @@ export default async function ProductoPage({
   // destino/número). Se resuelve acá, no en el componente cliente, para
   // no tener que mandarle categorías/mapeos — solo el texto ya elegido.
   let requirementsText: string | null = null;
-  if (isDomus && product.category_id) {
+  if (showRequisitos && product.category_id) {
     const categories = await getProductCategories(org.id);
     const root = findRootAncestor(categories, product.category_id);
     const operationType = root ? DOMUS_OPERATION_BY_ROOT_NAME[root.name] : undefined;
@@ -124,7 +129,8 @@ export default async function ProductoPage({
         imageUrl={images.find((img) => img.media_type !== "video")?.image_url ?? null}
         primaryColor={primary}
         whatsappNumber={org.whatsapp_number}
-        orgSlug={params.slug}
+        isRealEstate={isRealEstate}
+        hasFavorites={hasFavorites}
         requirementsText={requirementsText}
       />
 
@@ -133,10 +139,10 @@ export default async function ProductoPage({
           Visitas), no dos prompts de login separados. "Reservar"
           desaparece mientras la propiedad esté reservada; "Solicitar
           visita" no se ve afectado por el estado de reserva. */}
-      {isDomus &&
+      {(canBookVisit || canReserve) &&
         (user ? (
           <>
-            {!hasActiveReservation && (
+            {canReserve && !hasActiveReservation && (
               <PropertyReservationButton
                 slug={params.slug}
                 orgId={org.id}
@@ -144,21 +150,31 @@ export default async function ProductoPage({
                 primaryColor={primary}
               />
             )}
-            <PropertyVisitBooking
-              slug={params.slug}
-              orgId={org.id}
-              productId={product.id}
-              primaryColor={primary}
-            />
+            {canBookVisit && (
+              <PropertyVisitBooking
+                slug={params.slug}
+                orgId={org.id}
+                productId={product.id}
+                primaryColor={primary}
+              />
+            )}
           </>
         ) : (
           <div className="space-y-2">
             <p className="text-sm text-stone-600 text-center">
-              {hasActiveReservation
+              {canReserve && !hasActiveReservation && canBookVisit
+                ? "Iniciá sesión para reservar o solicitar una visita."
+                : canBookVisit
                 ? "Iniciá sesión para solicitar una visita."
-                : "Iniciá sesión para reservar o solicitar una visita."}
+                : "Iniciá sesión para reservar."}
             </p>
-            <LoginForm primaryColor={primary} orgId={org.id} />
+            <LoginForm
+              primaryColor={primary}
+              orgId={org.id}
+              orgSlug={params.slug}
+              hasRegistroExtendido={hasFeature(org, "registro_extendido")}
+              hasLoyaltyPoints={hasFeature(org, "fidelizacion_qr")}
+            />
           </div>
         ))}
 
@@ -178,12 +194,6 @@ export default async function ProductoPage({
         </div>
       )}
 
-      {/* Fase chatbot Domus: mismo widget que la home, reusado tal cual
-          (contexto server-side con TODAS las propiedades activas, no
-          solo esta) — no hace falta ninguna lógica específica de ficha. */}
-      {isDomus && (
-        <DomusChatWidget slug={params.slug} orgId={org.id} whatsappNumber={org.whatsapp_number} />
-      )}
     </div>
   );
 }

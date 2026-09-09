@@ -1,24 +1,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTenantOrg } from "../data";
+import { hasFeature } from "@/lib/features";
 import { getKapustaCalcOptions } from "../kapusta-calculadoras-actions";
 import { KapustaCalculadoras } from "../kapusta-calculadoras";
 
-// Calculadoras inmobiliarias — SOLO Kapusta (slug "kapusta"). Cualquier
-// otro slug cae en notFound(): la ruta vive bajo [slug] por la estructura
-// del proyecto, pero no se habilita para Domus, Inmo Básica/360 ni ninguna
-// otra org. Misma mecánica de scoping por slug directo que el resto de las
-// features de esta vertical (ver isDomus/isBike en page.tsx).
+// Calculadoras inmobiliarias — disponibles para cualquier org de la
+// vertical con la feature "calculadoras" (nivel Básica+). El resto de los
+// slugs cae en notFound(): la ruta vive bajo [slug] por la estructura del
+// proyecto. Ver lib/features.ts.
 export default async function CalculadorasPage({ params }: { params: { slug: string } }) {
-  if (params.slug !== "kapusta") notFound();
-
   const org = await getTenantOrg(params.slug);
   if (!org) notFound();
+  if (!hasFeature(org, "calculadoras")) notFound();
 
   // Tipos de propiedad (categorías hoja) y barrios reales del catálogo —
   // la calc de tasación se apoya en el stock propio, así que las opciones
   // salen de la base. Mismo helper que usa el modal del botón flotante.
-  const { tipos, zonas } = await getKapustaCalcOptions();
+  const { tipos, zonas } = await getKapustaCalcOptions(params.slug);
 
   const primary = org.primary_color ?? "#005F77";
   const secondary = org.secondary_color ?? "#0180AB";
@@ -35,6 +34,7 @@ export default async function CalculadorasPage({ params }: { params: { slug: str
       </Link>
 
       <KapustaCalculadoras
+        slug={params.slug}
         tipos={tipos}
         zonas={zonas}
         primaryColor={primary}

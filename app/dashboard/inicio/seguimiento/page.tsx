@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { cn, formatPrice } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
+import { hasFeature, isRealEstateOrg } from "@/lib/features";
+import { glassTheme } from "@/lib/glass-theme";
 import { GlassLink } from "../kapusta-glass";
 
 // Fase reorganizar panel: antes solo admin, ahora también agente — mismo
@@ -28,7 +30,11 @@ export default async function InicioSeguimientoPage() {
   if (!user) redirect("/login");
 
   const [{ data: org }, { data: membership }] = await Promise.all([
-    supabase.from("loyalty_organizations").select("slug").eq("id", orgId).maybeSingle(),
+    supabase
+      .from("loyalty_organizations")
+      .select("slug, primary_color, secondary_color, background_color, feature_tier, feature_overrides")
+      .eq("id", orgId)
+      .maybeSingle(),
     supabase
       .from("loyalty_members")
       .select("role")
@@ -37,10 +43,11 @@ export default async function InicioSeguimientoPage() {
       .maybeSingle(),
   ]);
 
-  if (org?.slug !== "domus" && org?.slug !== "kapusta") redirect("/dashboard");
+  if (!hasFeature(org, "crm_leads")) redirect("/dashboard");
   if (!membership || !ALLOWED_ROLES.includes(membership.role)) redirect("/dashboard");
 
-  const isKapusta = org?.slug === "kapusta";
+  const glass = isRealEstateOrg(org);
+  const gt = glassTheme(org);
 
   const [{ data: offers }, { data: inquiries }] = await Promise.all([
     supabase
@@ -101,29 +108,29 @@ export default async function InicioSeguimientoPage() {
     })),
   ].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
-  const CardTag = isKapusta ? GlassLink : Link;
-  const cardClass = isKapusta
+  const CardTag = glass ? GlassLink : Link;
+  const cardClass = glass
     ? "block rounded-2xl p-4 space-y-1"
     : "block bg-white rounded-xl border border-stone-200 p-4 space-y-1 hover:border-amber-300 transition-colors";
 
   return (
-    <div className={cn("flex-1 overflow-y-auto", isKapusta && "bg-white")}>
+    <div className={cn("flex-1 overflow-y-auto", glass && "bg-white")} style={glass ? gt.vars : undefined}>
       <header
         className={cn(
           "border-b px-8 h-16 flex items-center gap-3 shrink-0",
-          isKapusta ? "bg-[#69BDE1] border-[#4FA6D3]" : "bg-white border-stone-200"
+          glass ? "bg-[var(--kap-header-bg)] border-[var(--kap-header-border)]" : "bg-white border-stone-200"
         )}
       >
         <Link
           href="/dashboard/inicio"
           className={cn(
             "text-sm transition-colors",
-            isKapusta ? "text-[#0B1417]/70 hover:text-[#0B1417]" : "text-stone-400 hover:text-stone-700"
+            glass ? "text-[#0B1417]/70 hover:text-[#0B1417]" : "text-stone-400 hover:text-stone-700"
           )}
         >
           ‹ Inicio
         </Link>
-        <h1 className={cn("text-lg font-semibold", isKapusta ? "text-[#0B1417]" : "text-stone-900")}>
+        <h1 className={cn("text-lg font-semibold", glass ? "text-[#0B1417]" : "text-stone-900")}>
           Seguimiento
         </h1>
       </header>
@@ -133,7 +140,7 @@ export default async function InicioSeguimientoPage() {
           <div
             className={cn(
               "rounded-xl py-16 text-center text-sm",
-              isKapusta
+              glass
                 ? "kap-glass text-[#0B1417]/60"
                 : "bg-white border border-dashed border-stone-200 text-stone-400"
             )}
@@ -145,7 +152,7 @@ export default async function InicioSeguimientoPage() {
             {rows.map((row) => (
               <CardTag key={`${row.type}-${row.id}`} href={row.href} className={cardClass}>
                 <div className="flex items-start justify-between gap-3">
-                  <p className={cn("text-sm font-semibold", isKapusta ? "text-[#0B1417]" : "text-stone-900")}>
+                  <p className={cn("text-sm font-semibold", glass ? "text-[#0B1417]" : "text-stone-900")}>
                     {row.name} · {row.phone}
                   </p>
                   <span
@@ -157,8 +164,8 @@ export default async function InicioSeguimientoPage() {
                     {row.type === "oferta" ? "Oferta de propiedad" : "Consulta general"}
                   </span>
                 </div>
-                <p className={cn("text-sm", isKapusta ? "text-[#0B1417]/80" : "text-stone-600")}>{row.summary}</p>
-                <p className={cn("text-xs", isKapusta ? "text-[#0B1417]/55" : "text-stone-400")}>
+                <p className={cn("text-sm", glass ? "text-[#0B1417]/80" : "text-stone-600")}>{row.summary}</p>
+                <p className={cn("text-xs", glass ? "text-[#0B1417]/55" : "text-stone-400")}>
                   {new Date(row.createdAt).toLocaleDateString("es-AR", {
                     day: "numeric",
                     month: "short",

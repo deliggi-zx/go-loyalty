@@ -20,11 +20,10 @@ interface ProductImagesManagerProps {
   orgId: string;
   productId: string;
   images: ProductImage[];
-  // Fase video: el botón "Subir video" solo se ofrece para Domus (pedido
-  // explícito) — mismo patrón de prop opcional que orgSlug en
-  // ProductForm. El resto de las orgs sigue viendo únicamente "Seleccionar
-  // imágenes", sin cambios.
-  orgSlug?: string;
+  // Vertical inmobiliaria (feature "catalogo_propiedades"): habilita el
+  // botón "Subir video" en la galería. El resto de las orgs ve únicamente
+  // "Seleccionar imágenes".
+  isRealEstate?: boolean;
 }
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -34,7 +33,7 @@ export function ProductImagesManager({
   orgId,
   productId,
   images: initialImages,
-  orgSlug,
+  isRealEstate = false,
 }: ProductImagesManagerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -44,7 +43,7 @@ export function ProductImagesManager({
   const [error, setError] = useState<string | null>(null);
 
   const supabase = createClient();
-  const isDomus = orgSlug === "domus" || orgSlug === "kapusta";
+  const isDomus = isRealEstate;
   const hasVideo = images.some((i) => i.media_type === "video");
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { ORG_LOGO_LOCKUP } from "@/lib/org-logo-lockup";
+import { hasFeature, isRealEstateOrg } from "@/lib/features";
 
 export default async function DashboardLayout({
   children,
@@ -32,9 +33,7 @@ export default async function DashboardLayout({
   let showInicio = false;
   let orgName: string | undefined;
   let orgSlug: string | undefined;
-  let isDomusAdmin = false;
-  // Fase 1c (rol agente): hoisted junto a isDomusAdmin (mismo motivo:
-  // hace falta también fuera del if de abajo, para hideMobileNav).
+  // Hoisted: hace falta también fuera del if de abajo, para hideMobileNav.
   let isDomusStaff = false;
   if (orgId) {
     const [{ data: org }, { count: gymLocationsCount }, { data: membership }] = await Promise.all([
@@ -43,7 +42,7 @@ export default async function DashboardLayout({
       // Loyalty" hardcodeado del sidebar por el nombre real de la org.
       supabase
         .from("loyalty_organizations")
-        .select("catalog_type, slug, name")
+        .select("catalog_type, slug, name, feature_tier, feature_overrides")
         .eq("id", orgId)
         .maybeSingle(),
       // Mismo criterio hasGymFeatures que el sitio público (org con filas
@@ -83,44 +82,28 @@ export default async function DashboardLayout({
     // reusado para los dos, porque no tienen por qué seguir coincidiendo
     // si el día de mañana alguno de los dos se habilita para otro role).
     showTurnos = isVetOrg && isAdminOrVetRole;
-    // Fase 1 Domus: panel de visitas (agenda + disponibilidad propia),
-    // mismo criterio de flag local por slug que isVetOrg/isCornerOrg
-    // arriba. Solo role admin (el gerente/dueño, ver Fase 1c rol agente)
-    // — no hay un role 'vet' equivalente que sumar acá.
-    const isDomusOrg = org?.slug === "domus" || org?.slug === "kapusta";
-    isDomusAdmin = isDomusOrg && membership?.role === "admin";
-    // Fase 1c (rol agente): un segundo role de staff, "agente", que
-    // ahora también puede entrar a Inicio/Consultas (ve solo lo suyo ahí
-    // adentro, ver ALLOWED_ROLES de esas páginas) — pero NO a Visitas/
-    // Ofertas/Reservas, que por ahora siguen siendo solo del gerente
-    // (isDomusAdmin de arriba, sin cambios).
-    const isDomusAgentRole = isDomusOrg && membership?.role === "agente";
-    isDomusStaff = isDomusAdmin || isDomusAgentRole;
-    showVisitas = isDomusAdmin;
+    // Vertical inmobiliaria (Inmo Básica / Pro / 360) — ver lib/features.ts.
+    // "agente" es un segundo role de staff que entra a Inicio/Consultas
+    // (ve solo lo suyo, ver ALLOWED_ROLES de esas páginas) pero NO a
+    // Visitas/Ofertas/Reservas, que siguen siendo solo del gerente (admin).
+    const isDomusOrg = isRealEstateOrg(org);
+    const isRealEstateStaffRole = isDomusOrg && (membership?.role === "admin" || membership?.role === "agente");
+    isDomusStaff = isRealEstateStaffRole;
+    // Visitas / Ofertas / Reservas: nivel Pro, solo el gerente (admin).
+    showVisitas = hasFeature(org, "agenda_visitas") && membership?.role === "admin";
     // Fase T1 "Mundo Bike" Taller: panel de disponibilidad, mismo criterio
     // de flag local por slug que isDomusOrg arriba. Solo role admin —
     // mismo criterio isBikeAdmin ya usado en /perfil (Fase P5) y
     // layout.tsx del sitio público (Fase 3j).
     const isBikeOrg = org?.slug === "bike";
     showTaller = isBikeOrg && membership?.role === "admin";
-    // Fase 2b: panel de consultas, mismo gate exacto que Visitas arriba
-    // (por ahora coinciden 1 a 1, mismo criterio de flags separados que
-    // showMascotas/showTurnos de Huellitas: no tienen por qué seguir
-    // coincidiendo si el día de mañana alguno se habilita para otro role).
-    // Fase 1c: ahora sí divergen — Consultas suma el role agente.
-    showConsultas = isDomusStaff;
-    // Fase 3: panel de ofertas ("ofrecer mi propiedad"), mismo gate exacto
-    // que Visitas/Consultas arriba.
-    showOfertas = isDomusAdmin;
-    // Fase Reservas: panel de reservas pendientes, mismo gate exacto que
-    // el resto de Domus.
-    showReservas = isDomusAdmin;
-    // Fase 4b: mini-CRM del agente (Contactos/Consultas/Reuniones/
-    // Seguimiento), mismo gate exacto que Visitas/Consultas/Ofertas. No
-    // reemplaza el redirect de /login (compartido con todas las orgs,
-    // ver Gate 0 de esta fase) — vive como primer ítem del sidebar. Fase
-    // 1c: ahora también role agente, para llegar al panel con su badge.
-    showInicio = isDomusStaff;
+    // CRM de consultas y leads (nivel Pro): Consultas e Inicio los ve
+    // cualquier staff (admin + agente); Ofertas y Reservas, solo el gerente.
+    const hasCrm = hasFeature(org, "crm_leads");
+    showConsultas = hasCrm && isRealEstateStaffRole;
+    showOfertas = hasCrm && membership?.role === "admin";
+    showReservas = hasFeature(org, "reservas_propiedad") && membership?.role === "admin";
+    showInicio = hasCrm && isRealEstateStaffRole;
   }
 
   return (

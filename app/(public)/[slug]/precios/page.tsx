@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantOrg, getProductCatalog, getProductCategories } from "../data";
+import { isRealEstateOrg } from "@/lib/features";
 import { PriceFlyers } from "../price-flyers";
 import { ProductCatalog } from "../product-catalog";
 import { BikeChatWidget } from "../bike-chat-widget";
@@ -38,6 +39,7 @@ export default async function PreciosPage({
           categories={categories}
           primaryColor={org.primary_color ?? "#f59e0b"}
           initialCategoryId={searchParams.categoria ?? null}
+          isRealEstate={isRealEstateOrg(org)}
         />
 
         {/* Fase 5 "Mundo Bike": el chat también vive acá, a diferencia

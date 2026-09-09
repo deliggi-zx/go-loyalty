@@ -2,10 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { hasFeature } from "@/lib/features";
 import { disconnect } from "@/lib/google-calendar-oauth";
 
-// Desconectar el Google Calendar de la org. Solo gerente (admin) de
-// Kapusta — la conexión es única y compartida.
+// Desconectar el Google Calendar de la org. Solo el gerente (admin) de una
+// org con la feature "google_calendar" (nivel Pro) — la conexión es única
+// y compartida.
 export async function disconnectGoogleCalendar(): Promise<{ ok: boolean }> {
   const supabase = createClient();
   const {
@@ -22,10 +24,10 @@ export async function disconnectGoogleCalendar(): Promise<{ ok: boolean }> {
 
   const { data: org } = await supabase
     .from("loyalty_organizations")
-    .select("slug")
+    .select("feature_tier, feature_overrides")
     .eq("id", membership.org_id)
     .maybeSingle();
-  if (org?.slug !== "kapusta") return { ok: false };
+  if (!hasFeature(org, "google_calendar")) return { ok: false };
 
   await disconnect(membership.org_id);
   revalidatePath("/dashboard/configuracion");

@@ -1,12 +1,26 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { hasFeature } from "@/lib/features";
 
-// Calculadoras inmobiliarias de Kapusta (ver kapusta-calculadoras.tsx).
-// Scoped a esta org: los dos server actions resuelven el slug "kapusta"
-// server-side, no confían en un orgId que llegue del cliente. Domus y el
-// resto de las inmobiliarias no llaman acá.
-const KAPUSTA_SLUG = "kapusta";
+// Calculadoras inmobiliarias (ver kapusta-calculadoras.tsx). Disponibles
+// para cualquier org de la vertical con la feature "calculadoras" (nivel
+// Básica+). Los server actions que dependen del catálogo reciben el slug
+// pero SIEMPRE re-verifican el nivel server-side (hasFeature), no confían
+// en lo que llegue del cliente. Default "kapusta" por compatibilidad con
+// callers que todavía no lo pasan.
+const DEFAULT_SLUG = "kapusta";
+
+async function resolveRealEstateOrgId(slug: string): Promise<string | null> {
+  const supabase = createClient();
+  const { data: org } = await supabase
+    .from("loyalty_organizations")
+    .select("id, feature_tier, feature_overrides")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (!org || !hasFeature(org, "calculadoras")) return null;
+  return org.id;
+}
 
 // ─────────────────────────────────────────────────────────────────────────
 // Opciones de los selectores (tipo de propiedad + zona/barrio) — derivadas
@@ -15,19 +29,17 @@ const KAPUSTA_SLUG = "kapusta";
 // un server component arriba de donde recibirlas.
 // ─────────────────────────────────────────────────────────────────────────
 
-export async function getKapustaCalcOptions(): Promise<{ tipos: string[]; zonas: string[] }> {
+export async function getKapustaCalcOptions(
+  slug: string = DEFAULT_SLUG
+): Promise<{ tipos: string[]; zonas: string[] }> {
   const supabase = createClient();
 
-  const { data: org } = await supabase
-    .from("loyalty_organizations")
-    .select("id")
-    .eq("slug", KAPUSTA_SLUG)
-    .maybeSingle();
-  if (!org) return { tipos: [], zonas: [] };
+  const orgId = await resolveRealEstateOrgId(slug);
+  if (!orgId) return { tipos: [], zonas: [] };
 
   const [{ data: categories }, { data: products }] = await Promise.all([
-    supabase.from("product_categories").select("name, parent_id").eq("org_id", org.id),
-    supabase.from("products").select("specs").eq("org_id", org.id).eq("active", true),
+    supabase.from("product_categories").select("name, parent_id").eq("org_id", orgId),
+    supabase.from("products").select("specs").eq("org_id", orgId).eq("active", true),
   ]);
 
   const tipos = Array.from(
@@ -93,7 +105,10 @@ function specString(specs: Record<string, unknown> | null, key: string): string 
   return typeof val === "string" && val.trim() ? val.trim() : null;
 }
 
-export async function estimarTasacionKapusta(input: TasacionInput): Promise<TasacionResult> {
+export async function estimarTasacionKapusta(
+  input: TasacionInput,
+  slug: string = DEFAULT_SLUG
+): Promise<TasacionResult> {
   const superficie = Number(input.superficieM2);
   if (!Number.isFinite(superficie) || superficie <= 0 || !input.tipo || !input.operacion) {
     return { ok: false, error: "invalid" };
@@ -101,20 +116,16 @@ export async function estimarTasacionKapusta(input: TasacionInput): Promise<Tasa
 
   const supabase = createClient();
 
-  const { data: org } = await supabase
-    .from("loyalty_organizations")
-    .select("id")
-    .eq("slug", KAPUSTA_SLUG)
-    .maybeSingle();
-  if (!org) return { ok: false, error: "invalid" };
+  const orgId = await resolveRealEstateOrgId(slug);
+  if (!orgId) return { ok: false, error: "invalid" };
 
   const [{ data: productsData }, { data: categoriesData }] = await Promise.all([
     supabase
       .from("products")
       .select("price, currency, specs, category_id")
-      .eq("org_id", org.id)
+      .eq("org_id", orgId)
       .eq("active", true),
-    supabase.from("product_categories").select("id, name, parent_id").eq("org_id", org.id),
+    supabase.from("product_categories").select("id, name, parent_id").eq("org_id", orgId),
   ]);
 
   const categoryById = new Map((categoriesData ?? []).map((c) => [c.id, c]));

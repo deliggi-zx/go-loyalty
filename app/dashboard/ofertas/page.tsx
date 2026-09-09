@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
+import { hasFeature } from "@/lib/features";
 import { OfertasManager, type OfferRow } from "./ofertas-manager";
 
 // Mismo criterio de gate exacto que dashboard/consultas y
@@ -19,7 +20,7 @@ export default async function OfertasPage() {
   if (!user) redirect("/login");
 
   const [{ data: org }, { data: membership }] = await Promise.all([
-    supabase.from("loyalty_organizations").select("slug").eq("id", orgId).maybeSingle(),
+    supabase.from("loyalty_organizations").select("slug, feature_tier, feature_overrides").eq("id", orgId).maybeSingle(),
     supabase
       .from("loyalty_members")
       .select("role")
@@ -28,7 +29,7 @@ export default async function OfertasPage() {
       .maybeSingle(),
   ]);
 
-  if (org?.slug !== "domus" && org?.slug !== "kapusta") redirect("/dashboard");
+  if (!hasFeature(org, "crm_leads")) redirect("/dashboard");
   if (!membership || !ALLOWED_ROLES.includes(membership.role)) redirect("/dashboard");
 
   // Todas las ofertas de la org (mismo criterio que Consultas: no está

@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { isLoyaltyPointsSlug } from "@/lib/loyalty/config";
+import { hasFeature } from "@/lib/features";
 import { getTenantUser } from "../data";
 import { LoginForm } from "../login-form";
 
@@ -15,15 +15,14 @@ export default async function BienvenidaPage({
 }: {
   params: { slug: string };
 }) {
-  if (!isLoyaltyPointsSlug(params.slug)) notFound();
-
   const supabase = createClient();
   const { data: org } = await supabase
     .from("loyalty_organizations")
-    .select("id, name, primary_color, signup_bonus_points")
+    .select("id, name, primary_color, signup_bonus_points, feature_tier, feature_overrides")
     .eq("slug", params.slug)
     .maybeSingle();
   if (!org) notFound();
+  if (!hasFeature(org, "fidelizacion_qr")) notFound();
 
   const user = await getTenantUser();
   if (user) redirect(`/${params.slug}/perfil`);
@@ -57,6 +56,8 @@ export default async function BienvenidaPage({
           variant="card"
           orgId={org.id}
           orgSlug={params.slug}
+          hasRegistroExtendido={hasFeature(org, "registro_extendido")}
+          hasLoyaltyPoints={hasFeature(org, "fidelizacion_qr")}
           defaultMode="register"
         />
       </div>

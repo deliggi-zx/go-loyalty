@@ -1,17 +1,21 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
+import { hasFeature } from "@/lib/features";
 import { ProductForm } from "../../product-form";
 import { ProductImagesManager } from "../../product-images-manager";
 import { ProductSpecsManager } from "../../product-specs-manager";
 import { PropertySpecsForm } from "../../property-specs-form";
 import { ProductCarouselsManager } from "../../product-carousels-manager";
+import { BackToCatalogLink } from "../../back-to-catalog-link";
+import { PublishBar } from "../../publish-bar";
 
 export default async function EditarProductoPage({
   params,
+  searchParams,
 }: {
   params: { id: string };
+  searchParams: { nuevo?: string };
 }) {
   const supabase = createClient();
   const orgId = await getOrgId();
@@ -50,35 +54,40 @@ export default async function EditarProductoPage({
         .eq("product_id", params.id),
       // Fase moneda/cuotas: mismo criterio que productos/nuevo/page.tsx —
       // ver comentario ahí.
-      supabase.from("loyalty_organizations").select("slug").eq("id", orgId).maybeSingle(),
+      supabase
+        .from("loyalty_organizations")
+        .select("slug, feature_tier, feature_overrides")
+        .eq("id", orgId)
+        .maybeSingle(),
     ]);
 
   if (!product) return notFound();
 
-  // Catálogo inmobiliario (Domus / Kapusta): el editor de specs genérico
-  // clave/valor se reemplaza por el formulario orientado al rubro.
-  const isDomus = org?.slug === "domus" || org?.slug === "kapusta";
+  // Catálogo inmobiliario (feature "catalogo_propiedades"): el editor de
+  // specs genérico clave/valor se reemplaza por el formulario del rubro.
+  const isDomus = hasFeature(org, "catalogo_propiedades");
+
+  // ?nuevo=1 llega desde product-form.tsx solo la vez que se acaba de
+  // crear el producto (ver comentario ahí y en back-to-catalog-link.tsx)
+  // — distingue "recién creado, cargando fotos" de "editando uno viejo".
+  const justCreated = searchParams.nuevo === "1";
 
   return (
     <div className="flex-1 overflow-y-auto">
       <header className="bg-white border-b border-stone-200 px-8 h-16 flex items-center gap-3 shrink-0">
-        <Link
-          href="/dashboard/catalogo"
-          className="text-sm text-stone-400 hover:text-stone-700 transition-colors"
-        >
-          ‹ Catálogo
-        </Link>
+        <BackToCatalogLink label="‹ Catálogo" justPublished={justCreated} />
         <h1 className="text-lg font-semibold text-stone-900">{product.name}</h1>
       </header>
 
       <div className="p-8 space-y-10">
-        <ProductForm categories={categories ?? []} product={product} orgSlug={org?.slug} />
+        <ProductForm categories={categories ?? []} product={product} isRealEstate={isDomus} />
         <ProductImagesManager
           orgId={orgId}
           productId={product.id}
           images={images ?? []}
-          orgSlug={org?.slug}
+          isRealEstate={isDomus}
         />
+        {justCreated && <PublishBar isRealEstate={isDomus} />}
         {isDomus ? (
           <PropertySpecsForm
             productId={product.id}

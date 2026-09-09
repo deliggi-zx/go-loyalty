@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
 import { publicBaseUrlForSlug } from "@/lib/org-domains";
+import { hasFeature, isRealEstateOrg } from "@/lib/features";
 import { AppearanceForm } from "./appearance-form";
 import { WelcomeQr } from "./welcome-qr";
 import { CarouselManager } from "./carousel-manager";
@@ -24,7 +25,7 @@ export default async function ConfiguracionPage() {
     supabase
       .from("loyalty_organizations")
       .select(
-        "id, slug, name, banner_url, background_url, background_color, primary_color, secondary_color, accent_color, member_tier_label, next_reward_threshold, about_text, whatsapp_number, phone_number, facebook_url, instagram_url, twitter_url, youtube_url, terms_text, rental_requirements_text, purchase_requirements_text, workshop_capacity_per_slot"
+        "id, slug, name, banner_url, background_url, background_color, primary_color, secondary_color, accent_color, member_tier_label, next_reward_threshold, about_text, whatsapp_number, phone_number, facebook_url, instagram_url, twitter_url, youtube_url, terms_text, rental_requirements_text, purchase_requirements_text, workshop_capacity_per_slot, feature_tier, feature_overrides"
       )
       .eq("id", orgId)
       .single(),
@@ -44,28 +45,31 @@ export default async function ConfiguracionPage() {
   const priceItems =
     contentRes.data?.filter((c) => c.type === "price_list") ?? [];
 
-  // Google Calendar (solo Kapusta): estado de la conexión + rol del
-  // usuario para saber si puede conectar/desconectar.
-  const isKapusta = org.slug === "kapusta";
+  // Vertical inmobiliaria (cualquier nivel): Configuración reordenada — QR
+  // arriba (si tiene fidelización), Contacto, Requisitos; sin Lista de
+  // precios / Carrusel / Colores / Banner / Fondo; "Promos" → "Flyers".
+  const isRealEstate = isRealEstateOrg(org);
+  const showWelcomeQr = hasFeature(org, "fidelizacion_qr");
+  const showRequisitos = hasFeature(org, "requisitos_operacion");
+  const showGoogleCalendar = hasFeature(org, "google_calendar");
 
-  // Fase fidelización Kapusta: URL de la página de bienvenida para el QR
-  // imprimible. Dominio propio si lo tiene (kapusta.com.ar/bienvenida), si
-  // no el origin actual + /<slug>/bienvenida.
+  // URL de la página de bienvenida para el QR imprimible. Dominio propio si
+  // lo tiene (kapusta.com.ar/bienvenida), si no el origin actual + /<slug>/bienvenida.
   const h = headers();
   const currentOrigin = `${h.get("x-forwarded-proto") ?? "https"}://${
     h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000"
   }`;
-  const welcomeUrl = isKapusta
+  const welcomeUrl = showWelcomeQr
     ? `${publicBaseUrlForSlug(org.slug!, currentOrigin)}/bienvenida`
     : null;
   const {
     data: { user },
   } = await supabase.auth.getUser();
   const [{ data: membership }, calendarConnection] = await Promise.all([
-    isKapusta && user
+    showGoogleCalendar && user
       ? supabase.from("loyalty_members").select("role").eq("org_id", orgId).eq("profile_id", user.id).maybeSingle()
       : Promise.resolve({ data: null }),
-    isKapusta ? getConnectionInfo(orgId) : Promise.resolve(null),
+    showGoogleCalendar ? getConnectionInfo(orgId) : Promise.resolve(null),
   ]);
 
   return (
@@ -92,31 +96,35 @@ export default async function ConfiguracionPage() {
       </header>
 
       <div className="p-8 space-y-10 max-w-3xl">
-        {isKapusta ? (
-          // Orden y secciones propios de Kapusta (pedido 05/09): QR primero,
-          // después Contacto y redes, después Requisitos (sin cambios) —
-          // Carrusel/Lista de precios ocultos del todo (Carrusel ya se
-          // gestiona desde Catálogo, Lista de precios no aplica a
-          // inmobiliaria) y Apariencia sin Banner/Fondo/Colores de marca.
-          // Domus y el resto de las orgs no entran acá — ver la rama de
-          // abajo, intacta.
+        {isRealEstate ? (
+          // Configuración reordenada de la vertical inmobiliaria (aplica a
+          // los 3 niveles): QR de fidelización arriba (si la org lo tiene),
+          // Contacto y redes, Requisitos (si la org lo tiene). Sin Carrusel
+          // (se gestiona desde Catálogo), sin Lista de precios, y Apariencia
+          // sin Banner/Fondo/Colores de marca. "Promos" → "Flyers".
           <>
             {welcomeUrl && <WelcomeQr url={welcomeUrl} />}
             <ContactForm org={org} />
-            <RequirementsForm org={org} />
+            {showRequisitos && <RequirementsForm org={org} />}
             <AppearanceForm
               org={org}
               hideBannerBgColors
-              title="Fidelización"
-              description="Cómo ven los clientes su tipo de socio y su progreso de puntos"
+              title={showWelcomeQr ? "Fidelización" : undefined}
+              description={
+                showWelcomeQr
+                  ? "Cómo ven los clientes su tipo de socio y su progreso de puntos"
+                  : undefined
+              }
             />
             <PromoManager orgId={orgId} items={promoItems} title="Flyers" />
-            <GoogleCalendarConnect
-              configured={isCalendarConfigured()}
-              connectedEmail={calendarConnection?.connectedEmail ?? null}
-              connectedAt={calendarConnection?.connectedAt ?? null}
-              canManage={membership?.role === "admin"}
-            />
+            {showGoogleCalendar && (
+              <GoogleCalendarConnect
+                configured={isCalendarConfigured()}
+                connectedEmail={calendarConnection?.connectedEmail ?? null}
+                connectedAt={calendarConnection?.connectedAt ?? null}
+                canManage={membership?.role === "admin"}
+              />
+            )}
           </>
         ) : (
           <>
@@ -125,9 +133,6 @@ export default async function ConfiguracionPage() {
             <PromoManager orgId={orgId} items={promoItems} />
             <PriceListManager orgId={orgId} items={priceItems} />
             <ContactForm org={org} />
-            {/* Fase Requisitos: solo Domus tiene "venta"/"alquiler" como
-                concepto — el resto de las orgs no ve este bloque. */}
-            {org.slug === "domus" && <RequirementsForm org={org} />}
             {/* Fase T1 "Mundo Bike" Taller: solo bike tiene taller de
                 service — el resto de las orgs no ve este bloque. */}
             {org.slug === "bike" && <WorkshopCapacityForm org={org} />}

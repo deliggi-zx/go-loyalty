@@ -70,12 +70,13 @@ interface DomusAgentPanelProps {
   backgroundColor?: string;
 }
 
-// Switch sin hooks: Kapusta con datos → panel rediseñado; todo lo demás →
-// el panel clásico de 5 botones (Domus, y Kapusta si por algún motivo no
-// llegan los datos rediseñados). Se separa así para no romper las reglas
-// de hooks con un return temprano en un componente que los usa.
+// Switch sin hooks: si llegan los datos del panel rediseñado (estilo
+// vidrio), se usa para cualquier org de la vertical inmobiliaria con su
+// propia paleta; si no, el panel clásico de 5 botones (fallback). Se
+// separa así para no romper las reglas de hooks con un return temprano en
+// un componente que los usa.
 export function DomusAgentPanel(props: DomusAgentPanelProps) {
-  if (props.slug === "kapusta" && props.kapustaData) {
+  if (props.kapustaData) {
     return (
       <KapustaTeamPanel
         orgId={props.orgId}

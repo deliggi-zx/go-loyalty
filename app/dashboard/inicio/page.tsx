@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
 import { publicBaseUrlForSlug } from "@/lib/org-domains";
+import { hasFeature } from "@/lib/features";
+import { glassTheme } from "@/lib/glass-theme";
 import { DomusAgentPanel } from "./domus-agent-panel";
 import { getDomusAgentBadgeCounts } from "./domus-badge-counts";
 import { getKapustaPanelData } from "./kapusta-panel-data";
@@ -35,7 +37,7 @@ export default async function InicioPage() {
   const [{ data: org }, { data: membership }, { data: profile }] = await Promise.all([
     supabase
       .from("loyalty_organizations")
-      .select("slug, primary_color, secondary_color, background_color")
+      .select("slug, primary_color, secondary_color, background_color, feature_tier, feature_overrides")
       .eq("id", orgId)
       .maybeSingle(),
     supabase
@@ -47,10 +49,9 @@ export default async function InicioPage() {
     supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
   ]);
 
-  if (!org || (org.slug !== "domus" && org.slug !== "kapusta")) redirect("/dashboard");
+  if (!org || !hasFeature(org, "crm_leads")) redirect("/dashboard");
   if (!membership || !ALLOWED_ROLES.includes(membership.role)) redirect("/dashboard");
 
-  const isKapusta = org.slug === "kapusta";
   const agentProfileId = membership.role === "admin" ? null : user.id;
 
   // Fase 1c (rol agente): el gerente (admin) sigue viendo el total de la
@@ -60,33 +61,20 @@ export default async function InicioPage() {
     agentProfileId
   );
 
-  // Rediseño del panel de Kapusta (KAPUSTA_PANEL_SPEC): trae los conteos
-  // extra (seguimiento, cartera, próxima visita). Domus no lo llama.
-  const kapustaData = isKapusta ? await getKapustaPanelData(orgId, agentProfileId) : undefined;
+  // Panel del equipo rediseñado (estilo vidrio): conteos extra
+  // (seguimiento, cartera, próxima visita). Para toda la vertical.
+  const kapustaData = await getKapustaPanelData(orgId, agentProfileId);
 
-  // Botón "‹ Ver sitio" del panel (pedido 05/09, solo Kapusta): misma
-  // resolución de URL que el QR de bienvenida (dominio propio si lo tiene,
-  // si no origin actual + /kapusta) — ver publicBaseUrlForSlug.
-  let publicHomeHref: string | undefined;
-  if (isKapusta) {
-    const h = headers();
-    const currentOrigin = `${h.get("x-forwarded-proto") ?? "https"}://${
-      h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000"
-    }`;
-    publicHomeHref = publicBaseUrlForSlug(org.slug, currentOrigin);
-  }
+  // Botón "‹ Ver sitio" del header del panel: misma resolución de URL que
+  // el QR de bienvenida (dominio propio si lo tiene) — ver publicBaseUrlForSlug.
+  const h = headers();
+  const currentOrigin = `${h.get("x-forwarded-proto") ?? "https"}://${
+    h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000"
+  }`;
+  const publicHomeHref = publicBaseUrlForSlug(org.slug, currentOrigin);
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      {!isKapusta && (
-        <header className="bg-white border-b border-stone-200 px-8 h-16 flex items-center shrink-0">
-          <div>
-            <h1 className="text-lg font-semibold text-stone-900">Inicio</h1>
-            <p className="text-xs text-stone-400">No perderle el hilo a nada</p>
-          </div>
-        </header>
-      )}
-
+    <div className="flex-1 overflow-y-auto" style={glassTheme(org).vars}>
       <DomusAgentPanel
         orgId={orgId}
         consultasNuevoCount={consultasNuevoCount}

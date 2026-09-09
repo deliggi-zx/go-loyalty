@@ -21,6 +21,9 @@ interface ProductCatalogProps {
   categories: CatalogCategory[];
   primaryColor: string;
   initialCategoryId: string | null;
+  // Vertical inmobiliaria (cualquier nivel): panel de filtros combinables
+  // en vez del pill row, y la card linkea siempre a la ficha.
+  isRealEstate?: boolean;
 }
 
 // Breakpoint mobile para la cascada de categorías (Fase 1b SuperElectro) —
@@ -34,6 +37,7 @@ export function ProductCatalog({
   categories,
   primaryColor,
   initialCategoryId,
+  isRealEstate = false,
 }: ProductCatalogProps) {
   // Fase 1c: el filtro activo ya no es solo un category_id — puede venir
   // acotado además por marca o por rango de pulgadas (ver CatalogSelection
@@ -67,10 +71,10 @@ export function ProductCatalog({
     return map;
   }, [categories]);
 
-  // Fase filtros de búsqueda (Domus): reemplaza el pill row de arriba
-  // por un panel de filtros combinables, SOLO para esta org — el resto
-  // sigue con activeSelection/pills/cascada sin ningún cambio.
-  const isDomus = slug === "domus" || slug === "kapusta";
+  // Vertical inmobiliaria (cualquier nivel): reemplaza el pill row por un
+  // panel de filtros combinables (operación / tipo / zona) — el resto de
+  // las orgs sigue con activeSelection/pills/cascada sin ningún cambio.
+  const isDomus = isRealEstate;
 
   const categoryById = useMemo(() => {
     const map = new Map<string, CatalogCategory>();
@@ -339,7 +343,7 @@ export function ProductCatalog({
           product={selectedProduct}
           primaryColor={primaryColor}
           onClose={() => setSelectedProduct(null)}
-          orgSlug={slug}
+          favoritesMode={isRealEstate}
         />
       )}
 

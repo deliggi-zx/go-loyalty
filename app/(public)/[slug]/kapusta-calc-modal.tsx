@@ -8,6 +8,7 @@ import { KapustaCalcTabs } from "./kapusta-calculadoras";
 interface KapustaCalcModalProps {
   open: boolean;
   onClose: () => void;
+  slug: string;
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
@@ -25,6 +26,7 @@ interface KapustaCalcModalProps {
 export function KapustaCalcModal({
   open,
   onClose,
+  slug,
   primaryColor,
   secondaryColor,
   accentColor,
@@ -38,7 +40,7 @@ export function KapustaCalcModal({
   useEffect(() => {
     if (!open || optionsLoaded) return;
     let cancelled = false;
-    getKapustaCalcOptions()
+    getKapustaCalcOptions(slug)
       .then((res) => {
         if (!cancelled) {
           setOptions(res);
@@ -53,7 +55,7 @@ export function KapustaCalcModal({
     return () => {
       cancelled = true;
     };
-  }, [open, optionsLoaded]);
+  }, [open, optionsLoaded, slug]);
 
   // Cerrar con Escape mientras está abierto.
   useEffect(() => {
@@ -93,6 +95,7 @@ export function KapustaCalcModal({
 
         <div className="overflow-y-auto p-4">
           <KapustaCalcTabs
+            slug={slug}
             tipos={options.tipos}
             zonas={options.zonas}
             optionsLoading={!optionsLoaded}

@@ -4,6 +4,8 @@ import { CalendarPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
+import { hasFeature, isRealEstateOrg } from "@/lib/features";
+import { glassTheme } from "@/lib/glass-theme";
 import { buildGoogleCalendarUrl } from "@/lib/google-calendar";
 import { MeetingForm } from "./meeting-form";
 
@@ -26,7 +28,11 @@ export default async function InicioReunionesPage() {
   if (!user) redirect("/login");
 
   const [{ data: org }, { data: membership }] = await Promise.all([
-    supabase.from("loyalty_organizations").select("slug").eq("id", orgId).maybeSingle(),
+    supabase
+      .from("loyalty_organizations")
+      .select("slug, primary_color, secondary_color, background_color, feature_tier, feature_overrides")
+      .eq("id", orgId)
+      .maybeSingle(),
     supabase
       .from("loyalty_members")
       .select("role")
@@ -35,10 +41,11 @@ export default async function InicioReunionesPage() {
       .maybeSingle(),
   ]);
 
-  if (org?.slug !== "domus" && org?.slug !== "kapusta") redirect("/dashboard");
+  if (!hasFeature(org, "crm_leads")) redirect("/dashboard");
   if (!membership || !ALLOWED_ROLES.includes(membership.role)) redirect("/dashboard");
 
-  const isKapusta = org?.slug === "kapusta";
+  const glass = isRealEstateOrg(org);
+  const gt = glassTheme(org);
 
   const [{ data: offers }, { data: visits }, { data: meetings }] = await Promise.all([
     supabase
@@ -53,7 +60,7 @@ export default async function InicioReunionesPage() {
       )
       .eq("org_id", orgId)
       .eq("status", "confirmed"),
-    isKapusta
+    glass
       ? supabase
           .from("kapusta_meetings")
           .select("id, title, meeting_date, meeting_time, location, notes, google_synced, created_by")
@@ -160,33 +167,33 @@ export default async function InicioReunionesPage() {
   ].sort((a, b) => (a.when < b.when ? -1 : 1));
 
   // ── Estilos ──
-  const shellClass = cn("flex-1 overflow-y-auto", isKapusta && "bg-white");
+  const shellClass = cn("flex-1 overflow-y-auto", glass && "bg-white");
   const headerClass = cn(
     "border-b px-8 h-16 flex items-center gap-3 shrink-0",
-    isKapusta ? "bg-[#69BDE1] border-[#4FA6D3]" : "bg-white border-stone-200"
+    glass ? "bg-[var(--kap-header-bg)] border-[var(--kap-header-border)]" : "bg-white border-stone-200"
   );
   const backClass = cn(
     "text-sm transition-colors",
-    isKapusta ? "text-[#0B1417]/70 hover:text-[#0B1417]" : "text-stone-400 hover:text-stone-700"
+    glass ? "text-[#0B1417]/70 hover:text-[#0B1417]" : "text-stone-400 hover:text-stone-700"
   );
-  const h1Class = cn("text-lg font-semibold", isKapusta ? "text-[#0B1417]" : "text-stone-900");
-  const cardClass = isKapusta
+  const h1Class = cn("text-lg font-semibold", glass ? "text-[#0B1417]" : "text-stone-900");
+  const cardClass = glass
     ? "kap-glass rounded-2xl p-4 space-y-1"
     : "bg-white rounded-xl border border-stone-200 p-4 space-y-1";
   const sectionTitleClass = cn(
     "text-xs font-bold uppercase tracking-wide",
-    isKapusta ? "text-[#0B1417]/60" : "text-stone-500"
+    glass ? "text-[#0B1417]/60" : "text-stone-500"
   );
   const emptyClass = cn(
     "rounded-xl py-10 text-center text-sm",
-    isKapusta ? "kap-glass text-[#0B1417]/60" : "bg-white border border-dashed border-stone-200 text-stone-400"
+    glass ? "kap-glass text-[#0B1417]/60" : "bg-white border border-dashed border-stone-200 text-stone-400"
   );
-  const primaryText = isKapusta ? "text-[#0B1417]" : "text-stone-900";
-  const secondaryText = isKapusta ? "text-[#0B1417]/80" : "text-stone-600";
-  const mutedText = isKapusta ? "text-[#0B1417]/55" : "text-stone-500";
+  const primaryText = glass ? "text-[#0B1417]" : "text-stone-900";
+  const secondaryText = glass ? "text-[#0B1417]/80" : "text-stone-600";
+  const mutedText = glass ? "text-[#0B1417]/55" : "text-stone-500";
 
   return (
-    <div className={shellClass}>
+    <div className={shellClass} style={glass ? gt.vars : undefined}>
       <header className={headerClass}>
         <Link href="/dashboard/inicio" className={backClass}>
           ‹ Inicio
@@ -195,7 +202,7 @@ export default async function InicioReunionesPage() {
       </header>
 
       <div className="p-8 max-w-3xl space-y-8">
-        {isKapusta && (
+        {glass && (
           <div className="flex justify-end">
             <MeetingForm glass />
           </div>
@@ -241,7 +248,7 @@ export default async function InicioReunionesPage() {
                       rel="noopener noreferrer"
                       className={cn(
                         "flex items-center gap-1 text-xs font-medium transition-colors",
-                        isKapusta
+                        glass
                           ? "text-[#0B1417]/60 hover:text-[#0B1417]"
                           : "text-stone-500 hover:text-stone-800"
                       )}
@@ -292,7 +299,7 @@ export default async function InicioReunionesPage() {
                       rel="noopener noreferrer"
                       className={cn(
                         "flex items-center gap-1 text-xs font-medium transition-colors",
-                        isKapusta
+                        glass
                           ? "text-[#0B1417]/60 hover:text-[#0B1417]"
                           : "text-stone-500 hover:text-stone-800"
                       )}

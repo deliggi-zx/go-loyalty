@@ -27,6 +27,9 @@ interface ProductRailProps {
   loopInfinite?: boolean;
   autoplaySpeedMs?: number;
   direction?: "forward" | "reverse";
+  // Vertical inmobiliaria (cualquier nivel): la card linkea siempre a la
+  // ficha de la propiedad, tenga specs cargadas o no.
+  isRealEstate?: boolean;
 }
 
 // Fase Home: estante horizontal de productos para los carruseles
@@ -91,6 +94,7 @@ export function ProductRail({
   loopInfinite = false,
   autoplaySpeedMs = DEFAULT_AUTOPLAY_SPEED_MS,
   direction = "forward",
+  isRealEstate = false,
 }: ProductRailProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -229,7 +233,7 @@ export function ProductRail({
   // que el fix gemelo en product-catalog.tsx: para Domus la ficha es
   // donde viven Solicitar visita/Reservar/Requisitos, así que siempre
   // linkea ahí. El resto de las orgs sigue exactamente igual.
-  const isDomus = slug === "domus" || slug === "kapusta";
+  const isDomus = isRealEstate;
 
   if (products.length === 0) return null;
 

@@ -11,14 +11,14 @@ interface ProductModalProps {
   product: CatalogProduct;
   primaryColor: string;
   onClose: () => void;
-  // Fase Carrito→Favoritos: mismo patrón que en ClientHeader/CartPanel —
-  // ver comentario ahí. addItem/useCart de abajo no cambian, solo el
-  // texto del botón.
-  orgSlug?: string;
+  // Fase Carrito→Favoritos: "Agregar a favoritos" en vez de "Agregar al
+  // carrito". Lo decide el nivel de la org (feature "favoritos"), ver
+  // product-catalog.tsx. addItem/useCart de abajo no cambian.
+  favoritesMode?: boolean;
 }
 
-export function ProductModal({ product, primaryColor, onClose, orgSlug }: ProductModalProps) {
-  const isDomus = orgSlug === "domus" || orgSlug === "kapusta";
+export function ProductModal({ product, primaryColor, onClose, favoritesMode = false }: ProductModalProps) {
+  const isDomus = favoritesMode;
   const images = [...product.images].sort((a, b) => a.display_order - b.display_order);
   const [added, setAdded] = useState(false);
   const { addItem } = useCart();

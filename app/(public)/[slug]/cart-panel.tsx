@@ -8,16 +8,17 @@ interface CartPanelProps {
   isOpen: boolean;
   onClose: () => void;
   primaryColor: string;
-  // Fase Carrito→Favoritos: mismo patrón que en ClientHeader — ver
-  // comentario ahí. La lógica de items/cantidad/total de abajo es
-  // exactamente la misma para las dos orgs, no se toca cart-context.
-  orgSlug?: string;
+  // Fase Carrito→Favoritos: "Favoritos" (estrella, "Enviar consulta", sin
+  // total) en vez del carrito de e-commerce. Lo decide el nivel de la org
+  // (feature "favoritos", Pro/360) — ver ClientHeader. La lógica de items/
+  // cantidad de abajo es la misma, no se toca cart-context.
+  favoritesMode?: boolean;
 }
 
-export function CartPanel({ isOpen, onClose, primaryColor, orgSlug }: CartPanelProps) {
+export function CartPanel({ isOpen, onClose, primaryColor, favoritesMode = false }: CartPanelProps) {
   const { items, setQuantity, clear } = useCart();
   const [confirmed, setConfirmed] = useState(false);
-  const isDomus = orgSlug === "domus" || orgSlug === "kapusta";
+  const isDomus = favoritesMode;
 
   const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 

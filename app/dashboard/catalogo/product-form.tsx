@@ -75,15 +75,14 @@ interface ProductData {
 interface ProductFormProps {
   categories: CategoryOption[];
   product?: ProductData;
-  // Fase moneda / Fase cuotas: slug de la org activa — hoy solo se usa
-  // para dos comportamientos scopeados a Domus (default de moneda por
-  // categoría padre, ocultar el campo de cuotas). El resto del form es
-  // genérico y no lee esta prop. Opcional para no romper ningún caller
-  // que no la pase.
-  orgSlug?: string;
+  // Vertical inmobiliaria (feature "catalogo_propiedades"): default de
+  // moneda por categoría raíz (Venta→USD, Alquiler→ARS) y se ocultan los
+  // campos de e-commerce (precio tachado, cuotas, badge de envío). El
+  // resto del form es genérico y no lee esta prop.
+  isRealEstate?: boolean;
 }
 
-export function ProductForm({ categories, product, orgSlug }: ProductFormProps) {
+export function ProductForm({ categories, product, isRealEstate = false }: ProductFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [name, setName] = useState(product?.name ?? "");
@@ -118,11 +117,11 @@ export function ProductForm({ categories, product, orgSlug }: ProductFormProps) 
   // orgSlug === 'domus' — cualquier otra org que llame "Venta"/"Alquiler"
   // a una categoría raíz no dispara esto.
   useEffect(() => {
-    if ((orgSlug !== "domus" && orgSlug !== "kapusta") || currencyTouched || !categoryId) return;
+    if (!isRealEstate || currencyTouched || !categoryId) return;
     const root = findRootAncestor(categories, categoryId);
     const inferred = root ? DOMUS_CURRENCY_BY_ROOT_NAME[root.name] : undefined;
     if (inferred) setCurrency(inferred);
-  }, [categoryId, categories, orgSlug, currencyTouched]);
+  }, [categoryId, categories, isRealEstate, currencyTouched]);
 
   function handleSave() {
     if (!name.trim()) {
@@ -151,7 +150,11 @@ export function ProductForm({ categories, product, orgSlug }: ProductFormProps) 
         router.refresh();
       } else {
         const newId = await createProduct(payload);
-        router.push(`/dashboard/catalogo/productos/${newId}`);
+        // ?nuevo=1: la página de edición usa esto para mostrar la barra
+        // "Publicar y volver al catálogo" — ver back-to-catalog-link.tsx.
+        // Sin esto no había forma de distinguir "recién creado, todavía
+        // cargando fotos" de "editando un producto viejo".
+        router.push(`/dashboard/catalogo/productos/${newId}?nuevo=1`);
       }
     });
   }
@@ -242,7 +245,7 @@ export function ProductForm({ categories, product, orgSlug }: ProductFormProps) 
             criterio de slug directo (no catalog_type) que ya usa "Texto
             de cuotas" más abajo. SuperElectro y el resto siguen viendo
             estos dos campos exactamente igual que antes. */}
-        {orgSlug !== "domus" && orgSlug !== "kapusta" && (
+        {!isRealEstate && (
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-stone-600">Marca</label>
@@ -280,7 +283,7 @@ export function ProductForm({ categories, product, orgSlug }: ProductFormProps) 
             Fase campos Domus: "Precio de lista" (tachado tipo oferta) y
             "Texto de cuotas" tampoco tienen sentido acá — se oculta el
             grid entero para Domus en vez de dejar una columna vacía. */}
-        {orgSlug !== "domus" && orgSlug !== "kapusta" && (
+        {!isRealEstate && (
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-stone-600">Precio de lista</label>
@@ -308,7 +311,7 @@ export function ProductForm({ categories, product, orgSlug }: ProductFormProps) 
 
         {/* Fase campos Domus: "Badge de envío" ("Envío gratis", etc.) no
             aplica a inmuebles. */}
-        {orgSlug !== "domus" && orgSlug !== "kapusta" && (
+        {!isRealEstate && (
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-stone-600">Badge de envío</label>
             <input
