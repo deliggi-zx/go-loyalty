@@ -227,11 +227,11 @@ export default async function InicioReunionesPage() {
                           : "bg-amber-50 text-amber-700"
                       )}
                     >
-                      {v.mode === "con_agente" ? "Con agente" : "Retira llave"}
+                      {v.mode === "con_agente" ? "Con profesional" : "Retira llave"}
                     </span>
                   </div>
                   <p className={cn("text-sm", secondaryText)}>
-                    {v.client} · {v.phone} — agente: {v.agent}
+                    {v.client} · {v.phone} — profesional: {v.agent}
                   </p>
                   <div className="flex items-center justify-between gap-3 pt-0.5">
                     <p className={cn("text-xs font-medium", mutedText)}>{fmtWhen(v.when)}</p>
@@ -239,8 +239,8 @@ export default async function InicioReunionesPage() {
                       href={buildGoogleCalendarUrl({
                         title: `Visita a ${v.property}`,
                         start: new Date(v.when),
-                        details: `Cliente: ${v.client}\nTeléfono: ${v.phone}\nAgente: ${v.agent}\nModalidad: ${
-                          v.mode === "con_agente" ? "con agente" : "retira llave"
+                        details: `Cliente: ${v.client}\nTeléfono: ${v.phone}\nProfesional: ${v.agent}\nModalidad: ${
+                          v.mode === "con_agente" ? "con profesional" : "retira llave"
                         }`,
                         location: v.property,
                       })}

@@ -72,7 +72,7 @@ export function CartPanel({ isOpen, onClose, primaryColor, favoritesMode = false
             <h3 className="text-lg font-semibold text-stone-900">¡Listo!</h3>
             <p className="text-sm text-stone-500">
               {isDomus
-                ? "Un agente se va a poner en contacto a la brevedad."
+                ? "Un profesional se va a poner en contacto a la brevedad."
                 : "Te contactamos para coordinar el pago y la entrega."}
             </p>
             <button

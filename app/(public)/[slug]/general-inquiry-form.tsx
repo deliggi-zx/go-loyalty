@@ -52,7 +52,7 @@ export function GeneralInquiryForm({ slug, orgId, primaryColor, startOpen = fals
     return (
       <div className="rounded-xl border border-stone-200 bg-stone-50 p-4 space-y-1 text-center">
         <p className="text-sm font-semibold text-stone-900">¡Consulta enviada!</p>
-        <p className="text-xs text-stone-500">Un agente te va a contactar a la brevedad.</p>
+        <p className="text-xs text-stone-500">Un profesional te va a contactar a la brevedad.</p>
       </div>
     );
   }

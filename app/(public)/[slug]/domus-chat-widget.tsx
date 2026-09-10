@@ -38,8 +38,9 @@ interface DomusChatPanelProps {
    *  dock de Kapusta lo ancla distinto porque su botón es arrastrable y el
    *  panel no lo sigue. */
   positionClassName?: string;
-  /** Texto del link de derivación a una persona. Domus mantiene el de
-   *  siempre; Kapusta pasa uno sin la palabra "agente" (glosario). */
+  /** Texto del link de derivación a una persona. Domus usa el default;
+   *  Kapusta pasa su propia variante ("alguien del equipo"). Ninguno usa
+   *  la palabra "agente" de cara al usuario (glosario). */
   humanPrompt?: string;
   /** Color de la barra de título y las burbujas propias. Domus mantiene su
    *  navy; Kapusta pasa su negro de marca para que el panel combine con el
@@ -58,7 +59,7 @@ export function DomusChatPanel({
   onClose,
   title = "Asistente Domus",
   positionClassName = "fixed bottom-[168px] right-5 z-50 w-[calc(100vw-2.5rem)] max-w-sm",
-  humanPrompt = "¿Preferís hablar con un agente?",
+  humanPrompt = "¿Preferís hablar con un profesional?",
   accentColor = DOMUS_NAVY,
 }: DomusChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);

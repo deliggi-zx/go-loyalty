@@ -113,7 +113,7 @@ export function PropertyVisitBooking({
           {displayDate} a las {confirmed.time}
         </p>
         <p className="text-xs text-stone-400">
-          Está pendiente de confirmación — un agente te va a confirmar el horario a la brevedad.
+          Está pendiente de confirmación — un profesional te va a confirmar el horario a la brevedad.
         </p>
       </div>
     );
@@ -155,7 +155,7 @@ export function PropertyVisitBooking({
             onClick={() => setVisitMode("con_agente")}
             className="w-full py-3 rounded-lg border border-stone-200 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors text-left px-4"
           >
-            Con agente
+            Con profesional
           </button>
           <button
             type="button"

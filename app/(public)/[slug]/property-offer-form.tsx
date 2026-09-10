@@ -156,7 +156,7 @@ export function PropertyOfferForm({ slug, orgId, userId, primaryColor }: Propert
     return (
       <div className="rounded-xl border border-stone-200 bg-stone-50 p-4 space-y-1 text-center">
         <p className="text-sm font-semibold text-stone-900">¡Listo, la recibimos!</p>
-        <p className="text-xs text-stone-500">Un agente se va a poner en contacto.</p>
+        <p className="text-xs text-stone-500">Un profesional se va a poner en contacto.</p>
       </div>
     );
   }
