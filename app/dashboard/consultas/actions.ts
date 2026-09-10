@@ -128,7 +128,7 @@ export async function assignInquiryAgent(id: string, targetProfileId: string | n
       .eq("profile_id", targetProfileId)
       .maybeSingle();
     if (!target || (target.role !== "agente" && target.role !== "admin")) {
-      throw new Error("Agente inválido");
+      throw new Error("Profesional inválido");
     }
   }
 

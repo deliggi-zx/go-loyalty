@@ -34,7 +34,7 @@ interface VisitasManagerProps {
 }
 
 const VISIT_MODE_LABEL: Record<VisitRow["visitMode"], string> = {
-  con_agente: "Con agente",
+  con_agente: "Con profesional",
   retira_llave: "Retira llave",
 };
 
