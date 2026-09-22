@@ -121,6 +121,16 @@ export interface CatalogProduct {
   // tiene filas suyas. Alimenta el badge "Reservada" de la grilla
   // (product-catalog.tsx).
   reserved: boolean;
+  // Fase operación dual (vertical inmobiliaria): una propiedad puede estar
+  // en venta y en alquiler al mismo tiempo, cada una con su propio
+  // precio/moneda — ver migración add_dual_operation_columns_to_products.
+  // false/null para cualquier org no inmobiliaria (nunca se les setean).
+  sale_active: boolean;
+  sale_price: number | null;
+  sale_currency: string | null;
+  rental_active: boolean;
+  rental_price: number | null;
+  rental_currency: string | null;
   images: CatalogImage[];
 }
 
@@ -160,7 +170,7 @@ export const getProductCatalog = cache(async (orgId: string): Promise<CatalogPro
   const { data: productsData } = await supabase
     .from("products")
     .select(
-      "id, name, description, price, category_id, brand, screen_size_inches, specs, currency, display_order"
+      "id, name, description, price, category_id, brand, screen_size_inches, specs, currency, display_order, sale_active, sale_price, sale_currency, rental_active, rental_price, rental_currency"
     )
     .eq("org_id", orgId)
     .eq("active", true)
@@ -211,6 +221,12 @@ export const getProductCatalog = cache(async (orgId: string): Promise<CatalogPro
     reserved: reservedProductIds.has(p.id),
     specs: (p.specs as Record<string, string> | null) ?? null,
     currency: p.currency,
+    sale_active: p.sale_active,
+    sale_price: p.sale_price,
+    sale_currency: p.sale_currency,
+    rental_active: p.rental_active,
+    rental_price: p.rental_price,
+    rental_currency: p.rental_currency,
     images: imagesByProduct.get(p.id) ?? [],
   }));
 });
@@ -299,11 +315,15 @@ export interface ProductDetail {
   specs: Record<string, string> | null;
   // Fase moneda: ver CatalogProduct.currency más arriba.
   currency: string;
-  // Fase Requisitos (Domus): se usa para inferir el tipo de operación
-  // (venta/alquiler) subiendo hasta la categoría raíz del producto — ver
-  // findRootAncestor en lib/category-tree.ts y su uso en producto/[id]/
-  // page.tsx. null para cualquier producto sin categoría asignada.
   category_id: string | null;
+  // Fase operación dual (vertical inmobiliaria): ver CatalogProduct más
+  // arriba — misma forma, usada acá para la ficha (producto/[id]/page.tsx).
+  sale_active: boolean;
+  sale_price: number | null;
+  sale_currency: string | null;
+  rental_active: boolean;
+  rental_price: number | null;
+  rental_currency: string | null;
   images: CatalogImage[];
 }
 
@@ -451,7 +471,9 @@ export const getProductDetail = cache(
     const supabase = createClient();
     const { data: product } = await supabase
       .from("products")
-      .select("id, name, description, price, brand, screen_size_inches, specs, currency, category_id")
+      .select(
+        "id, name, description, price, brand, screen_size_inches, specs, currency, category_id, sale_active, sale_price, sale_currency, rental_active, rental_price, rental_currency"
+      )
       .eq("id", productId)
       .eq("org_id", orgId)
       .eq("active", true)
@@ -475,6 +497,12 @@ export const getProductDetail = cache(
       specs: (product.specs as Record<string, string> | null) ?? null,
       currency: product.currency,
       category_id: product.category_id,
+      sale_active: product.sale_active,
+      sale_price: product.sale_price,
+      sale_currency: product.sale_currency,
+      rental_active: product.rental_active,
+      rental_price: product.rental_price,
+      rental_currency: product.rental_currency,
       images: imagesData ?? [],
     };
   }

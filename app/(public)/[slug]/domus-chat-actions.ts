@@ -55,7 +55,7 @@ export async function askDomusChat(
 
   const supabase = createClient();
 
-  const [{ data: org }, { data: productsData }, { data: categoriesData }] = await Promise.all([
+  const [{ data: org }, { data: productsData }] = await Promise.all([
     supabase
       .from("loyalty_organizations")
       .select("name, about_text, whatsapp_number")
@@ -63,23 +63,21 @@ export async function askDomusChat(
       .maybeSingle(),
     supabase
       .from("products")
-      .select("id, name, price, currency, specs, category_id")
+      .select(
+        "id, name, specs, sale_active, sale_price, sale_currency, rental_active, rental_price, rental_currency"
+      )
       .eq("org_id", orgId)
       .eq("active", true),
-    supabase.from("product_categories").select("id, name, parent_id").eq("org_id", orgId),
   ]);
 
-  const categoryById = new Map((categoriesData ?? []).map((c) => [c.id, c]));
-
-  // "Operación" (Venta/Alquiler) sale de specs si está cargada, y si no,
-  // de la categoría raíz del producto (mismo criterio Venta/Alquiler que
-  // ya usa la Fase moneda para inferir la moneda por defecto).
-  function operationFromCategory(categoryId: string | null): string | null {
-    if (!categoryId) return null;
-    const cat = categoryById.get(categoryId);
-    if (!cat) return null;
-    const root = cat.parent_id ? categoryById.get(cat.parent_id) : cat;
-    return root?.name ?? null;
+  // Fase operación dual: la operación (venta/alquiler/las dos) ya no se
+  // infiere de la categoría — es un dato propio del producto. Se arma un
+  // segmento por cada operación activa, con su propio precio.
+  function operationSegments(p: { sale_active: boolean; sale_price: number | null; sale_currency: string | null; rental_active: boolean; rental_price: number | null; rental_currency: string | null }): string {
+    const segments: string[] = [];
+    if (p.sale_active) segments.push(`Venta ${formatPrice(p.sale_price ?? 0, p.sale_currency)}`);
+    if (p.rental_active) segments.push(`Alquiler ${formatPrice(p.rental_price ?? 0, p.rental_currency)}`);
+    return segments.length > 0 ? segments.join(" / ") : "—";
   }
 
   const properties = productsData ?? [];
@@ -90,9 +88,8 @@ export async function askDomusChat(
             const specs = (p.specs as Record<string, unknown> | null) ?? null;
             const zona = specString(specs, "barrio") ?? "zona no especificada";
             const ambientes = specString(specs, "ambientes");
-            const operacion = specString(specs, "operación") ?? operationFromCategory(p.category_id) ?? "—";
-            const precio = formatPrice(Number(p.price), p.currency);
-            return `- [${p.id}] ${p.name} — ${operacion}, zona ${zona}${ambientes ? `, ${ambientes} ambientes` : ""}, ${precio}`;
+            const precio = operationSegments(p);
+            return `- [${p.id}] ${p.name} — ${precio}, zona ${zona}${ambientes ? `, ${ambientes} ambientes` : ""}`;
           })
           .join("\n")
       : "No hay propiedades activas cargadas en este momento.";

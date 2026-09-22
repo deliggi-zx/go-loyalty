@@ -97,22 +97,12 @@ export function SideMenu({
   const [loggingOut, setLoggingOut] = useState(false);
   const hasSocials = facebookUrl || instagramUrl || twitterUrl || youtubeUrl;
 
-  // Vertical inmobiliaria (cualquier nivel): oculta "Lista de precios" y
-  // agrupa las categorías por operación.
+  // Vertical inmobiliaria (cualquier nivel): oculta "Lista de precios".
+  // Fase operación dual: ya NO agrupa las categorías por Venta/Alquiler —
+  // el merge de categorías (ver migración merge_venta_alquiler_categories)
+  // las dejó planas, así que Domus pasa a usar la misma lista plana que
+  // cualquier otra org.
   const isDomusOrg = isRealEstate;
-  // Ajuste 2: categorías raíz (parent_id null) y sus hijas, para agrupar
-  // Venta/Alquiler con sus subcategorías debajo — mismo criterio de
-  // filtrado por parent_id que category-drilldown.tsx. Solo se arma/usa
-  // cuando isDomusOrg (ver más abajo); el resto de las orgs sigue con la
-  // lista plana de siempre, sin tocar.
-  const rootCategories = productCategories.filter((c) => !c.parent_id);
-  const childrenByParent = new Map<string, SideMenuCategory[]>();
-  for (const cat of productCategories) {
-    if (!cat.parent_id) continue;
-    const siblings = childrenByParent.get(cat.parent_id) ?? [];
-    siblings.push(cat);
-    childrenByParent.set(cat.parent_id, siblings);
-  }
 
   // Clases condicionadas al tema — mismo criterio que showLoginIcon: una
   // variante de estilo por prop, no un side-menu-<org>.tsx paralelo por
@@ -242,33 +232,9 @@ export function SideMenu({
               <h3 className={`text-xs font-semibold uppercase tracking-wide ${sectionLabel}`}>
                 Categorías
               </h3>
-              {isDomusOrg ? (
-                // Agrupada: cada raíz (Venta/Alquiler) como encabezado,
-                // sus hijas debajo — mismo criterio de filtro por
-                // parent_id que category-drilldown.tsx. El resto de las
-                // orgs sigue con la lista plana de siempre (rama de abajo,
-                // sin tocar).
-                <div className="space-y-3">
-                  {rootCategories.map((root) => (
-                    <div key={root.id} className="space-y-1">
-                      <p className={`text-xs font-semibold ${sectionLabel}`}>{root.name}</p>
-                      <div className="space-y-1 pl-1">
-                        {(childrenByParent.get(root.id) ?? []).map((child) => (
-                          <Link
-                            key={child.id}
-                            href={`/${slug}/precios?categoria=${child.id}`}
-                            onClick={onClose}
-                            className={`flex items-center gap-2 text-sm transition-colors ${linkTextMuted}`}
-                          >
-                            <Tag className={`w-3.5 h-3.5 ${leadIconSm}`} />
-                            {child.name}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
+              {/* Fase operación dual: Domus ya no agrupa por Venta/Alquiler
+                  (categorías planas después del merge) — misma lista plana
+                  que cualquier otra org con catalog_type='products'. */}
               <div className="space-y-1">
                 {productCategories.map((cat) => (
                   <Link
@@ -282,7 +248,6 @@ export function SideMenu({
                   </Link>
                 ))}
               </div>
-              )}
             </div>
           )}
 

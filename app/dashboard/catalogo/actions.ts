@@ -135,6 +135,46 @@ export interface ProductInput {
   compare_at_price: number | null;
   installments_text: string | null;
   shipping_badge_text: string | null;
+  // Fase operación dual (vertical inmobiliaria): una propiedad puede estar
+  // en venta y en alquiler al mismo tiempo, cada una con su propio
+  // precio/moneda — ver migración add_dual_operation_columns_to_products.
+  // null/undefined (orgs no inmobiliarias) equivale a "sin tocar" estos
+  // campos. Cuando llegan seteados (isRealEstate en el form), se exige al
+  // menos una de las dos activa.
+  sale_active?: boolean;
+  sale_price?: number | null;
+  sale_currency?: string | null;
+  rental_active?: boolean;
+  rental_price?: number | null;
+  rental_currency?: string | null;
+}
+
+// Para orgs real-estate, price/currency (usados por carruseles/destacados/
+// favoritos — ver decisión de diseño) quedan sincronizados como "precio
+// representativo": el de venta si está activa, si no el de alquiler.
+// undefined para orgs no inmobiliarias (ProductInput no trae estos campos),
+// en cuyo caso se usan tal cual vinieron del form de siempre.
+function resolveDualOperation(data: ProductInput) {
+  if (data.sale_active === undefined && data.rental_active === undefined) {
+    return { price: data.price, currency: data.currency, dual: {} };
+  }
+  if (!data.sale_active && !data.rental_active) {
+    throw new Error("Debe haber al menos una operación activa (venta o alquiler)");
+  }
+  const price = data.sale_active ? data.sale_price ?? 0 : data.rental_price ?? 0;
+  const currency = data.sale_active ? data.sale_currency ?? "ARS" : data.rental_currency ?? "ARS";
+  return {
+    price,
+    currency,
+    dual: {
+      sale_active: !!data.sale_active,
+      sale_price: data.sale_active ? data.sale_price ?? 0 : null,
+      sale_currency: data.sale_active ? data.sale_currency ?? "ARS" : null,
+      rental_active: !!data.rental_active,
+      rental_price: data.rental_active ? data.rental_price ?? 0 : null,
+      rental_currency: data.rental_active ? data.rental_currency ?? "ARS" : null,
+    },
+  };
 }
 
 export async function createProduct(data: ProductInput): Promise<string> {
@@ -149,6 +189,7 @@ export async function createProduct(data: ProductInput): Promise<string> {
     .limit(1);
 
   const nextOrder = last && last.length > 0 ? last[0].display_order + 1 : 0;
+  const { price, currency, dual } = resolveDualOperation(data);
 
   const { data: inserted, error } = await supabase
     .from("products")
@@ -156,8 +197,8 @@ export async function createProduct(data: ProductInput): Promise<string> {
       org_id: orgId,
       name: data.name,
       description: data.description,
-      price: data.price,
-      currency: data.currency,
+      price,
+      currency,
       category_id: data.category_id,
       active: data.active,
       brand: data.brand,
@@ -166,6 +207,7 @@ export async function createProduct(data: ProductInput): Promise<string> {
       installments_text: data.installments_text,
       shipping_badge_text: data.shipping_badge_text,
       display_order: nextOrder,
+      ...dual,
     })
     .select("id")
     .single();
@@ -179,14 +221,15 @@ export async function createProduct(data: ProductInput): Promise<string> {
 export async function updateProduct(id: string, data: ProductInput) {
   const supabase = createClient();
   const orgId = await requireOrgId();
+  const { price, currency, dual } = resolveDualOperation(data);
 
   await supabase
     .from("products")
     .update({
       name: data.name,
       description: data.description,
-      price: data.price,
-      currency: data.currency,
+      price,
+      currency,
       category_id: data.category_id,
       active: data.active,
       brand: data.brand,
@@ -194,6 +237,7 @@ export async function updateProduct(id: string, data: ProductInput) {
       compare_at_price: data.compare_at_price,
       installments_text: data.installments_text,
       shipping_badge_text: data.shipping_badge_text,
+      ...dual,
     })
     .eq("id", id)
     .eq("org_id", orgId);

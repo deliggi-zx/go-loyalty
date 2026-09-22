@@ -111,10 +111,6 @@ export function KapustaCalculadoras({
         <h1 className="text-xl font-bold" style={{ color: primaryColor }}>
           Calculadoras
         </h1>
-        <p className="text-sm text-stone-600">
-          Herramientas para estimar una cuota, un valor de referencia o la
-          actualización de un alquiler. Todos los resultados son estimativos.
-        </p>
       </header>
 
       <KapustaCalcTabs

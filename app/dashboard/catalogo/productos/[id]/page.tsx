@@ -26,7 +26,7 @@ export default async function EditarProductoPage({
       supabase
         .from("products")
         .select(
-          "id, name, description, price, currency, category_id, active, brand, screen_size_inches, specs, compare_at_price, installments_text, shipping_badge_text"
+          "id, name, description, price, currency, category_id, active, brand, screen_size_inches, specs, compare_at_price, installments_text, shipping_badge_text, sale_active, sale_price, sale_currency, rental_active, rental_price, rental_currency"
         )
         .eq("id", params.id)
         .eq("org_id", orgId)

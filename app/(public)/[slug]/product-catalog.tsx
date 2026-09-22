@@ -82,26 +82,17 @@ export function ProductCatalog({
     return map;
   }, [categories]);
 
-  // Fix bug filtro Alquiler/Venta (Domus): specs.operación primero,
-  // category_id (root) como fallback — al revés que antes. Evidencia
-  // real: "Casa 2 plantas" tenía category_id apuntando a Casas/Alquiler
-  // por un error de carga (era Venta, corregido en la base), y no tenía
-  // specs propias con las que contrastar — la categorización sola no es
-  // confiable del todo (es un simple click al cargar el producto, más
-  // fácil de equivocarse que escribir la operación a mano en la ficha).
-  // specs.operación es el dato más explícito cuando existe, así que gana
-  // — category_id sigue siendo necesario como único dato disponible
-  // para los productos sin specs cargadas. "tipo" no tiene un campo
-  // equivalente en specs para contrastar, sigue dependiendo 100% del
-  // árbol de categorías.
-  const resolveDomusLabels = useCallback(
-    (product: CatalogProduct): { operacion: string | null; tipo: string | null } => {
-      const leaf = product.category_id ? categoryById.get(product.category_id) : undefined;
-      const root = leaf?.parent_id ? categoryById.get(leaf.parent_id) : undefined;
-      return {
-        operacion: product.specs?.["operación"] ?? root?.name ?? null,
-        tipo: leaf?.name ?? null,
-      };
+  // Fase operación dual: "tipo" sigue viniendo 100% de category_id (ahora
+  // siempre una categoría plana — el merge Venta/Alquiler dejó un solo
+  // árbol de tipos de propiedad, ver migración
+  // merge_venta_alquiler_categories). La operación dejó de inferirse de la
+  // categoría (o de specs.operación como fallback, que existía solo para
+  // tapar categorización poco confiable) — ahora es un dato propio del
+  // producto (sale_active/rental_active), sin ambigüedad posible.
+  const resolveDomusTipo = useCallback(
+    (product: CatalogProduct): string | null => {
+      const cat = product.category_id ? categoryById.get(product.category_id) : undefined;
+      return cat?.name ?? null;
     },
     [categoryById]
   );
@@ -112,9 +103,9 @@ export function ProductCatalog({
   const domusTipos = useMemo(() => {
     if (!isDomus) return [];
     return Array.from(
-      new Set(products.map((p) => resolveDomusLabels(p).tipo).filter((t): t is string => !!t))
+      new Set(products.map((p) => resolveDomusTipo(p)).filter((t): t is string => !!t))
     ).sort((a, b) => a.localeCompare(b, "es"));
-  }, [isDomus, products, resolveDomusLabels]);
+  }, [isDomus, products, resolveDomusTipo]);
 
   const domusZonas = useMemo(() => {
     if (!isDomus) return [];
@@ -123,22 +114,43 @@ export function ProductCatalog({
     ).sort((a, b) => a.localeCompare(b, "es"));
   }, [isDomus, products]);
 
-  // Deep link desde el drawer (Venta > Departamentos, etc. — ver
-  // side-menu.tsx) sigue funcionando: ?categoria=<hoja> precarga
-  // Operación + Tipo en vez de activeSelection (que ya no se usa acá).
+  // Deep link desde el drawer (ver side-menu.tsx) sigue funcionando:
+  // ?categoria=<id> precarga el filtro de Tipo. Ya no precarga Operación —
+  // las categorías no la implican más (ver merge_venta_alquiler_categories).
   const [domusFilters, setDomusFilters] = useState<DomusFilterState>(() => {
     if (!isDomus || !initialCategoryId) return DEFAULT_DOMUS_FILTERS;
-    const leaf = categories.find((c) => c.id === initialCategoryId);
-    const root = leaf?.parent_id ? categories.find((c) => c.id === leaf.parent_id) : undefined;
-    return { ...DEFAULT_DOMUS_FILTERS, tipo: leaf?.name ?? "", operacion: root?.name ?? "todas" };
+    const cat = categories.find((c) => c.id === initialCategoryId);
+    return { ...DEFAULT_DOMUS_FILTERS, tipo: cat?.name ?? "" };
   });
+
+  // Fase operación dual: por operación activa que matchea el filtro
+  // elegido, su precio/moneda propios — reemplaza el p.price/p.currency
+  // único de antes. Cuando el filtro es "todas", cualquiera de las dos
+  // operaciones activas sirve para el rango de precio.
+  function matchesOperation(p: CatalogProduct, op: "Venta" | "Alquiler" | "todas"): boolean {
+    if (op === "Venta") return p.sale_active;
+    if (op === "Alquiler") return p.rental_active;
+    return p.sale_active || p.rental_active;
+  }
+
+  function matchesPriceRange(p: CatalogProduct, op: "Venta" | "Alquiler" | "todas"): boolean {
+    const candidates: { price: number | null; currency: string | null }[] = [];
+    if (op !== "Alquiler" && p.sale_active) candidates.push({ price: p.sale_price, currency: p.sale_currency });
+    if (op !== "Venta" && p.rental_active) candidates.push({ price: p.rental_price, currency: p.rental_currency });
+    return candidates.some(({ price, currency }) => {
+      if (price === null || currency !== domusFilters.priceCurrency) return false;
+      if (domusFilters.priceMin !== "" && price < Number(domusFilters.priceMin)) return false;
+      if (domusFilters.priceMax !== "" && price > Number(domusFilters.priceMax)) return false;
+      return true;
+    });
+  }
 
   const domusFilteredProducts = useMemo(() => {
     if (!isDomus) return [];
+    const operacion = domusFilters.operacion as "Venta" | "Alquiler" | "todas";
     return products.filter((p) => {
-      const { operacion, tipo } = resolveDomusLabels(p);
-      if (domusFilters.operacion !== "todas" && operacion !== domusFilters.operacion) return false;
-      if (domusFilters.tipo !== "" && tipo !== domusFilters.tipo) return false;
+      if (!matchesOperation(p, operacion)) return false;
+      if (domusFilters.tipo !== "" && resolveDomusTipo(p) !== domusFilters.tipo) return false;
       if (domusFilters.zona !== "" && p.specs?.["barrio"] !== domusFilters.zona) return false;
       if (domusFilters.ambientesMin !== "") {
         const ambientes = Number(p.specs?.["ambientes"]);
@@ -149,13 +161,12 @@ export function ProductCatalog({
       // convertir sería inventar un dato). Sin Desde/Hasta cargado, la
       // moneda elegida no filtra nada por sí sola.
       if (domusFilters.priceMin !== "" || domusFilters.priceMax !== "") {
-        if (p.currency !== domusFilters.priceCurrency) return false;
-        if (domusFilters.priceMin !== "" && p.price < Number(domusFilters.priceMin)) return false;
-        if (domusFilters.priceMax !== "" && p.price > Number(domusFilters.priceMax)) return false;
+        if (!matchesPriceRange(p, operacion)) return false;
       }
       return true;
     });
-  }, [isDomus, products, domusFilters, resolveDomusLabels]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDomus, products, domusFilters, resolveDomusTipo]);
 
   // Todos los ids descendientes de una categoría (recursivo) — para que
   // filtrar por "TV y Audio" también traiga los productos cargados en sus
@@ -303,9 +314,33 @@ export function ProductCatalog({
                   <p className="text-sm font-medium text-stone-900 line-clamp-2">
                     {product.name}
                   </p>
-                  <p className="text-sm font-semibold" style={{ color: primaryColor }}>
-                    {formatPrice(product.price, product.currency)}
-                  </p>
+                  {/* Fase operación dual: con las dos activas y sin filtro
+                      de operación puntual, se muestran los dos precios con
+                      su etiqueta — con un filtro de operación aplicado, solo
+                      el precio de esa operación. El resto de las orgs (no
+                      inmobiliarias) sigue con el precio único de siempre. */}
+                  {isDomus ? (
+                    <div className="space-y-0">
+                      {(domusFilters.operacion !== "Alquiler") && product.sale_active && (
+                        <p className="text-sm font-semibold" style={{ color: primaryColor }}>
+                          {product.sale_active && product.rental_active && domusFilters.operacion === "todas"
+                            ? `Venta: ${formatPrice(product.sale_price ?? 0, product.sale_currency)}`
+                            : formatPrice(product.sale_price ?? 0, product.sale_currency)}
+                        </p>
+                      )}
+                      {(domusFilters.operacion !== "Venta") && product.rental_active && (
+                        <p className="text-sm font-semibold" style={{ color: primaryColor }}>
+                          {product.sale_active && product.rental_active && domusFilters.operacion === "todas"
+                            ? `Alquiler: ${formatPrice(product.rental_price ?? 0, product.rental_currency)}`
+                            : formatPrice(product.rental_price ?? 0, product.rental_currency)}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm font-semibold" style={{ color: primaryColor }}>
+                      {formatPrice(product.price, product.currency)}
+                    </p>
+                  )}
                 </div>
               </>
             );
