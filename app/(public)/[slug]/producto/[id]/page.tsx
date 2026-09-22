@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getTenantOrg, getTenantUser, getProductDetail, getProductCategories } from "../../data";
+import { getTenantOrg, getTenantUser, getProductDetail } from "../../data";
 import { ProductImageCarousel } from "../../product-image-carousel";
 import { ProductDetailActions } from "../../product-detail-actions";
 import { PropertyVisitBooking } from "../../property-visit-booking";
@@ -8,18 +8,7 @@ import { PropertyReservationButton } from "../../property-reservation-button";
 import { LoginForm } from "../../login-form";
 import { hasFeature, isRealEstateOrg } from "@/lib/features";
 import { formatPrice } from "@/lib/utils";
-import { findRootAncestor } from "@/lib/category-tree";
 import { getProductReservationState } from "../../domus-reservations-data";
-
-// Fase Requisitos (Domus): mismo criterio que DOMUS_CURRENCY_BY_ROOT_NAME
-// en dashboard/catalogo/product-form.tsx — el tipo de operación de una
-// propiedad se infiere de su categoría raíz ("Venta"/"Alquiler"), no es
-// una columna propia de `products`. Solo se consulta para orgSlug ===
-// 'domus', ninguna otra org nombra así a sus categorías raíz.
-const DOMUS_OPERATION_BY_ROOT_NAME: Record<string, "venta" | "alquiler"> = {
-  Venta: "venta",
-  Alquiler: "alquiler",
-};
 
 // Ficha de producto individual (Fase 3) — /[slug]/producto/[id]. Mismo
 // patrón de ruteo que /[slug]/sede/[locationId] (Gym2): org por slug,
@@ -67,20 +56,14 @@ export default async function ProductoPage({
   // Fase Requisitos (Domus): "Requisitos" reemplaza al botón "Consultar
   // por WhatsApp" en ProductDetailActions (ya redundante con el botón
   // flotante de WhatsApp, ver WhatsAppButton en layout.tsx — mismo
-  // destino/número). Se resuelve acá, no en el componente cliente, para
-  // no tener que mandarle categorías/mapeos — solo el texto ya elegido.
-  let requirementsText: string | null = null;
-  if (showRequisitos && product.category_id) {
-    const categories = await getProductCategories(org.id);
-    const root = findRootAncestor(categories, product.category_id);
-    const operationType = root ? DOMUS_OPERATION_BY_ROOT_NAME[root.name] : undefined;
-    requirementsText =
-      operationType === "venta"
-        ? org.purchase_requirements_text
-        : operationType === "alquiler"
-        ? org.rental_requirements_text
-        : null;
-  }
+  // destino/número). Se resuelve acá, no en el componente cliente.
+  // Fase operación dual: el texto ya no se infiere de la categoría — sale
+  // directo de qué operaciones tiene activas ESTA propiedad; con las dos
+  // activas se pasan los dos textos (ProductDetailActions decide si
+  // muestra uno o dos botones).
+  const requirementsVenta = showRequisitos && product.sale_active ? org.purchase_requirements_text : null;
+  const requirementsAlquiler =
+    showRequisitos && product.rental_active ? org.rental_requirements_text : null;
 
   return (
     <div className="max-w-lg mx-auto px-4 py-4 space-y-5">
@@ -102,9 +85,35 @@ export default async function ProductoPage({
           </p>
         )}
         <h1 className="text-xl font-semibold text-stone-900">{product.name}</h1>
-        <p className="text-2xl font-bold" style={{ color: primary }}>
-          {formatPrice(product.price, product.currency)}
-        </p>
+        {/* Fase operación dual: con las dos operaciones activas, un
+            encabezado combinado y los dos precios; con una sola, el precio
+            de siempre. El resto de las orgs (no inmobiliarias) sigue con
+            product.price/currency único, sin cambios. */}
+        {isRealEstate ? (
+          <div className="space-y-0.5">
+            {product.sale_active && product.rental_active && (
+              <p className="text-xs font-semibold uppercase tracking-wide text-stone-400">
+                Venta y Alquiler
+              </p>
+            )}
+            {product.sale_active && (
+              <p className="text-2xl font-bold" style={{ color: primary }}>
+                {product.sale_active && product.rental_active && "Venta: "}
+                {formatPrice(product.sale_price ?? 0, product.sale_currency)}
+              </p>
+            )}
+            {product.rental_active && (
+              <p className="text-2xl font-bold" style={{ color: primary }}>
+                {product.sale_active && product.rental_active && "Alquiler: "}
+                {formatPrice(product.rental_price ?? 0, product.rental_currency)}
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="text-2xl font-bold" style={{ color: primary }}>
+            {formatPrice(product.price, product.currency)}
+          </p>
+        )}
         {/* Fase Reservas (Domus): mismo criterio que el badge de la
             grilla (product-catalog.tsx) — acá siempre en la ficha
             completa, no solo la card. Solo una vez CONFIRMADA. */}
@@ -122,7 +131,11 @@ export default async function ProductoPage({
       <ProductDetailActions
         productId={product.id}
         productName={product.name}
-        price={product.price}
+        // Fase operación dual: "precio representativo" para el carrito de
+        // favoritos (nivel 360, sin total mostrado — ver comentario en el
+        // propio componente) — venta si está activa, si no alquiler. El
+        // resto de las orgs (no inmobiliarias) sigue con product.price.
+        price={isRealEstate ? product.sale_price ?? product.rental_price ?? 0 : product.price}
         // Fase video: miniatura del carrito, se salta un video si quedó
         // primero en la galería (el carrusel de arriba sí recibe `images`
         // completo, con video incluido).
@@ -131,7 +144,8 @@ export default async function ProductoPage({
         whatsappNumber={org.whatsapp_number}
         isRealEstate={isRealEstate}
         hasFavorites={hasFavorites}
-        requirementsText={requirementsText}
+        requirementsVenta={requirementsVenta}
+        requirementsAlquiler={requirementsAlquiler}
       />
 
       {/* Fase Reservas (Domus): mismo gate de login que Visitas/Consultas

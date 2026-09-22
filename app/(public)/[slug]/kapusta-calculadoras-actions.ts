@@ -38,13 +38,16 @@ export async function getKapustaCalcOptions(
   if (!orgId) return { tipos: [], zonas: [] };
 
   const [{ data: categories }, { data: products }] = await Promise.all([
-    supabase.from("product_categories").select("name, parent_id").eq("org_id", orgId),
+    supabase.from("product_categories").select("name").eq("org_id", orgId),
     supabase.from("products").select("specs").eq("org_id", orgId).eq("active", true),
   ]);
 
-  const tipos = Array.from(
-    new Set((categories ?? []).filter((c) => c.parent_id).map((c) => c.name))
-  ).sort((a, b) => a.localeCompare(b, "es"));
+  // Fase operación dual: después del merge de categorías (ver migración
+  // merge_venta_alquiler_categories) ya no hay dos niveles — todas las
+  // categorías real-estate son tipos de propiedad de nivel único.
+  const tipos = Array.from(new Set((categories ?? []).map((c) => c.name))).sort((a, b) =>
+    a.localeCompare(b, "es")
+  );
 
   const zonas = Array.from(
     new Set(
@@ -122,17 +125,21 @@ export async function estimarTasacionKapusta(
   const [{ data: productsData }, { data: categoriesData }] = await Promise.all([
     supabase
       .from("products")
-      .select("price, currency, specs, category_id")
+      .select(
+        "specs, category_id, sale_active, sale_price, sale_currency, rental_active, rental_price, rental_currency"
+      )
       .eq("org_id", orgId)
       .eq("active", true),
-    supabase.from("product_categories").select("id, name, parent_id").eq("org_id", orgId),
+    supabase.from("product_categories").select("id, name").eq("org_id", orgId),
   ]);
 
   const categoryById = new Map((categoriesData ?? []).map((c) => [c.id, c]));
 
-  // Misma derivación operación/tipo que resolveDomusLabels en
-  // product-catalog.tsx: specs.operación gana; si no, el nombre de la
-  // categoría raíz. El tipo sale siempre de la categoría hoja.
+  // Fase operación dual: la operación ya no se infiere de la categoría
+  // (que ahora solo representa tipo de propiedad, ver migración
+  // merge_venta_alquiler_categories) — es un dato propio del producto. Un
+  // comparable usa el precio/moneda de la operación pedida (input.operacion)
+  // si esa propiedad la tiene activa.
   interface Comparable {
     perM2: number;
     currency: string;
@@ -143,18 +150,28 @@ export async function estimarTasacionKapusta(
   for (const p of productsData ?? []) {
     const specs = (p.specs as Record<string, unknown> | null) ?? null;
     const leaf = p.category_id ? categoryById.get(p.category_id) : undefined;
-    const root = leaf?.parent_id ? categoryById.get(leaf.parent_id) : leaf;
     const tipo = leaf?.name ?? null;
-    const operacion = specString(specs, "operación") ?? root?.name ?? null;
-    if (tipo !== input.tipo || operacion !== input.operacion) continue;
+    if (tipo !== input.tipo) continue;
+
+    const opMatch =
+      input.operacion === "Venta"
+        ? p.sale_active
+          ? { price: p.sale_price, currency: p.sale_currency }
+          : null
+        : input.operacion === "Alquiler"
+        ? p.rental_active
+          ? { price: p.rental_price, currency: p.rental_currency }
+          : null
+        : null;
+    if (!opMatch) continue;
 
     const m2 = specNumber(specs, "m2_totales") ?? specNumber(specs, "m2_cubiertos");
-    const price = Number(p.price);
+    const price = Number(opMatch.price);
     if (!m2 || !Number.isFinite(price) || price <= 0) continue;
 
     comparablesBase.push({
       perM2: price / m2,
-      currency: p.currency ?? "ARS",
+      currency: opMatch.currency ?? "ARS",
       barrio: specString(specs, "barrio"),
     });
   }

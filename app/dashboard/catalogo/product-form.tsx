@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createProduct, updateProduct, deleteProduct } from "./actions";
-import { findRootAncestor } from "@/lib/category-tree";
 
 interface CategoryOption {
   id: string;
@@ -38,14 +37,6 @@ function buildCategoryOptions(categories: CategoryOption[]): { cat: CategoryOpti
   return result;
 }
 
-// Solo se consulta cuando orgSlug === 'domus' (ver efecto de moneda más
-// abajo) — no es un mapeo genérico para cualquier org que llame a una
-// categoría raíz "Venta"/"Alquiler".
-const DOMUS_CURRENCY_BY_ROOT_NAME: Record<string, string> = {
-  Venta: "USD",
-  Alquiler: "ARS",
-};
-
 interface ProductData {
   id: string;
   name: string;
@@ -70,6 +61,15 @@ interface ProductData {
   compare_at_price: number | null;
   installments_text: string | null;
   shipping_badge_text: string | null;
+  // Fase operación dual (vertical inmobiliaria): ver migración
+  // add_dual_operation_columns_to_products. Solo se leen/muestran cuando
+  // isRealEstate — el resto de las orgs sigue con precio/moneda único.
+  sale_active: boolean;
+  sale_price: number | null;
+  sale_currency: string | null;
+  rental_active: boolean;
+  rental_price: number | null;
+  rental_currency: string | null;
 }
 
 interface ProductFormProps {
@@ -89,11 +89,6 @@ export function ProductForm({ categories, product, isRealEstate = false }: Produ
   const [description, setDescription] = useState(product?.description ?? "");
   const [price, setPrice] = useState(product?.price?.toString() ?? "");
   const [currency, setCurrency] = useState(product?.currency ?? "ARS");
-  // Se prende apenas el agente toca el selector a mano — a partir de ahí
-  // el default automático por categoría (ver efecto más abajo) deja de
-  // pisarlo. Arranca en true al editar un producto existente (currency ya
-  // viene cargada, no hay nada que autocompletar).
-  const [currencyTouched, setCurrencyTouched] = useState(!!product);
   const [categoryId, setCategoryId] = useState(product?.category_id ?? "");
   const [active, setActive] = useState(product?.active ?? true);
   const [brand, setBrand] = useState(product?.brand ?? "");
@@ -105,27 +100,29 @@ export function ProductForm({ categories, product, isRealEstate = false }: Produ
   );
   const [installmentsText, setInstallmentsText] = useState(product?.installments_text ?? "");
   const [shippingBadgeText, setShippingBadgeText] = useState(product?.shipping_badge_text ?? "");
+  // Fase operación dual (vertical inmobiliaria): dos secciones
+  // independientes en vez del precio/moneda único de arriba — ver
+  // ProductData.sale_*/rental_* y migración
+  // add_dual_operation_columns_to_products. Un producto nuevo arranca con
+  // "En venta" prendida y "En alquiler" apagada (mismo default que tenía
+  // antes la categoría "Venta" con USD); el agente puede prender las dos.
+  const [saleActive, setSaleActive] = useState(product?.sale_active ?? true);
+  const [salePrice, setSalePrice] = useState(product?.sale_price?.toString() ?? "");
+  const [saleCurrency, setSaleCurrency] = useState(product?.sale_currency ?? "USD");
+  const [rentalActive, setRentalActive] = useState(product?.rental_active ?? false);
+  const [rentalPrice, setRentalPrice] = useState(product?.rental_price?.toString() ?? "");
+  const [rentalCurrency, setRentalCurrency] = useState(product?.rental_currency ?? "ARS");
   const [error, setError] = useState<string | null>(null);
 
   const categoryOptions = useMemo(() => buildCategoryOptions(categories), [categories]);
 
-  // Fase moneda (Domus): al elegir categoría en un producto NUEVO, si el
-  // agente todavía no tocó el selector de moneda a mano, se autocompleta
-  // según el nombre de la categoría raíz (Venta→USD, Alquiler→ARS). Nunca
-  // corre al editar un producto existente (currencyTouched arranca en
-  // true ahí) ni pisa una elección manual ya hecha. Scopeado a
-  // orgSlug === 'domus' — cualquier otra org que llame "Venta"/"Alquiler"
-  // a una categoría raíz no dispara esto.
-  useEffect(() => {
-    if (!isRealEstate || currencyTouched || !categoryId) return;
-    const root = findRootAncestor(categories, categoryId);
-    const inferred = root ? DOMUS_CURRENCY_BY_ROOT_NAME[root.name] : undefined;
-    if (inferred) setCurrency(inferred);
-  }, [categoryId, categories, isRealEstate, currencyTouched]);
-
   function handleSave() {
     if (!name.trim()) {
       setError("El nombre es obligatorio");
+      return;
+    }
+    if (isRealEstate && !saleActive && !rentalActive) {
+      setError("Tiene que estar activa al menos \"En venta\" o \"En alquiler\"");
       return;
     }
     setError(null);
@@ -142,6 +139,16 @@ export function ProductForm({ categories, product, isRealEstate = false }: Produ
       compare_at_price: compareAtPrice.trim() ? parseFloat(compareAtPrice) : null,
       installments_text: installmentsText.trim() || null,
       shipping_badge_text: shippingBadgeText.trim() || null,
+      ...(isRealEstate
+        ? {
+            sale_active: saleActive,
+            sale_price: parseFloat(salePrice) || 0,
+            sale_currency: saleCurrency,
+            rental_active: rentalActive,
+            rental_price: parseFloat(rentalPrice) || 0,
+            rental_currency: rentalCurrency,
+          }
+        : {}),
     };
 
     startTransition(async () => {
@@ -196,33 +203,101 @@ export function ProductForm({ categories, product, isRealEstate = false }: Produ
           />
         </div>
 
-        <div className="grid grid-cols-[1fr_92px] gap-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-stone-600">Precio</label>
-            <input
-              type="number"
-              min="0"
-              step="any"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
-            />
+        {isRealEstate ? (
+          // Fase operación dual: "En venta"/"En alquiler" independientes,
+          // cada una con su switch + precio + moneda — reemplaza el bloque
+          // único de precio/moneda de abajo (ver ProductInput.sale_*/
+          // rental_* en actions.ts).
+          <div className="space-y-3">
+            {(
+              [
+                {
+                  key: "sale" as const,
+                  label: "En venta",
+                  active: saleActive,
+                  setActive: setSaleActive,
+                  price: salePrice,
+                  setPrice: setSalePrice,
+                  currency: saleCurrency,
+                  setCurrency: setSaleCurrency,
+                },
+                {
+                  key: "rental" as const,
+                  label: "En alquiler",
+                  active: rentalActive,
+                  setActive: setRentalActive,
+                  price: rentalPrice,
+                  setPrice: setRentalPrice,
+                  currency: rentalCurrency,
+                  setCurrency: setRentalCurrency,
+                },
+              ]
+            ).map((op) => (
+              <div key={op.key} className="rounded-lg border border-stone-200 p-3 space-y-2.5">
+                <label className="flex items-center gap-2 text-sm font-medium text-stone-700 cursor-pointer w-fit">
+                  <input
+                    type="checkbox"
+                    checked={op.active}
+                    onChange={(e) => op.setActive(e.target.checked)}
+                    className="w-4 h-4 rounded border-stone-300 text-amber-500 focus:ring-amber-400"
+                  />
+                  {op.label}
+                </label>
+                <div className="grid grid-cols-[1fr_92px] gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-stone-600">Precio</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      disabled={!op.active}
+                      value={op.price}
+                      onChange={(e) => op.setPrice(e.target.value)}
+                      className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors disabled:opacity-50 disabled:bg-stone-50"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-stone-600">Moneda</label>
+                    <select
+                      value={op.currency}
+                      disabled={!op.active}
+                      onChange={(e) => op.setCurrency(e.target.value)}
+                      className="w-full h-10 px-2 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors bg-white disabled:opacity-50 disabled:bg-stone-50"
+                    >
+                      <option value="ARS">ARS</option>
+                      <option value="USD">USD</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-stone-600">Moneda</label>
-            <select
-              value={currency}
-              onChange={(e) => {
-                setCurrency(e.target.value);
-                setCurrencyTouched(true);
-              }}
-              className="w-full h-10 px-2 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors bg-white"
-            >
-              <option value="ARS">ARS</option>
-              <option value="USD">USD</option>
-            </select>
+        ) : (
+          <div className="grid grid-cols-[1fr_92px] gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-stone-600">Precio</label>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                className="w-full h-10 px-3 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-stone-600">Moneda</label>
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="w-full h-10 px-2 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors bg-white"
+              >
+                <option value="ARS">ARS</option>
+                <option value="USD">USD</option>
+              </select>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-stone-600">Categoría</label>
