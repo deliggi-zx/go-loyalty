@@ -265,7 +265,7 @@ export function ProductForm({ categories, product, isRealEstate = false }: Produ
                       className="w-full h-10 px-2 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors bg-white disabled:opacity-50 disabled:bg-stone-50"
                     >
                       <option value="ARS">ARS</option>
-                      <option value="USD">USD</option>
+                      <option value="USD">u$s</option>
                     </select>
                   </div>
                 </div>
@@ -293,7 +293,7 @@ export function ProductForm({ categories, product, isRealEstate = false }: Produ
                 className="w-full h-10 px-2 text-sm rounded-lg border border-stone-200 focus:outline-none focus:border-amber-400 transition-colors bg-white"
               >
                 <option value="ARS">ARS</option>
-                <option value="USD">USD</option>
+                <option value="USD">u$s</option>
               </select>
             </div>
           </div>

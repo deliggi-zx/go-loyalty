@@ -6,6 +6,9 @@ export interface CartItem {
   productId: string;
   name: string;
   price: number;
+  // 'ARS' | 'USD' — para formatear con formatPrice (una propiedad en USD
+  // no puede mostrarse con "$"). Opcional: sin moneda = ARS de siempre.
+  currency?: string | null;
   imageUrl: string | null;
   quantity: number;
 }
@@ -14,6 +17,7 @@ interface CartProduct {
   id: string;
   name: string;
   price: number;
+  currency?: string | null;
   imageUrl: string | null;
 }
 
@@ -44,6 +48,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           productId: product.id,
           name: product.name,
           price: product.price,
+          currency: product.currency,
           imageUrl: product.imageUrl,
           quantity,
         },

@@ -24,7 +24,7 @@ interface Props {
 
 const CURRENCIES = [
   { value: "ARS", label: "$ (ARS)" },
-  { value: "USD", label: "US$ (USD)" },
+  { value: "USD", label: "u$s (USD)" },
 ];
 
 export function KapustaCalcCredito({ theme }: Props) {

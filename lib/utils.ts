@@ -12,7 +12,9 @@ export function cn(...inputs: ClassValue[]) {
 // (hoy solo lo usa Domus en sus propiedades en venta). Único punto de
 // formateo de precio — antes estaba duplicado con `$${price.toLocaleString
 // ("es-AR")}` en cada card/ficha/dashboard por separado.
-const CURRENCY_SYMBOLS: Record<string, string> = { ARS: "$", USD: "US$" };
+// Dólar se muestra "u$s" (formato local pedido para toda la vertical), no
+// "US$" — solo display, currency sigue guardándose como 'USD'.
+export const CURRENCY_SYMBOLS: Record<string, string> = { ARS: "$", USD: "u$s" };
 
 export function formatPrice(price: number, currency?: string | null): string {
   const symbol = CURRENCY_SYMBOLS[currency ?? "ARS"] ?? "$";

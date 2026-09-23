@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { X, ShoppingCart, Star, Minus, Plus, ImageOff } from "lucide-react";
 import { useCart } from "./cart-context";
+import { formatPrice } from "@/lib/utils";
 
 interface CartPanelProps {
   isOpen: boolean;
@@ -116,7 +117,7 @@ export function CartPanel({ isOpen, onClose, primaryColor, favoritesMode = false
                       {item.name}
                     </p>
                     <p className="text-xs text-stone-500">
-                      ${item.price.toLocaleString("es-AR")} c/u
+                      {formatPrice(item.price, item.currency)} c/u
                     </p>
                     <div className="flex items-center justify-between pt-1">
                       <div className="flex items-center gap-2">
@@ -139,7 +140,7 @@ export function CartPanel({ isOpen, onClose, primaryColor, favoritesMode = false
                         </button>
                       </div>
                       <span className="text-sm font-semibold" style={{ color: primaryColor }}>
-                        ${(item.price * item.quantity).toLocaleString("es-AR")}
+                        {formatPrice(item.price * item.quantity, item.currency)}
                       </span>
                     </div>
                   </div>
@@ -156,7 +157,7 @@ export function CartPanel({ isOpen, onClose, primaryColor, favoritesMode = false
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-stone-500">Total</span>
                   <span className="text-lg font-bold text-stone-900">
-                    ${total.toLocaleString("es-AR")}
+                    {formatPrice(total)}
                   </span>
                 </div>
               )}

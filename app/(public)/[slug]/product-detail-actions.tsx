@@ -8,6 +8,9 @@ interface ProductDetailActionsProps {
   productId: string;
   productName: string;
   price: number;
+  // Moneda del `price` de arriba — la usa el panel de favoritos/carrito
+  // para formatear (ver formatPrice).
+  currency?: string | null;
   imageUrl: string | null;
   primaryColor: string;
   whatsappNumber: string | null;
@@ -40,6 +43,7 @@ export function ProductDetailActions({
   productId,
   productName,
   price,
+  currency,
   imageUrl,
   primaryColor,
   whatsappNumber,
@@ -57,7 +61,7 @@ export function ProductDetailActions({
   const { addItem } = useCart();
 
   function handleAddToCart() {
-    addItem({ id: productId, name: productName, price, imageUrl });
+    addItem({ id: productId, name: productName, price, currency, imageUrl });
     setAdded(true);
   }
 

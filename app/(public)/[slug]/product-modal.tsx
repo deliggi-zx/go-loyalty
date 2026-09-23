@@ -28,6 +28,7 @@ export function ProductModal({ product, primaryColor, onClose, favoritesMode = f
       id: product.id,
       name: product.name,
       price: product.price,
+      currency: product.currency,
       // Fase video: la miniatura del carrito es un <img>, se salta un
       // video si quedó primero en la galería (images acá arriba se pasa
       // completo, con video incluido, a ProductImageCarousel — esto es

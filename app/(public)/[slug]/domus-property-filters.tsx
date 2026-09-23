@@ -142,7 +142,7 @@ export function DomusPropertyFilters({
             onChange={(e) => set("priceCurrency", e.target.value as DomusFilterState["priceCurrency"])}
             className={selectClass}
           >
-            <option value="USD">US$</option>
+            <option value="USD">u$s</option>
             <option value="ARS">$</option>
           </select>
           <input

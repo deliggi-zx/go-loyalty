@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addManualPoints } from "../actions";
+import { formatPrice } from "@/lib/utils";
 
 interface Suggestions {
   visit: number;
@@ -74,9 +75,7 @@ export function AddPointsForm({
 
     let detailToSend = detail.trim();
     if (motive === "operation" && opValue.trim()) {
-      const opNote = `valor ${opCurrency} ${Number(
-        opValue.replace(/[^\d.]/g, "")
-      ).toLocaleString("es-AR")}`;
+      const opNote = `valor ${formatPrice(Number(opValue.replace(/[^\d.]/g, "")), opCurrency)}`;
       detailToSend = detailToSend ? `${opNote} — ${detailToSend}` : opNote;
     }
 
@@ -136,7 +135,7 @@ export function AddPointsForm({
               onChange={(e) => setOpCurrency(e.target.value as "USD" | "ARS")}
               className={`${inputClass} w-24 shrink-0`}
             >
-              <option value="USD">USD</option>
+              <option value="USD">u$s</option>
               <option value="ARS">ARS</option>
             </select>
             <input

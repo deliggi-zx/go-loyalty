@@ -266,7 +266,7 @@ export function PropertyOfferForm({ slug, orgId, userId, primaryColor }: Propert
             className={`${inputClass} bg-white px-2`}
           >
             <option value="ARS">ARS</option>
-            <option value="USD">USD</option>
+            <option value="USD">u$s</option>
           </select>
         </div>
       </div>

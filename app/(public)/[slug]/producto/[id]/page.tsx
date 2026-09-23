@@ -136,6 +136,11 @@ export default async function ProductoPage({
         // propio componente) — venta si está activa, si no alquiler. El
         // resto de las orgs (no inmobiliarias) sigue con product.price.
         price={isRealEstate ? product.sale_price ?? product.rental_price ?? 0 : product.price}
+        currency={
+          isRealEstate
+            ? (product.sale_price != null ? product.sale_currency : product.rental_currency) ?? product.currency
+            : product.currency
+        }
         // Fase video: miniatura del carrito, se salta un video si quedó
         // primero en la galería (el carrusel de arriba sí recibe `images`
         // completo, con video incluido).
