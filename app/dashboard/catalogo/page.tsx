@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
 import { hasFeature } from "@/lib/features";
+import { resolveDisplayPrices } from "@/app/(public)/[slug]/operation-price-utils";
 import { CategoryManager } from "./category-manager";
 import { ProductsList, type ProductRow } from "./products-list";
 
@@ -39,7 +40,9 @@ export default async function CatalogoPage({
       .order("display_order", { ascending: true }),
     supabase
       .from("products")
-      .select("id, name, price, currency, active, is_featured, category_id, display_order")
+      .select(
+        "id, name, price, currency, active, is_featured, category_id, display_order, sale_active, sale_price, sale_currency, rental_active, rental_price, rental_currency"
+      )
       .eq("org_id", orgId)
       .order("display_order", { ascending: true }),
   ]);
@@ -79,6 +82,9 @@ export default async function CatalogoPage({
     name: p.name,
     price: p.price,
     currency: p.currency,
+    // Fix precio por contexto: una propiedad en venta y alquiler muestra
+    // los dos precios en el listado, no solo el de venta espejado en price.
+    prices: resolveDisplayPrices(p, null),
     active: p.active ?? true,
     is_featured: p.is_featured ?? false,
     category_id: p.category_id,

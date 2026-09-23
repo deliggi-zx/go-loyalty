@@ -579,6 +579,26 @@ export async function toggleCarouselDirection(id: string, direction: "forward" |
   revalidatePath("/dashboard/catalogo");
 }
 
+// Vertical inmobiliaria: con operación seteada, el carrusel público solo
+// muestra propiedades con esa operación activa y con su precio (ver
+// getActiveCarousels en app/(public)/[slug]/data.ts). null = mixto.
+export async function updateCarouselOperation(id: string, operation: "venta" | "alquiler" | null) {
+  if (operation !== null && operation !== "venta" && operation !== "alquiler") {
+    throw new Error("Operación inválida");
+  }
+  const supabase = createClient();
+  const orgId = await requireOrgId();
+
+  await supabase
+    .from("catalog_carousels")
+    .update({ operation })
+    .eq("id", id)
+    .eq("org_id", orgId);
+
+  revalidatePath("/dashboard/catalogo/carruseles");
+  revalidatePath("/dashboard/catalogo");
+}
+
 export async function deleteCarousel(id: string) {
   const supabase = createClient();
   const orgId = await requireOrgId();

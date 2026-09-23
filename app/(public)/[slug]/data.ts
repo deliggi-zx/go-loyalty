@@ -1,6 +1,12 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getConfirmedReservedProductIds } from "./domus-reservations-data";
+import {
+  matchesCarouselOperation,
+  resolveDisplayPrices,
+  type CarouselOperation,
+  type DisplayPrice,
+} from "./operation-price-utils";
 
 export const getTenantOrg = cache(async (slug: string) => {
   const supabase = createClient();
@@ -241,6 +247,10 @@ export interface FeaturedProduct {
   specs: Record<string, string> | null;
   // Fase moneda: ver CatalogProduct.currency más arriba.
   currency: string;
+  // Fix precio por contexto: lo que la card muestra de verdad — ver
+  // resolveDisplayPrices (sin operación de contexto: los dos precios con
+  // etiqueta si la propiedad está en venta y alquiler).
+  prices: DisplayPrice[];
 }
 
 // Productos marcados como destacados desde el admin (products.is_featured,
@@ -252,7 +262,9 @@ export const getFeaturedProducts = cache(async (orgId: string): Promise<Featured
   const supabase = createClient();
   const { data: productsData } = await supabase
     .from("products")
-    .select("id, name, price, specs, currency, display_order")
+    .select(
+      "id, name, price, specs, currency, display_order, sale_active, sale_price, sale_currency, rental_active, rental_price, rental_currency"
+    )
     .eq("org_id", orgId)
     .eq("active", true)
     .eq("is_featured", true)
@@ -296,6 +308,7 @@ export const getFeaturedProducts = cache(async (orgId: string): Promise<Featured
     imageUrl: mainImageByProduct.get(p.id) ?? null,
     specs: (p.specs as Record<string, string> | null) ?? null,
     currency: p.currency,
+    prices: resolveDisplayPrices(p, null),
   }));
 });
 
@@ -349,11 +362,18 @@ export interface CarouselProductItem {
   specs: Record<string, string> | null;
   // Fase moneda: ver CatalogProduct.currency más arriba.
   currency: string;
+  // Fix precio por contexto: precio(s) según la operación del carrusel
+  // (ver resolveDisplayPrices) — en "En alquiler" el de alquiler aunque la
+  // propiedad también esté en venta.
+  prices: DisplayPrice[];
 }
 
 export interface ProductCarousel {
   id: string;
   title: string;
+  // Vertical inmobiliaria: ver catalog_carousels.operation. null =
+  // carrusel mixto, sin filtro por operación.
+  operation: CarouselOperation | null;
   products: CarouselProductItem[];
   // Fase autoplay: default false en la columna (ver migración
   // add_autoplay_to_catalog_carousels), así que sin cambios para los
@@ -379,7 +399,7 @@ export const getActiveCarousels = cache(async (orgId: string): Promise<ProductCa
   const supabase = createClient();
   const { data: carouselsData } = await supabase
     .from("catalog_carousels")
-    .select("id, title, autoplay, loop_infinite, autoplay_speed_ms, direction")
+    .select("id, title, operation, autoplay, loop_infinite, autoplay_speed_ms, direction")
     .eq("org_id", orgId)
     .eq("active", true)
     .order("display_order", { ascending: true });
@@ -401,7 +421,7 @@ export const getActiveCarousels = cache(async (orgId: string): Promise<ProductCa
   const { data: productsData } = await supabase
     .from("products")
     .select(
-      "id, name, price, compare_at_price, installments_text, shipping_badge_text, specs, currency"
+      "id, name, price, compare_at_price, installments_text, shipping_badge_text, specs, currency, sale_active, sale_price, sale_currency, rental_active, rental_price, rental_currency"
     )
     .in("id", productIds)
     .eq("org_id", orgId)
@@ -438,10 +458,14 @@ export const getActiveCarousels = cache(async (orgId: string): Promise<ProductCa
 
   return carousels
     .map((c) => {
+      const operation = (c.operation as CarouselOperation | null) ?? null;
       const products = links
         .filter((l) => l.carousel_id === c.id)
         .map((l) => productById.get(l.product_id))
         .filter((p): p is NonNullable<typeof p> => !!p)
+        // Un carrusel "En venta" nunca muestra una propiedad que solo está
+        // en alquiler (y viceversa), aunque haya quedado asignada a mano.
+        .filter((p) => matchesCarouselOperation(p, operation))
         .map((p) => ({
           id: p.id,
           name: p.name,
@@ -452,10 +476,12 @@ export const getActiveCarousels = cache(async (orgId: string): Promise<ProductCa
           imageUrl: mainImageByProduct.get(p.id) ?? null,
           specs: (p.specs as Record<string, string> | null) ?? null,
           currency: p.currency,
+          prices: resolveDisplayPrices(p, operation),
         }));
       return {
         id: c.id,
         title: c.title,
+        operation,
         products,
         autoplay: c.autoplay,
         loopInfinite: c.loop_infinite,
