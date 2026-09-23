@@ -27,6 +27,7 @@ import {
   toggleCarouselLoop,
   updateCarouselSpeed,
   toggleCarouselDirection,
+  updateCarouselOperation,
   deleteCarousel,
 } from "../actions";
 import { CAROUSEL_SPEED_MIN_MS, CAROUSEL_SPEED_MAX_MS } from "../carousel-constants";
@@ -42,6 +43,8 @@ export interface CarouselRow {
   loop_infinite: boolean;
   autoplay_speed_ms: number;
   direction: "forward" | "reverse";
+  // Vertical inmobiliaria: ver updateCarouselOperation. null = mixto.
+  operation: "venta" | "alquiler" | null;
 }
 
 // Paso de +/- para el control de velocidad — simple a propósito (pedido
@@ -54,7 +57,13 @@ const SPEED_STEP_MS = 500;
 // ahí no hace falta. Esta es la pantalla que reemplaza la idea de "una
 // estrellita fija": el título y la existencia de cada carrusel los define
 // Die acá, no quedan hardcodeados en ningún componente.
-export function CarouselManager({ carousels: initialCarousels }: { carousels: CarouselRow[] }) {
+export function CarouselManager({
+  carousels: initialCarousels,
+  isRealEstate = false,
+}: {
+  carousels: CarouselRow[];
+  isRealEstate?: boolean;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [carousels, setCarousels] = useState(initialCarousels);
@@ -156,6 +165,15 @@ export function CarouselManager({ carousels: initialCarousels }: { carousels: Ca
     setCarousels((prev) => prev.map((c) => (c.id === id ? { ...c, direction: next } : c)));
     startTransition(async () => {
       await toggleCarouselDirection(id, next);
+      router.refresh();
+    });
+  }
+
+  function handleOperationChange(id: string, value: string) {
+    const operation = value === "venta" || value === "alquiler" ? value : null;
+    setCarousels((prev) => prev.map((c) => (c.id === id ? { ...c, operation } : c)));
+    startTransition(async () => {
+      await updateCarouselOperation(id, operation);
       router.refresh();
     });
   }
@@ -343,6 +361,26 @@ export function CarouselManager({ carousels: initialCarousels }: { carousels: Ca
                     )}
                     {c.direction === "reverse" ? "Invertido" : "Normal"}
                   </button>
+                </div>
+              )}
+
+              {/* Vertical inmobiliaria: con una operación elegida, el
+                  carrusel solo muestra propiedades con esa operación activa
+                  y con el precio de esa operación (una propiedad en venta y
+                  alquiler muestra el de alquiler en "En alquiler"). */}
+              {isRealEstate && editingId !== c.id && (
+                <div className="flex items-center gap-2 pl-1 text-xs text-stone-500">
+                  <span className="font-medium uppercase tracking-wide text-[10px]">Operación</span>
+                  <select
+                    value={c.operation ?? ""}
+                    onChange={(e) => handleOperationChange(c.id, e.target.value)}
+                    disabled={isPending}
+                    className="h-7 px-2 text-xs rounded-md border border-stone-200 bg-white focus:outline-none focus:border-amber-400 disabled:opacity-50"
+                  >
+                    <option value="">Mixto (venta y alquiler)</option>
+                    <option value="venta">Solo venta</option>
+                    <option value="alquiler">Solo alquiler</option>
+                  </select>
                 </div>
               )}
             </div>

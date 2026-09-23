@@ -50,9 +50,14 @@ export function FeaturedProductsGrid({
           </div>
           <div className="p-3 space-y-0.5">
             <p className="text-sm font-medium text-stone-900 line-clamp-2">{product.name}</p>
-            <p className="text-sm font-semibold" style={{ color: primaryColor }}>
-              {formatPrice(product.price, product.currency)}
-            </p>
+            {/* Fix precio por contexto: ver resolveDisplayPrices — una
+                propiedad en venta y alquiler muestra los dos precios. */}
+            {product.prices.map((p) => (
+              <p key={p.label ?? "single"} className="text-sm font-semibold" style={{ color: primaryColor }}>
+                {p.label && `${p.label}: `}
+                {formatPrice(p.price, p.currency)}
+              </p>
+            ))}
           </div>
         </Link>
       ))}

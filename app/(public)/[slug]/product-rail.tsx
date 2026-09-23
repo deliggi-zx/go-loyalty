@@ -259,8 +259,16 @@ export function ProductRail({
         className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 snap-x snap-mandatory"
       >
         {cards.map((product, i) => {
+          // Fix precio por contexto: product.prices ya viene resuelto según
+          // la operación del carrusel (ver resolveDisplayPrices en data.ts).
+          // El tachado cosmético solo tiene sentido contra un precio único
+          // en la misma moneda en la que se cargó.
+          const single = product.prices.length === 1 ? product.prices[0] : null;
           const showCompareAt =
-            product.compareAtPrice !== null && product.compareAtPrice > product.price;
+            single !== null &&
+            single.currency === product.currency &&
+            product.compareAtPrice !== null &&
+            product.compareAtPrice > single.price;
 
           return (
             <Link
@@ -296,9 +304,16 @@ export function ProductRail({
                     {formatPrice(product.compareAtPrice!, product.currency)}
                   </p>
                 )}
-                <p className="text-sm font-semibold" style={{ color: primaryColor }}>
-                  {formatPrice(product.price, product.currency)}
-                </p>
+                {product.prices.map((p) => (
+                  <p
+                    key={p.label ?? "single"}
+                    className="text-sm font-semibold"
+                    style={{ color: primaryColor }}
+                  >
+                    {p.label && `${p.label}: `}
+                    {formatPrice(p.price, p.currency)}
+                  </p>
+                ))}
                 {product.installmentsText && (
                   <p className="text-[11px] text-stone-500">{product.installmentsText}</p>
                 )}

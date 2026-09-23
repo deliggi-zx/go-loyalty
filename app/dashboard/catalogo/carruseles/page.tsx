@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOrgId } from "@/lib/supabase/get-org";
+import { isRealEstateOrg } from "@/lib/features";
 import { CarouselManager } from "./carousel-manager";
 
 export default async function CarrucelesPage() {
@@ -12,7 +13,7 @@ export default async function CarrucelesPage() {
 
   const { data: org } = await supabase
     .from("loyalty_organizations")
-    .select("catalog_type")
+    .select("catalog_type, feature_tier, feature_overrides")
     .eq("id", orgId)
     .maybeSingle();
 
@@ -23,7 +24,7 @@ export default async function CarrucelesPage() {
 
   const { data: carousels } = await supabase
     .from("catalog_carousels")
-    .select("id, title, display_order, active, autoplay, loop_infinite, autoplay_speed_ms, direction")
+    .select("id, title, operation, display_order, active, autoplay, loop_infinite, autoplay_speed_ms, direction")
     .eq("org_id", orgId)
     .order("display_order", { ascending: true });
 
@@ -40,7 +41,7 @@ export default async function CarrucelesPage() {
       </header>
 
       <div className="p-8 max-w-3xl">
-        <CarouselManager carousels={carousels ?? []} />
+        <CarouselManager carousels={carousels ?? []} isRealEstate={isRealEstateOrg(org)} />
       </div>
     </div>
   );

@@ -6,12 +6,14 @@ import Link from "next/link";
 import { ToggleLeft, ToggleRight, Pencil, Package, Star, CheckCircle2, X } from "lucide-react";
 import { cn, formatPrice } from "@/lib/utils";
 import { toggleProductActive, toggleProductFeatured } from "./actions";
+import type { DisplayPrice } from "@/app/(public)/[slug]/operation-price-utils";
 
 export interface ProductRow {
   id: string;
   name: string;
   price: number;
   currency: string;
+  prices: DisplayPrice[];
   active: boolean;
   is_featured: boolean;
   category_id: string | null;
@@ -236,7 +238,9 @@ export function ProductsList({
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold text-stone-900 tabular-nums">
-                    {formatPrice(product.price, product.currency)}
+                    {product.prices
+                      .map((p) => `${p.label ? `${p.label}: ` : ""}${formatPrice(p.price, p.currency)}`)
+                      .join(" · ")}
                   </span>
                   <Link
                     href={`/dashboard/catalogo/productos/${product.id}`}
