@@ -19,6 +19,7 @@ const APP_LEVEL_PREFIXES = [
   "/admin",
   "/api",
   "/_next",
+  "/privacidad",
 ];
 
 function isAppLevel(pathname: string): boolean {
