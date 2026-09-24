@@ -9,7 +9,7 @@ export default function PrivacyPolicyPage() {
 
       <section className="space-y-4 text-sm leading-relaxed">
         <p>
-          Kapusta ("la app", "el sitio") es operada por Kapusta Propiedades, con sede en
+          Kapusta (&quot;la app&quot;, &quot;el sitio&quot;) es operada por Kapusta Propiedades, con sede en
           Berazategui, Provincia de Buenos Aires, Argentina. Esta política explica qué
           información recolectamos de las personas que usan la aplicación web y la app
           móvil, y cómo la usamos.
@@ -35,7 +35,7 @@ export default function PrivacyPolicyPage() {
         <p>
           Los datos se almacenan de forma segura utilizando servicios de
           infraestructura de terceros (Supabase) que cumplen con estándares
-          estándares de la industria en materia de seguridad. No vendemos ni
+          de la industria en materia de seguridad. No vendemos ni
           compartimos tu información personal con terceros con fines publicitarios.
         </p>
 
