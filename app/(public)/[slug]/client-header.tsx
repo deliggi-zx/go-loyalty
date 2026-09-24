@@ -6,6 +6,7 @@ import { Menu, ScanLine, ShoppingCart, Star, User, Building2, Settings } from "l
 import { SideMenu, type SideMenuProps } from "./side-menu";
 import { CartPanel } from "./cart-panel";
 import { LoginModal } from "./login-modal";
+import { QrScanModal } from "./qr-scan-modal";
 import { useCart } from "./cart-context";
 
 interface ClientHeaderProps {
@@ -37,7 +38,9 @@ interface ClientHeaderProps {
   // branding en la imagen, repetirlo encima quedaría redundante.
   floatingOverlay?: boolean;
   // Ícono de escaneo QR — hoy se saca por completo (no solo se oculta)
-  // para "bike" (Fase 3c), no tiene lector del otro lado todavía.
+  // para "bike" (Fase 3c). Abre QrScanModal (cámara nativa vía ML Kit en la
+  // app de las tiendas, cámara web + jsQR en el sitio) solo si la org tiene
+  // hasLoyaltyPoints; para el resto sigue sin función, como antes.
   showScanIcon?: boolean;
   // Fase Carrito→Favoritos: slug de la org activa, para el link a /perfil
   // y para reenviar a LoginModal / CartPanel. El toggle carrito/favoritos
@@ -83,6 +86,7 @@ export function ClientHeader({
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
   const { totalQuantity } = useCart();
   // Una inmobiliaria de nivel Básica no muestra ni carrito ni favoritos
   // (definición 1); Pro/360 muestran "Favoritos". El resto de las orgs de
@@ -106,7 +110,16 @@ export function ClientHeader({
     : orgName;
 
   function handleScan() {
-    console.log("scan");
+    // El escaneo solo hace algo para orgs con fidelización QR (Kapusta hoy).
+    // Para el resto queda sin función, como antes.
+    if (!hasLoyaltyPoints) return;
+    // claimEarnTransaction necesita sesión — si no hay, mandamos a loguearse
+    // en vez de abrir la cámara para terminar en un error de "iniciá sesión".
+    if (!isLoggedIn) {
+      setLoginOpen(true);
+      return;
+    }
+    setScanOpen(true);
   }
 
   return (
@@ -228,6 +241,13 @@ export function ClientHeader({
           orgSlug={orgSlug}
           hasRegistroExtendido={hasRegistroExtendido}
           hasLoyaltyPoints={hasLoyaltyPoints}
+        />
+      )}
+      {hasLoyaltyPoints && (
+        <QrScanModal
+          isOpen={scanOpen}
+          onClose={() => setScanOpen(false)}
+          primaryColor={primaryColor}
         />
       )}
     </>
