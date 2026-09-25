@@ -46,6 +46,23 @@ export default function PrivacyPolicyPage() {
           figuran más abajo.
         </p>
 
+        <h2 id="eliminar-cuenta" className="text-lg font-semibold pt-2">
+          Eliminación de cuenta y datos
+        </h2>
+        <p>
+          Si querés eliminar tu cuenta de Kapusta y los datos asociados a ella,
+          enviá un correo a{" "}
+          <a href="mailto:deliggi@abc.gob.ar" className="underline">
+            deliggi@abc.gob.ar
+          </a>{" "}
+          solicitando la baja, indicando el nombre o el correo electrónico con el
+          que te registraste. Vamos a confirmarte la eliminación de tu cuenta y de
+          tu información personal (nombre, correo electrónico, teléfono e
+          historial de puntos de fidelización) dentro de los 30 días posteriores a
+          la solicitud, salvo que debamos conservar algún dato por una obligación
+          legal.
+        </p>
+
         <h2 className="text-lg font-semibold pt-2">Contacto</h2>
         <p>
           Si tenés preguntas sobre esta política de privacidad o sobre el tratamiento
